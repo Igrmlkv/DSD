@@ -66,11 +66,11 @@ export default function SyncMonitoringScreen() {
 
         <View style={styles.syncDetails}>
           <View style={styles.syncDetail}>
-            <Text style={styles.syncDetailLabel}>Последняя синхронизация</Text>
+            <Text style={styles.syncDetailLabel}>{t('syncMonitoring.lastSync')}</Text>
             <Text style={styles.syncDetailValue}>{formatDate(item.last_sync)}</Text>
           </View>
           <View style={styles.syncDetail}>
-            <Text style={styles.syncDetailLabel}>Документов в очереди</Text>
+            <Text style={styles.syncDetailLabel}>{t('syncMonitoring.docsInQueue')}</Text>
             <Text style={[styles.syncDetailValue, item.pending_docs > 0 && { color: COLORS.error }]}>
               {item.pending_docs || 0}
             </Text>
@@ -88,19 +88,19 @@ export default function SyncMonitoringScreen() {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryValue}>{stats.totalDevices || 0}</Text>
-              <Text style={styles.summaryLabel}>Устройств</Text>
+              <Text style={styles.summaryLabel}>{t('syncMonitoring.devicesCount')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryValue, { color: '#34C759' }]}>{stats.syncedDevices || 0}</Text>
-              <Text style={styles.summaryLabel}>Синхр.</Text>
+              <Text style={styles.summaryLabel}>{t('syncMonitoring.synced')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryValue, { color: COLORS.error }]}>{stats.pendingDocs || 0}</Text>
-              <Text style={styles.summaryLabel}>В очереди</Text>
+              <Text style={styles.summaryLabel}>{t('syncMonitoring.inQueue')}</Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryValue, { color: COLORS.accent }]}>{stats.conflicts || conflicts.length}</Text>
-              <Text style={styles.summaryLabel}>Конфликтов</Text>
+              <Text style={styles.summaryLabel}>{t('syncMonitoring.conflictsCount')}</Text>
             </View>
           </View>
         </View>
@@ -121,7 +121,7 @@ export default function SyncMonitoringScreen() {
       )}
 
       {/* Список устройств */}
-      <Text style={styles.sectionTitle}>Статус по устройствам</Text>
+      <Text style={styles.sectionTitle}>{t('syncMonitoring.deviceStatus')}</Text>
       <FlatList
         data={stats?.devices || []}
         keyExtractor={(item, index) => item.id || String(index)}
@@ -131,7 +131,7 @@ export default function SyncMonitoringScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="sync-outline" size={48} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyText}>Нет данных синхронизации</Text>
+            <Text style={styles.emptyText}>{t('syncMonitoring.noData')}</Text>
           </View>
         }
       />

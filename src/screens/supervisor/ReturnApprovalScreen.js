@@ -126,7 +126,7 @@ export default function ReturnApprovalScreen() {
       ListEmptyComponent={
         <View style={styles.empty}>
           <Ionicons name="checkmark-circle-outline" size={48} color="#34C759" />
-          <Text style={styles.emptyText}>Нет возвратов на утверждении</Text>
+          <Text style={styles.emptyText}>{t('returnApproval.noReturns')}</Text>
         </View>
       }
     />

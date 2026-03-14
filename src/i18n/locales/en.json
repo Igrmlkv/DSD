@@ -361,7 +361,18 @@
     },
     "deleteOrder": "Delete order?",
     "deleteOrderMsg": "Order and all its items will be deleted.",
-    "deleteButton": "Delete"
+    "deleteButton": "Delete",
+    "product": "Product",
+    "quantity": "Qty",
+    "amount": "Amount",
+    "discount": "Discount",
+    "edit": "Edit",
+    "delete": "Delete",
+    "view": "View",
+    "title": "Orders",
+    "ordersCount": "orders",
+    "totalAmount": "total",
+    "noOrders": "No orders"
   },
   "orderEdit": {
     "alreadyAdded": "Product already added",
@@ -377,7 +388,19 @@
     "selectCustomerHint": "Select customer...",
     "commentPlaceholder": "Order comment...",
     "saveChanges": "Save Changes",
-    "createOrder": "Create Order"
+    "createOrder": "Create Order",
+    "selectClient": "Select client",
+    "addProductTitle": "Add product",
+    "inVehicle": "In vehicle",
+    "pcs": "pcs",
+    "noStockLabel": "No",
+    "readOnlyHint": "Order shipped — view only",
+    "clientLabel": "Client",
+    "products": "Products",
+    "add": "Add",
+    "noProducts": "No products",
+    "note": "Note",
+    "total": "Total"
   },
   "returnApproval": {
     "approveReturn": "Approve return?",
@@ -386,17 +409,26 @@
     "noReason": "No reason specified",
     "rejectReturn": "Reject return?",
     "reject": "Reject",
-    "rejectedBySupervisor": "Rejected by supervisor"
+    "rejectedBySupervisor": "Rejected by supervisor",
+    "noReturns": "No returns pending approval"
   },
   "analyticsScreen": {
     "periods": {
       "day": "Day",
       "week": "Week",
       "month": "Month"
-    }
+    },
+    "pointsVisited": "Points visited",
+    "paymentsToday": "Payments today",
+    "pendingApproval": "Pending approval",
+    "returnsAmount": "Returns amount",
+    "expeditorPerformance": "Expeditor performance",
+    "topDebtors": "Top-10 debtors"
   },
   "userManagement": {
-    "searchPlaceholder": "Search by name, login, role..."
+    "searchPlaceholder": "Search by name, login, role...",
+    "total": "Total",
+    "notFound": "Users not found"
   },
   "userEdit": {
     "errorName": "Enter full name",
@@ -407,7 +439,15 @@
     "namePlaceholder": "John Smith",
     "platePlaceholder": "ABC 1234",
     "createUser": "Create User",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "fullName": "Full Name",
+    "loginLabel": "Login",
+    "phone": "Phone",
+    "roleLabel": "Role",
+    "vehicleNumber": "Vehicle Number",
+    "statusLabel": "Status",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "deviceManagement": {
     "statuses": {
@@ -415,7 +455,15 @@
       "inactive": "Inactive",
       "blocked": "Blocked"
     },
-    "searchPlaceholder": "Search by device, user..."
+    "searchPlaceholder": "Search by device, user...",
+    "user": "User",
+    "appVersion": "App Version",
+    "lastSync": "Last Sync",
+    "data": "Data",
+    "total": "Total",
+    "activeCount": "Active",
+    "blocked": "Blocked",
+    "notFound": "Devices not found"
   },
   "syncMonitoring": {
     "statuses": {
@@ -423,7 +471,15 @@
       "warning": "Warning",
       "critical": "Critical"
     },
-    "conflictsRequire": "{{count}} conflicts require resolution"
+    "conflictsRequire": "{{count}} conflicts require resolution",
+    "lastSync": "Last Sync",
+    "docsInQueue": "Documents in queue",
+    "devicesCount": "Devices",
+    "synced": "Synced",
+    "inQueue": "In queue",
+    "conflictsCount": "Conflicts",
+    "deviceStatus": "Device status",
+    "noData": "No sync data"
   },
   "conflictResolution": {
     "entityTypes": {
@@ -441,7 +497,13 @@
     "conflictResolved": "Conflict resolved",
     "syncConflict": "Data conflict during synchronization",
     "noData": "No data",
-    "conflictsToResolve": "{{count}} conflicts to resolve"
+    "conflictsToResolve": "{{count}} conflicts to resolve",
+    "server": "Server",
+    "device": "Device",
+    "acceptServer": "Accept server",
+    "acceptMobile": "Accept mobile",
+    "noConflicts": "No conflicts",
+    "allSynced": "All data synchronized"
   },
   "auditLog": {
     "types": {
@@ -462,7 +524,9 @@
       "update": "Update",
       "approve": "Approve"
     },
-    "searchPlaceholder": "Search by user, description..."
+    "searchPlaceholder": "Search by user, description...",
+    "today": "Today",
+    "noRecords": "No records"
   },
   "systemSettings": {
     "syncSection": "Synchronization",
@@ -503,7 +567,12 @@
     "defaultName": "User",
     "notifications": "Notifications",
     "notificationsSub": "System notifications",
-    "settings": "Settings"
+    "settings": "Settings",
+    "settingsSub": "PIN, sync, profile",
+    "login": "Login",
+    "role": "Role",
+    "status": "Status",
+    "active": "Active"
   },
   "settingsScreen": {
     "logoutTitle": "Sign Out",
@@ -541,37 +610,74 @@
       "arrived": "On Site",
       "completed": "Done",
       "skipped": "Skipped"
-    }
+    },
+    "points": "points",
+    "noRoutes": "No routes for today"
   },
   "deliveryScreen": {
     "types": {
       "retail": "Retail",
       "wholesale": "Wholesale"
     },
-    "other": "Other"
+    "other": "Other",
+    "debt": "Debt",
+    "noDebt": "No debt",
+    "clientsInCities": "Clients: {{total}} in {{cities}} cities",
+    "noClients": "No clients"
   },
   "warehouseScreen": {
     "other": "Other",
     "inTruck": "In Truck",
     "inWarehouse": "In Warehouse",
-    "searchPlaceholder": "Search by name, SKU, brand..."
+    "searchPlaceholder": "Search by name, SKU, brand...",
+    "reserved": "Reserved",
+    "available": "Available",
+    "low": "Low",
+    "items": "items",
+    "notAccepted": "Stock not accepted to vehicle",
+    "completeLoading": "Complete trip loading to confirm vehicle stock",
+    "units": "units",
+    "kgInVehicle": "kg in vehicle",
+    "nothingFound": "Nothing found"
   },
   "financeScreen": {
     "credit": "Credit",
-    "cash": "Cash"
+    "cash": "Cash",
+    "used": "Used {{percent}}%",
+    "limit": "Limit",
+    "receivables": "Receivables",
+    "creditLimit": "Credit Limit",
+    "debtorsCount": "Debtors",
+    "receivablesTitle": "Accounts Receivable",
+    "noDebts": "No debts"
   },
   "monitoringMap": {
     "inTransit": "In Transit",
-    "plan": "Planned"
+    "plan": "Planned",
+    "points": "Points",
+    "expeditors": "Expeditors ({{count}})",
+    "hint": "Tap to focus, long press for details",
+    "noActiveRoutes": "No active routes"
   },
   "expeditorRouteDetail": {
     "completed": "Done",
     "inProgress": "In Progress",
     "onSite": "On Site",
-    "pending": "Pending"
+    "pending": "Pending",
+    "arrival": "Arrival",
+    "departure": "Departure",
+    "points": "Points",
+    "deliveries": "Deliveries",
+    "returns": "Returns"
   },
   "app": {
     "initError": "Database error: {{error}}",
     "initializing": "Initializing database..."
+  },
+  "notifications": {
+    "minAgo": "min ago",
+    "hoursAgo": "h ago",
+    "markAllRead": "Mark all as read ({{count}})",
+    "noNotifications": "No notifications"
   }
 }

@@ -86,7 +86,7 @@ export default function ProfileScreen() {
           icon="settings"
           iconColor={COLORS.info}
           title={t('profileScreen.settings')}
-          subtitle="PIN, синхронизация, профиль"
+          subtitle={t('profileScreen.settingsSub')}
           onPress={() => navigation.navigate(SCREEN_NAMES.SETTINGS)}
         />
       </View>
@@ -94,20 +94,20 @@ export default function ProfileScreen() {
       {/* Информация */}
       <View style={styles.infoSection}>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Логин</Text>
+          <Text style={styles.infoLabel}>{t('profileScreen.login')}</Text>
           <Text style={styles.infoValue}>@{user?.username}</Text>
         </View>
         <View style={styles.separator} />
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Роль</Text>
+          <Text style={styles.infoLabel}>{t('profileScreen.role')}</Text>
           <Text style={styles.infoValue}>{t('roles.' + user?.role) || user?.role}</Text>
         </View>
         <View style={styles.separator} />
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Статус</Text>
+          <Text style={styles.infoLabel}>{t('profileScreen.status')}</Text>
           <View style={styles.statusBadge}>
             <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Активен</Text>
+            <Text style={styles.statusText}>{t('profileScreen.active')}</Text>
           </View>
         </View>
       </View>

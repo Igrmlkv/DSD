@@ -116,7 +116,7 @@ export default function RoutesScreen() {
             </View>
             <View style={styles.routeMeta}>
               <Ionicons name="location-outline" size={14} color={COLORS.textSecondary} />
-              <Text style={styles.routeMetaText}>{routePoints.length} точек</Text>
+              <Text style={styles.routeMetaText}>{routePoints.length} {t('routesScreen.points')}</Text>
             </View>
             <Ionicons
               name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -155,7 +155,7 @@ export default function RoutesScreen() {
       {routes.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="map-outline" size={48} color={COLORS.tabBarInactive} />
-          <Text style={styles.emptyText}>Нет маршрутов на сегодня</Text>
+          <Text style={styles.emptyText}>{t('routesScreen.noRoutes')}</Text>
         </View>
       ) : (
         <FlatList

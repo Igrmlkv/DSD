@@ -61,8 +61,8 @@ export default function FinanceScreen() {
               <View style={[styles.barFill, { width: `${Math.min(ratio * 100, 100)}%`, backgroundColor: barColor }]} />
             </View>
             <View style={styles.barLabels}>
-              <Text style={styles.barLabel}>Использовано {Math.round(ratio * 100)}%</Text>
-              <Text style={styles.barLabel}>Лимит: {formatMoney(item.credit_limit)}</Text>
+              <Text style={styles.barLabel}>{t('financeScreen.used', { percent: Math.round(ratio * 100) })}</Text>
+              <Text style={styles.barLabel}>{t('financeScreen.limit')}: {formatMoney(item.credit_limit)}</Text>
             </View>
           </View>
         )}
@@ -84,21 +84,21 @@ export default function FinanceScreen() {
         <View style={styles.summaryCard}>
           <Ionicons name="trending-down" size={22} color={COLORS.error} />
           <Text style={styles.summaryAmount}>{formatMoney(totalDebt)}</Text>
-          <Text style={styles.summaryLabel}>Дебиторка</Text>
+          <Text style={styles.summaryLabel}>{t('financeScreen.receivables')}</Text>
         </View>
         <View style={styles.summaryCard}>
           <Ionicons name="shield-checkmark-outline" size={22} color={COLORS.secondary} />
           <Text style={styles.summaryAmount}>{formatMoney(totalLimit)}</Text>
-          <Text style={styles.summaryLabel}>Кредитный лимит</Text>
+          <Text style={styles.summaryLabel}>{t('financeScreen.creditLimit')}</Text>
         </View>
         <View style={styles.summaryCard}>
           <Ionicons name="people-outline" size={22} color={COLORS.info} />
           <Text style={styles.summaryAmount}>{debtors.length}</Text>
-          <Text style={styles.summaryLabel}>Должников</Text>
+          <Text style={styles.summaryLabel}>{t('financeScreen.debtorsCount')}</Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Дебиторская задолженность</Text>
+      <Text style={styles.sectionTitle}>{t('financeScreen.receivablesTitle')}</Text>
 
       <FlatList
         data={debtors}
@@ -108,7 +108,7 @@ export default function FinanceScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <Ionicons name="checkmark-circle-outline" size={48} color="#4CAF50" />
-            <Text style={styles.emptyText}>Нет задолженностей</Text>
+            <Text style={styles.emptyText}>{t('financeScreen.noDebts')}</Text>
           </View>
         }
       />

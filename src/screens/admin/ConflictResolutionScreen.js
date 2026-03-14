@@ -66,7 +66,7 @@ export default function ConflictResolutionScreen() {
           <View style={styles.compareBox}>
             <View style={styles.compareHeader}>
               <Ionicons name="cloud" size={14} color={COLORS.secondary} />
-              <Text style={styles.compareTitle}>Сервер</Text>
+              <Text style={styles.compareTitle}>{t('conflictResolution.server')}</Text>
             </View>
             <Text style={styles.compareValue} numberOfLines={3}>
               {item.server_value || t('conflictResolution.noData')}
@@ -82,7 +82,7 @@ export default function ConflictResolutionScreen() {
           <View style={styles.compareBox}>
             <View style={styles.compareHeader}>
               <Ionicons name="phone-portrait" size={14} color={COLORS.info} />
-              <Text style={styles.compareTitle}>Устройство</Text>
+              <Text style={styles.compareTitle}>{t('conflictResolution.device')}</Text>
             </View>
             <Text style={styles.compareValue} numberOfLines={3}>
               {item.mobile_value || t('conflictResolution.noData')}
@@ -98,14 +98,14 @@ export default function ConflictResolutionScreen() {
             onPress={() => handleResolve(item, 'server')}
           >
             <Ionicons name="cloud-done" size={16} color={COLORS.secondary} />
-            <Text style={[styles.actionText, { color: COLORS.secondary }]}>Принять серверную</Text>
+            <Text style={[styles.actionText, { color: COLORS.secondary }]}>{t('conflictResolution.acceptServer')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, styles.mobileBtn]}
             onPress={() => handleResolve(item, 'mobile')}
           >
             <Ionicons name="phone-portrait" size={16} color={COLORS.info} />
-            <Text style={[styles.actionText, { color: COLORS.info }]}>Принять мобильную</Text>
+            <Text style={[styles.actionText, { color: COLORS.info }]}>{t('conflictResolution.acceptMobile')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -133,8 +133,8 @@ export default function ConflictResolutionScreen() {
       ListEmptyComponent={
         <View style={styles.empty}>
           <Ionicons name="checkmark-circle-outline" size={48} color="#34C759" />
-          <Text style={styles.emptyText}>Нет конфликтов</Text>
-          <Text style={styles.emptySubtext}>Все данные синхронизированы</Text>
+          <Text style={styles.emptyText}>{t('conflictResolution.noConflicts')}</Text>
+          <Text style={styles.emptySubtext}>{t('conflictResolution.allSynced')}</Text>
         </View>
       }
     />

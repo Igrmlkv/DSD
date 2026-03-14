@@ -191,7 +191,7 @@ export default function OrderEditScreen({ route, navigation }) {
       <Modal visible={showCustomerPicker} animationType="slide" onRequestClose={() => setShowCustomerPicker(false)}>
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Выберите клиента</Text>
+            <Text style={styles.modalTitle}>{t('orderEdit.selectClient')}</Text>
             <TouchableOpacity onPress={() => { setShowCustomerPicker(false); setCustomerSearch(''); }}>
               <Ionicons name="close" size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -238,7 +238,7 @@ export default function OrderEditScreen({ route, navigation }) {
       <Modal visible={showProductPicker} animationType="slide" onRequestClose={() => setShowProductPicker(false)}>
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Добавить товар</Text>
+            <Text style={styles.modalTitle}>{t('orderEdit.addProductTitle')}</Text>
             <TouchableOpacity onPress={() => { setShowProductPicker(false); setProductSearch(''); }}>
               <Ionicons name="close" size={24} color={COLORS.text} />
             </TouchableOpacity>
@@ -271,13 +271,13 @@ export default function OrderEditScreen({ route, navigation }) {
                     <Text style={styles.pickerSub}>{item.sku} | {item.brand} | {item.volume}</Text>
                     {user?.vehicleId && (
                       <Text style={[styles.pickerStock, noStock && styles.pickerStockEmpty]}>
-                        В авто: {available} шт.
+                        {t('orderEdit.inVehicle')}: {available} {t('orderEdit.pcs')}
                       </Text>
                     )}
                   </View>
                   <View style={styles.pickerRight}>
                     <Text style={styles.pickerPrice}>{formatMoney(item.base_price)}</Text>
-                    {noStock && <Text style={styles.pickerNoStock}>Нет</Text>}
+                    {noStock && <Text style={styles.pickerNoStock}>{t('orderEdit.noStockLabel')}</Text>}
                   </View>
                 </TouchableOpacity>
               );
@@ -303,12 +303,12 @@ export default function OrderEditScreen({ route, navigation }) {
         {readOnly && (
           <View style={styles.readOnlyBanner}>
             <Ionicons name="lock-closed" size={16} color={COLORS.white} />
-            <Text style={styles.readOnlyText}>Заказ отгружен — только просмотр</Text>
+            <Text style={styles.readOnlyText}>{t('orderEdit.readOnlyHint')}</Text>
           </View>
         )}
 
         {/* Клиент */}
-        <Text style={styles.sectionLabel}>Клиент</Text>
+        <Text style={styles.sectionLabel}>{t('orderEdit.clientLabel')}</Text>
         <TouchableOpacity style={styles.selector} onPress={() => !readOnly && setShowCustomerPicker(true)} disabled={readOnly}>
           <Ionicons name="people-outline" size={20} color={customerId ? COLORS.primary : COLORS.textSecondary} />
           <Text style={[styles.selectorText, !customerId && { color: COLORS.tabBarInactive }]}>
@@ -319,11 +319,11 @@ export default function OrderEditScreen({ route, navigation }) {
 
         {/* Товары */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionLabel}>Товары ({lines.length})</Text>
+          <Text style={styles.sectionLabel}>{t('orderEdit.products')} ({lines.length})</Text>
           {!readOnly && (
             <TouchableOpacity style={styles.addBtn} onPress={() => setShowProductPicker(true)}>
               <Ionicons name="add-circle" size={20} color={COLORS.primary} />
-              <Text style={styles.addBtnText}>Добавить</Text>
+              <Text style={styles.addBtnText}>{t('orderEdit.add')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -331,7 +331,7 @@ export default function OrderEditScreen({ route, navigation }) {
         {lines.length === 0 ? (
           <View style={styles.emptyLines}>
             <Ionicons name="cube-outline" size={32} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyLinesText}>Нет товаров</Text>
+            <Text style={styles.emptyLinesText}>{t('orderEdit.noProducts')}</Text>
           </View>
         ) : (
           lines.map((line, idx) => (
@@ -341,7 +341,7 @@ export default function OrderEditScreen({ route, navigation }) {
                   <Text style={styles.lineName} numberOfLines={1}>{line.name}</Text>
                   <Text style={styles.lineMeta}>
                     {line.sku} | {line.volume} | {formatMoney(line.price)}/шт
-                    {line.maxStock != null && !readOnly ? `  •  В авто: ${line.maxStock}` : ''}
+                    {line.maxStock != null && !readOnly ? `  •  ${t('orderEdit.inVehicle')}: ${line.maxStock}` : ''}
                   </Text>
                 </View>
                 {!readOnly && (
@@ -390,7 +390,7 @@ export default function OrderEditScreen({ route, navigation }) {
         )}
 
         {/* Примечание */}
-        <Text style={styles.sectionLabel}>Примечание</Text>
+        <Text style={styles.sectionLabel}>{t('orderEdit.note')}</Text>
         <TextInput
           style={styles.notesInput}
           value={notes}
@@ -404,7 +404,7 @@ export default function OrderEditScreen({ route, navigation }) {
         {/* Итого */}
         {lines.length > 0 && (
           <View style={styles.totalBar}>
-            <Text style={styles.totalLabel}>Итого</Text>
+            <Text style={styles.totalLabel}>{t('orderEdit.total')}</Text>
             <Text style={styles.totalValue}>{formatMoney(totalAmount)}</Text>
           </View>
         )}

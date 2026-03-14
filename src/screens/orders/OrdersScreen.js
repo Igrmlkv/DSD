@@ -128,9 +128,9 @@ export default function OrdersScreen() {
             {orderItems.length > 0 && (
               <>
                 <View style={styles.itemsHeader}>
-                  <Text style={[styles.itemsHeaderText, { flex: 1 }]}>Товар</Text>
-                  <Text style={styles.itemsHeaderText}>Кол-во</Text>
-                  <Text style={[styles.itemsHeaderText, { textAlign: 'right', width: 90 }]}>Сумма</Text>
+                  <Text style={[styles.itemsHeaderText, { flex: 1 }]}>{t('ordersScreen.product')}</Text>
+                  <Text style={styles.itemsHeaderText}>{t('ordersScreen.quantity')}</Text>
+                  <Text style={[styles.itemsHeaderText, { textAlign: 'right', width: 90 }]}>{t('ordersScreen.amount')}</Text>
                 </View>
                 {orderItems.map((oi) => (
                   <React.Fragment key={oi.id}>{renderItem({ item: oi })}</React.Fragment>
@@ -139,7 +139,7 @@ export default function OrdersScreen() {
             )}
             {item.discount_amount > 0 && (
               <View style={styles.discountRow}>
-                <Text style={styles.discountLabel}>Скидка</Text>
+                <Text style={styles.discountLabel}>{t('ordersScreen.discount')}</Text>
                 <Text style={styles.discountValue}>-{formatMoney(item.discount_amount)}</Text>
               </View>
             )}
@@ -148,17 +148,17 @@ export default function OrdersScreen() {
                 <>
                   <TouchableOpacity style={styles.actionBtn} onPress={() => handleEdit(item.id)}>
                     <Ionicons name="create-outline" size={16} color={COLORS.secondary} />
-                    <Text style={[styles.actionText, { color: COLORS.secondary }]}>Редактировать</Text>
+                    <Text style={[styles.actionText, { color: COLORS.secondary }]}>{t('ordersScreen.edit')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(item.id)}>
                     <Ionicons name="trash-outline" size={16} color={COLORS.error} />
-                    <Text style={[styles.actionText, { color: COLORS.error }]}>Удалить</Text>
+                    <Text style={[styles.actionText, { color: COLORS.error }]}>{t('ordersScreen.delete')}</Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate(SCREEN_NAMES.ORDER_EDIT, { orderId: item.id, readOnly: true })}>
                   <Ionicons name="eye-outline" size={16} color={COLORS.primary} />
-                  <Text style={[styles.actionText, { color: COLORS.primary }]}>Просмотр</Text>
+                  <Text style={[styles.actionText, { color: COLORS.primary }]}>{t('ordersScreen.view')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -181,17 +181,17 @@ export default function OrdersScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Заказы</Text>
+        <Text style={styles.headerTitle}>{t('ordersScreen.title')}</Text>
       </View>
       <View style={styles.summary}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{orders.length}</Text>
-          <Text style={styles.summaryLabel}>заказов</Text>
+          <Text style={styles.summaryLabel}>{t('ordersScreen.ordersCount')}</Text>
         </View>
         <View style={styles.summaryDivider} />
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{formatMoney(totalSum)}</Text>
-          <Text style={styles.summaryLabel}>на сумму</Text>
+          <Text style={styles.summaryLabel}>{t('ordersScreen.totalAmount')}</Text>
         </View>
       </View>
       <FlatList
@@ -202,7 +202,7 @@ export default function OrdersScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <Ionicons name="document-text-outline" size={48} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyText}>Нет заказов</Text>
+            <Text style={styles.emptyText}>{t('ordersScreen.noOrders')}</Text>
           </View>
         }
       />

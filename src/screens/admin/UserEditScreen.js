@@ -95,7 +95,7 @@ export default function UserEditScreen({ route }) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* ФИО */}
-      <Text style={styles.label}>ФИО *</Text>
+      <Text style={styles.label}>{t('userEdit.fullName')} *</Text>
       <TextInput
         style={styles.input}
         value={form.full_name}
@@ -105,7 +105,7 @@ export default function UserEditScreen({ route }) {
       />
 
       {/* Логин */}
-      <Text style={styles.label}>Логин *</Text>
+      <Text style={styles.label}>{t('userEdit.loginLabel')} *</Text>
       <TextInput
         style={[styles.input, !isNew && styles.inputDisabled]}
         value={form.username}
@@ -117,7 +117,7 @@ export default function UserEditScreen({ route }) {
       />
 
       {/* Телефон */}
-      <Text style={styles.label}>Телефон</Text>
+      <Text style={styles.label}>{t('userEdit.phone')}</Text>
       <TextInput
         style={styles.input}
         value={form.phone}
@@ -128,7 +128,7 @@ export default function UserEditScreen({ route }) {
       />
 
       {/* Роль */}
-      <Text style={styles.label}>Роль *</Text>
+      <Text style={styles.label}>{t('userEdit.roleLabel')} *</Text>
       <View style={styles.roleRow}>
         {ROLES.map((r) => (
           <TouchableOpacity
@@ -146,7 +146,7 @@ export default function UserEditScreen({ route }) {
       {/* Транспорт */}
       {form.role === 'expeditor' && (
         <>
-          <Text style={styles.label}>Номер ТС</Text>
+          <Text style={styles.label}>{t('userEdit.vehicleNumber')}</Text>
           <TextInput
             style={styles.input}
             value={form.vehicle_number}
@@ -159,21 +159,21 @@ export default function UserEditScreen({ route }) {
       )}
 
       {/* Статус */}
-      <Text style={styles.label}>Статус</Text>
+      <Text style={styles.label}>{t('userEdit.statusLabel')}</Text>
       <View style={styles.statusRow}>
         <TouchableOpacity
           style={[styles.statusChip, form.is_active === 1 && styles.statusActive]}
           onPress={() => updateField('is_active', 1)}
         >
           <View style={[styles.statusDot, { backgroundColor: '#34C759' }]} />
-          <Text style={[styles.statusChipText, form.is_active === 1 && styles.statusChipTextActive]}>Активен</Text>
+          <Text style={[styles.statusChipText, form.is_active === 1 && styles.statusChipTextActive]}>{t('userEdit.active')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.statusChip, form.is_active === 0 && styles.statusInactive]}
           onPress={() => updateField('is_active', 0)}
         >
           <View style={[styles.statusDot, { backgroundColor: COLORS.error }]} />
-          <Text style={[styles.statusChipText, form.is_active === 0 && styles.statusChipTextActive]}>Неактивен</Text>
+          <Text style={[styles.statusChipText, form.is_active === 0 && styles.statusChipTextActive]}>{t('userEdit.inactive')}</Text>
         </TouchableOpacity>
       </View>
 

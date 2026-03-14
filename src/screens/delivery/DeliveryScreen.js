@@ -81,12 +81,12 @@ export default function DeliveryScreen() {
           {item.debt_amount > 0 ? (
             <View style={styles.debtBadge}>
               <Text style={[styles.debtText, { color: debtColor }]}>
-                Долг: {formatMoney(item.debt_amount)}
+                {t('deliveryScreen.debt')}: {formatMoney(item.debt_amount)}
               </Text>
             </View>
           ) : (
             <View style={styles.debtBadge}>
-              <Text style={[styles.debtText, { color: '#4CAF50' }]}>Без долга</Text>
+              <Text style={[styles.debtText, { color: '#4CAF50' }]}>{t('deliveryScreen.noDebt')}</Text>
             </View>
           )}
         </View>
@@ -134,7 +134,7 @@ export default function DeliveryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.topBarText}>Клиенты: {total} в {sections.length} городах</Text>
+        <Text style={styles.topBarText}>{t('deliveryScreen.clientsInCities', { total, cities: sections.length })}</Text>
       </View>
       <SectionList
         sections={sections}
@@ -146,7 +146,7 @@ export default function DeliveryScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <Ionicons name="cube-outline" size={48} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyText}>Нет клиентов</Text>
+            <Text style={styles.emptyText}>{t('deliveryScreen.noClients')}</Text>
           </View>
         }
       />

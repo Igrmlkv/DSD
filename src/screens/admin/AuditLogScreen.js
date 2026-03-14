@@ -19,7 +19,7 @@ const ACTION_ICONS = {
 };
 
 export default function AuditLogScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const FILTERS = [
     { key: 'all', label: t('auditLog.filters.all') },
@@ -78,8 +78,9 @@ export default function AuditLogScreen() {
     const d = new Date(dateStr);
     const now = new Date();
     const isToday = d.toDateString() === now.toDateString();
-    const time = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    return isToday ? `Сегодня, ${time}` : d.toLocaleDateString('ru-RU') + ` ${time}`;
+    const locale = i18n.language === 'ru' ? 'ru-RU' : 'en-US';
+    const time = d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    return isToday ? `${t('auditLog.today')}, ${time}` : d.toLocaleDateString(locale) + ` ${time}`;
   };
 
   const renderEntry = ({ item }) => {
@@ -152,7 +153,7 @@ export default function AuditLogScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="list-outline" size={48} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyText}>Нет записей</Text>
+            <Text style={styles.emptyText}>{t('auditLog.noRecords')}</Text>
           </View>
         }
       />

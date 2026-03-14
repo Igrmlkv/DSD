@@ -361,7 +361,18 @@
     },
     "deleteOrder": "Удалить заказ?",
     "deleteOrderMsg": "Заказ и все его позиции будут удалены.",
-    "deleteButton": "Удалить"
+    "deleteButton": "Удалить",
+    "product": "Товар",
+    "quantity": "Кол-во",
+    "amount": "Сумма",
+    "discount": "Скидка",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "view": "Просмотр",
+    "title": "Заказы",
+    "ordersCount": "заказов",
+    "totalAmount": "на сумму",
+    "noOrders": "Нет заказов"
   },
   "orderEdit": {
     "alreadyAdded": "Товар уже добавлен",
@@ -377,7 +388,19 @@
     "selectCustomerHint": "Выберите клиента...",
     "commentPlaceholder": "Комментарий к заказу...",
     "saveChanges": "Сохранить изменения",
-    "createOrder": "Создать заказ"
+    "createOrder": "Создать заказ",
+    "selectClient": "Выберите клиента",
+    "addProductTitle": "Добавить товар",
+    "inVehicle": "В авто",
+    "pcs": "шт.",
+    "noStockLabel": "Нет",
+    "readOnlyHint": "Заказ отгружен — только просмотр",
+    "clientLabel": "Клиент",
+    "products": "Товары",
+    "add": "Добавить",
+    "noProducts": "Нет товаров",
+    "note": "Примечание",
+    "total": "Итого"
   },
   "returnApproval": {
     "approveReturn": "Утвердить возврат?",
@@ -386,17 +409,26 @@
     "noReason": "Без указания причины",
     "rejectReturn": "Отклонить возврат?",
     "reject": "Отклонить",
-    "rejectedBySupervisor": "Отклонено супервайзером"
+    "rejectedBySupervisor": "Отклонено супервайзером",
+    "noReturns": "Нет возвратов на утверждении"
   },
   "analyticsScreen": {
     "periods": {
       "day": "День",
       "week": "Неделя",
       "month": "Месяц"
-    }
+    },
+    "pointsVisited": "Точки посещены",
+    "paymentsToday": "Оплаты за день",
+    "pendingApproval": "Ожидают утверждения",
+    "returnsAmount": "Сумма возвратов",
+    "expeditorPerformance": "Производительность экспедиторов",
+    "topDebtors": "Топ-10 дебиторов"
   },
   "userManagement": {
-    "searchPlaceholder": "Поиск по имени, логину, роли..."
+    "searchPlaceholder": "Поиск по имени, логину, роли...",
+    "total": "Всего",
+    "notFound": "Пользователи не найдены"
   },
   "userEdit": {
     "errorName": "Введите ФИО",
@@ -407,7 +439,15 @@
     "namePlaceholder": "Иванов Иван Иванович",
     "platePlaceholder": "А123БВ 77",
     "createUser": "Создать пользователя",
-    "saveChanges": "Сохранить изменения"
+    "saveChanges": "Сохранить изменения",
+    "fullName": "ФИО",
+    "loginLabel": "Логин",
+    "phone": "Телефон",
+    "roleLabel": "Роль",
+    "vehicleNumber": "Номер ТС",
+    "statusLabel": "Статус",
+    "active": "Активен",
+    "inactive": "Неактивен"
   },
   "deviceManagement": {
     "statuses": {
@@ -415,7 +455,15 @@
       "inactive": "Неактивно",
       "blocked": "Заблокировано"
     },
-    "searchPlaceholder": "Поиск по устройству, пользователю..."
+    "searchPlaceholder": "Поиск по устройству, пользователю...",
+    "user": "Пользователь",
+    "appVersion": "Версия приложения",
+    "lastSync": "Последняя синхронизация",
+    "data": "Данные",
+    "total": "Всего",
+    "activeCount": "Активных",
+    "blocked": "Заблокировано",
+    "notFound": "Устройства не найдены"
   },
   "syncMonitoring": {
     "statuses": {
@@ -423,7 +471,15 @@
       "warning": "Предупреждение",
       "critical": "Критическое"
     },
-    "conflictsRequire": "{{count}} конфликтов требуют разрешения"
+    "conflictsRequire": "{{count}} конфликтов требуют разрешения",
+    "lastSync": "Последняя синхронизация",
+    "docsInQueue": "Документов в очереди",
+    "devicesCount": "Устройств",
+    "synced": "Синхр.",
+    "inQueue": "В очереди",
+    "conflictsCount": "Конфликтов",
+    "deviceStatus": "Статус по устройствам",
+    "noData": "Нет данных синхронизации"
   },
   "conflictResolution": {
     "entityTypes": {
@@ -441,7 +497,13 @@
     "conflictResolved": "Конфликт разрешён",
     "syncConflict": "Конфликт данных при синхронизации",
     "noData": "Нет данных",
-    "conflictsToResolve": "{{count}} конфликтов для разрешения"
+    "conflictsToResolve": "{{count}} конфликтов для разрешения",
+    "server": "Сервер",
+    "device": "Устройство",
+    "acceptServer": "Принять серверную",
+    "acceptMobile": "Принять мобильную",
+    "noConflicts": "Нет конфликтов",
+    "allSynced": "Все данные синхронизированы"
   },
   "auditLog": {
     "types": {
@@ -462,7 +524,9 @@
       "update": "Изменение",
       "approve": "Утверждение"
     },
-    "searchPlaceholder": "Поиск по пользователю, описанию..."
+    "searchPlaceholder": "Поиск по пользователю, описанию...",
+    "today": "Сегодня",
+    "noRecords": "Нет записей"
   },
   "systemSettings": {
     "syncSection": "Синхронизация",
@@ -503,7 +567,12 @@
     "defaultName": "Пользователь",
     "notifications": "Уведомления",
     "notificationsSub": "Системные уведомления",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "settingsSub": "PIN, синхронизация, профиль",
+    "login": "Логин",
+    "role": "Роль",
+    "status": "Статус",
+    "active": "Активен"
   },
   "settingsScreen": {
     "logoutTitle": "Выход",
@@ -541,37 +610,74 @@
       "arrived": "На месте",
       "completed": "Выполнено",
       "skipped": "Пропущено"
-    }
+    },
+    "points": "точек",
+    "noRoutes": "Нет маршрутов на сегодня"
   },
   "deliveryScreen": {
     "types": {
       "retail": "Розница",
       "wholesale": "Опт"
     },
-    "other": "Другое"
+    "other": "Другое",
+    "debt": "Долг",
+    "noDebt": "Без долга",
+    "clientsInCities": "Клиенты: {{total}} в {{cities}} городах",
+    "noClients": "Нет клиентов"
   },
   "warehouseScreen": {
     "other": "Другое",
     "inTruck": "В кузове",
     "inWarehouse": "На складе",
-    "searchPlaceholder": "Поиск по названию, SKU, бренду..."
+    "searchPlaceholder": "Поиск по названию, SKU, бренду...",
+    "reserved": "Резерв",
+    "available": "Доступно",
+    "low": "Мало",
+    "items": "поз.",
+    "notAccepted": "Остатки не приняты в машину",
+    "completeLoading": "Завершите загрузку рейса, чтобы подтвердить остатки в автомобиле",
+    "units": "ед.",
+    "kgInVehicle": "кг в кузове",
+    "nothingFound": "Ничего не найдено"
   },
   "financeScreen": {
     "credit": "Кредит",
-    "cash": "Наличные"
+    "cash": "Наличные",
+    "used": "Использовано {{percent}}%",
+    "limit": "Лимит",
+    "receivables": "Дебиторка",
+    "creditLimit": "Кредитный лимит",
+    "debtorsCount": "Должников",
+    "receivablesTitle": "Дебиторская задолженность",
+    "noDebts": "Нет задолженностей"
   },
   "monitoringMap": {
     "inTransit": "В пути",
-    "plan": "План"
+    "plan": "План",
+    "points": "Точки",
+    "expeditors": "Экспедиторы ({{count}})",
+    "hint": "Нажмите для фокуса, удерживайте для деталей",
+    "noActiveRoutes": "Нет активных маршрутов"
   },
   "expeditorRouteDetail": {
     "completed": "Готово",
     "inProgress": "В работе",
     "onSite": "На месте",
-    "pending": "Ожидает"
+    "pending": "Ожидает",
+    "arrival": "Прибытие",
+    "departure": "Убытие",
+    "points": "Точки",
+    "deliveries": "Доставки",
+    "returns": "Возвраты"
   },
   "app": {
     "initError": "Database error: {{error}}",
     "initializing": "Initializing database..."
+  },
+  "notifications": {
+    "minAgo": "мин назад",
+    "hoursAgo": "ч назад",
+    "markAllRead": "Отметить все прочитанными ({{count}})",
+    "noNotifications": "Нет уведомлений"
   }
 }

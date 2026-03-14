@@ -103,11 +103,11 @@ export default function WarehouseScreen() {
             <Text style={styles.stockValue}>{item.quantity}</Text>
           </View>
           <View style={styles.stockItem}>
-            <Text style={styles.stockLabel}>Резерв</Text>
+            <Text style={styles.stockLabel}>{t('warehouseScreen.reserved')}</Text>
             <Text style={[styles.stockValue, { color: COLORS.accent }]}>{item.reserved}</Text>
           </View>
           <View style={styles.stockItem}>
-            <Text style={styles.stockLabel}>Доступно</Text>
+            <Text style={styles.stockLabel}>{t('warehouseScreen.available')}</Text>
             <Text style={[styles.stockValue, { color: lowStock ? COLORS.error : '#4CAF50' }]}>
               {available}
             </Text>
@@ -115,7 +115,7 @@ export default function WarehouseScreen() {
           {lowStock && (
             <View style={styles.lowBadge}>
               <Ionicons name="warning" size={12} color={COLORS.error} />
-              <Text style={styles.lowText}>Мало</Text>
+              <Text style={styles.lowText}>{t('warehouseScreen.low')}</Text>
             </View>
           )}
         </View>
@@ -127,7 +127,7 @@ export default function WarehouseScreen() {
     return (
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{section.title}</Text>
-        <Text style={styles.sectionCount}>{section.data.length} поз.</Text>
+        <Text style={styles.sectionCount}>{section.data.length} {t('warehouseScreen.items')}</Text>
       </View>
     );
   }
@@ -154,9 +154,9 @@ export default function WarehouseScreen() {
         )}
         <View style={styles.notAccepted}>
           <Ionicons name="cube-outline" size={64} color={COLORS.tabBarInactive} />
-          <Text style={styles.notAcceptedTitle}>Остатки не приняты в машину</Text>
+          <Text style={styles.notAcceptedTitle}>{t('warehouseScreen.notAccepted')}</Text>
           <Text style={styles.notAcceptedSub}>
-            Завершите загрузку рейса, чтобы подтвердить остатки в автомобиле
+            {t('warehouseScreen.completeLoading')}
           </Text>
         </View>
       </View>
@@ -194,8 +194,8 @@ export default function WarehouseScreen() {
 
       <View style={styles.statsRow}>
         <Text style={styles.statsText}>
-          {totalItems} поз. | {totalQty} ед.
-          {isExpeditor ? ` | ~${Math.round(totalWeight)} кг в кузове` : ' на складе'}
+          {totalItems} {t('warehouseScreen.items')} | {totalQty} {t('warehouseScreen.units')}
+          {isExpeditor ? ` | ~${Math.round(totalWeight)} ${t('warehouseScreen.kgInVehicle')}` : ` ${t('warehouseScreen.inWarehouse')}`}
         </Text>
       </View>
 
@@ -209,7 +209,7 @@ export default function WarehouseScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <Ionicons name="search-outline" size={48} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyText}>Ничего не найдено</Text>
+            <Text style={styles.emptyText}>{t('warehouseScreen.nothingFound')}</Text>
           </View>
         }
       />

@@ -15,7 +15,7 @@ const STATUS_COLORS = {
 };
 
 export default function ExpeditorRouteDetailScreen({ route }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { expeditorId, routeId, driverName } = route.params || {};
   const [points, setPoints] = useState([]);
   const [deliveryCount, setDeliveryCount] = useState(0);
@@ -54,12 +54,12 @@ export default function ExpeditorRouteDetailScreen({ route }) {
           <View style={styles.pointMeta}>
             {item.actual_arrival && (
               <Text style={styles.metaText}>
-                Прибытие: {new Date(item.actual_arrival).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                {t('expeditorRouteDetail.arrival')}: {new Date(item.actual_arrival).toLocaleTimeString(i18n.language === 'ru' ? 'ru-RU' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
               </Text>
             )}
             {item.actual_departure && (
               <Text style={styles.metaText}>
-                Убытие: {new Date(item.actual_departure).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                {t('expeditorRouteDetail.departure')}: {new Date(item.actual_departure).toLocaleTimeString(i18n.language === 'ru' ? 'ru-RU' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
               </Text>
             )}
           </View>
@@ -80,17 +80,17 @@ export default function ExpeditorRouteDetailScreen({ route }) {
           <View style={styles.stat}>
             <Ionicons name="location" size={18} color={COLORS.primary} />
             <Text style={styles.statValue}>{completed}/{points.length}</Text>
-            <Text style={styles.statLabel}>Точки</Text>
+            <Text style={styles.statLabel}>{t('expeditorRouteDetail.points')}</Text>
           </View>
           <View style={styles.stat}>
             <Ionicons name="cube" size={18} color={COLORS.accent} />
             <Text style={styles.statValue}>{deliveryCount}</Text>
-            <Text style={styles.statLabel}>Доставки</Text>
+            <Text style={styles.statLabel}>{t('expeditorRouteDetail.deliveries')}</Text>
           </View>
           <View style={styles.stat}>
             <Ionicons name="return-down-back" size={18} color={COLORS.error} />
             <Text style={styles.statValue}>{returnCount}</Text>
-            <Text style={styles.statLabel}>Возвраты</Text>
+            <Text style={styles.statLabel}>{t('expeditorRouteDetail.returns')}</Text>
           </View>
         </View>
       </View>

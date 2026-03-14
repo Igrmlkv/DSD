@@ -64,22 +64,22 @@ export default function DeviceManagementScreen() {
 
         <View style={styles.detailsGrid}>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Пользователь</Text>
+            <Text style={styles.detailLabel}>{t('deviceManagement.user')}</Text>
             <Text style={styles.detailValue}>{item.user_name || '—'}</Text>
           </View>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Версия приложения</Text>
+            <Text style={styles.detailLabel}>{t('deviceManagement.appVersion')}</Text>
             <Text style={styles.detailValue}>{item.app_version || '—'}</Text>
           </View>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Последняя синхронизация</Text>
+            <Text style={styles.detailLabel}>{t('deviceManagement.lastSync')}</Text>
             <Text style={[styles.detailValue, syncWarning && styles.detailWarning]}>
               {formatDate(item.last_sync)}
               {syncWarning && ' ⚠️'}
             </Text>
           </View>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Данные</Text>
+            <Text style={styles.detailLabel}>{t('deviceManagement.data')}</Text>
             <Text style={styles.detailValue}>{item.storage_used ? `${item.storage_used} МБ` : '—'}</Text>
           </View>
         </View>
@@ -110,15 +110,15 @@ export default function DeviceManagementScreen() {
       <View style={styles.summaryRow}>
         <View style={styles.summaryItem}>
           <Text style={styles.summaryValue}>{devices.length}</Text>
-          <Text style={styles.summaryLabel}>Всего</Text>
+          <Text style={styles.summaryLabel}>{t('deviceManagement.total')}</Text>
         </View>
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: '#34C759' }]}>{devices.filter((d) => d.status === 'active').length}</Text>
-          <Text style={styles.summaryLabel}>Активных</Text>
+          <Text style={styles.summaryLabel}>{t('deviceManagement.activeCount')}</Text>
         </View>
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: COLORS.error }]}>{devices.filter((d) => d.status === 'blocked').length}</Text>
-          <Text style={styles.summaryLabel}>Заблокировано</Text>
+          <Text style={styles.summaryLabel}>{t('deviceManagement.blocked')}</Text>
         </View>
       </View>
 
@@ -131,7 +131,7 @@ export default function DeviceManagementScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="phone-portrait-outline" size={48} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyText}>Устройства не найдены</Text>
+            <Text style={styles.emptyText}>{t('deviceManagement.notFound')}</Text>
           </View>
         }
       />

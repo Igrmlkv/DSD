@@ -90,7 +90,7 @@ export default function UserManagementScreen() {
 
       {/* Счётчик */}
       <View style={styles.countRow}>
-        <Text style={styles.countText}>Всего: {filtered.length}</Text>
+        <Text style={styles.countText}>{t('userManagement.total')}: {filtered.length}</Text>
         <View style={styles.countBadges}>
           {['expeditor', 'supervisor', 'admin'].map((key) => {
             const count = filtered.filter((u) => u.role === key).length;
@@ -112,7 +112,7 @@ export default function UserManagementScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="people-outline" size={48} color={COLORS.tabBarInactive} />
-            <Text style={styles.emptyText}>Пользователи не найдены</Text>
+            <Text style={styles.emptyText}>{t('userManagement.notFound')}</Text>
           </View>
         }
       />

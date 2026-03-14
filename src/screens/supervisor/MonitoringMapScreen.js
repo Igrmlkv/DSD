@@ -150,7 +150,7 @@ export default function MonitoringMapScreen() {
 
         <View style={styles.progressSection}>
           <View style={styles.progressInfo}>
-            <Text style={styles.progressLabel}>Точки: {item.completed_points}/{item.total_points}</Text>
+            <Text style={styles.progressLabel}>{t('monitoringMap.points')}: {item.completed_points}/{item.total_points}</Text>
             <Text style={styles.progressPercent}>{Math.round(progress)}%</Text>
           </View>
           <View style={styles.progressBg}>
@@ -179,13 +179,13 @@ export default function MonitoringMapScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
         ListHeaderComponent={
           <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Экспедиторы ({expeditors.length})</Text>
-            <Text style={styles.listHint}>Нажмите для фокуса, удерживайте для деталей</Text>
+            <Text style={styles.listTitle}>{t('monitoringMap.expeditors', { count: expeditors.length })}</Text>
+            <Text style={styles.listHint}>{t('monitoringMap.hint')}</Text>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Нет активных маршрутов</Text>
+            <Text style={styles.emptyText}>{t('monitoringMap.noActiveRoutes')}</Text>
           </View>
         }
       />

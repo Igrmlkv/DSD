@@ -61,25 +61,25 @@ export default function AnalyticsReportsScreen() {
         <View style={styles.kpiGrid}>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiValue}>{stats.completedPoints}/{stats.totalPoints}</Text>
-            <Text style={styles.kpiLabel}>Точки посещены</Text>
+            <Text style={styles.kpiLabel}>{t('analyticsScreen.pointsVisited')}</Text>
           </View>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiValue}>{formatMoney(stats.totalPayments)}</Text>
-            <Text style={styles.kpiLabel}>Оплаты за день</Text>
+            <Text style={styles.kpiLabel}>{t('analyticsScreen.paymentsToday')}</Text>
           </View>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiValue}>{stats.pendingReturns}</Text>
-            <Text style={styles.kpiLabel}>Ожидают утверждения</Text>
+            <Text style={styles.kpiLabel}>{t('analyticsScreen.pendingApproval')}</Text>
           </View>
           <View style={styles.kpiCard}>
             <Text style={styles.kpiValue}>{formatMoney(stats.pendingReturnsAmount)}</Text>
-            <Text style={styles.kpiLabel}>Сумма возвратов</Text>
+            <Text style={styles.kpiLabel}>{t('analyticsScreen.returnsAmount')}</Text>
           </View>
         </View>
       )}
 
       {/* Производительность экспедиторов */}
-      <Text style={styles.sectionTitle}>Производительность экспедиторов</Text>
+      <Text style={styles.sectionTitle}>{t('analyticsScreen.expeditorPerformance')}</Text>
       {expeditors.map((exp) => {
         const pct = exp.total_points > 0 ? Math.round((exp.completed_points / exp.total_points) * 100) : 0;
         return (
@@ -94,7 +94,7 @@ export default function AnalyticsReportsScreen() {
       })}
 
       {/* Топ дебиторов */}
-      <Text style={styles.sectionTitle}>Топ-10 дебиторов</Text>
+      <Text style={styles.sectionTitle}>{t('analyticsScreen.topDebtors')}</Text>
       {debtors.map((d, i) => (
         <View key={d.id} style={styles.debtRow}>
           <Text style={styles.debtRank}>{i + 1}</Text>

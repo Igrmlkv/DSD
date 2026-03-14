@@ -104,7 +104,8 @@
     "quickActions": "Quick Actions",
     "actionRoute": "Route",
     "actionLoading": "Loading",
-    "actionUnloading": "Unloading"
+    "actionUnloading": "Unloading",
+    "actionStartOfDay": "Start of Day"
   },
   "supervisorHome": {
     "onRoute": "On Route",

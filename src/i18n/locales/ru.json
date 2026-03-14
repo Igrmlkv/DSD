@@ -104,7 +104,8 @@
     "quickActions": "Быстрые действия",
     "actionRoute": "Маршрут",
     "actionLoading": "Загрузка",
-    "actionUnloading": "Выгрузка"
+    "actionUnloading": "Выгрузка",
+    "actionStartOfDay": "Начало дня"
   },
   "supervisorHome": {
     "onRoute": "На маршруте",

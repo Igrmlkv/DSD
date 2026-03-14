@@ -11,7 +11,7 @@ import useAuthStore from '../../store/authStore';
 import {
   updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
   getOrCreateTodayEndCheckin, getVehicleCheckItems,
-  getUnloadingData, getTodayPaymentsTotal,
+  getUnloadingData, getTodayPaymentsTotal, getTodayTourCheckin,
 } from '../../database';
 import MaterialCheckInStep from './MaterialCheckInStep';
 import CashCheckInStep from './CashCheckInStep';
@@ -35,6 +35,7 @@ export default function EndOfDayScreen() {
   // External data
   const [unloadingData, setUnloadingData] = useState(null);
   const [expectedCashAmount, setExpectedCashAmount] = useState(0);
+  const [startOdometer, setStartOdometer] = useState(null);
 
   // Step data
   const [materialData, setMaterialData] = useState(null);
@@ -63,6 +64,12 @@ export default function EndOfDayScreen() {
         // Load expected cash total
         const cashTotal = await getTodayPaymentsTotal(user?.id);
         setExpectedCashAmount(cashTotal);
+
+        // Load start-of-day odometer for validation
+        const startCheckin = await getTodayTourCheckin(user?.id, 'start');
+        if (startCheckin?.odometer_reading) {
+          setStartOdometer(startCheckin.odometer_reading);
+        }
 
         const checkin = await getOrCreateTodayEndCheckin(user?.id, v?.id);
         if (checkin) {
@@ -207,6 +214,10 @@ export default function EndOfDayScreen() {
         Alert.alert('', t('odometerScreen.invalid'));
         return;
       }
+      if (STEPS[currentStep] === 'odometer' && startOdometer != null && odometerData?.value < startOdometer) {
+        Alert.alert('', t('odometerScreen.lessThanStart', { value: startOdometer }));
+        return;
+      }
 
       await saveStepData(STEPS[currentStep]);
 
@@ -301,7 +312,7 @@ export default function EndOfDayScreen() {
           />
         );
       case 'odometer':
-        return <OdometerStep data={odometerData} onUpdate={setOdometerData} readOnly={readOnly} />;
+        return <OdometerStep data={odometerData} onUpdate={setOdometerData} readOnly={readOnly} minReading={startOdometer} />;
       case 'vehicleCheck':
         return <VehicleCheckStep data={vehicleCheckData} onUpdate={setVehicleCheckData} readOnly={readOnly} />;
       case 'signature':

@@ -718,7 +718,8 @@
     "placeholder": "e.g. 45230",
     "lastReading": "Last reading: {{value}} km",
     "noLastReading": "No previous reading recorded",
-    "invalid": "Please enter a valid odometer reading"
+    "invalid": "Please enter a valid odometer reading",
+    "lessThanStart": "Reading must be greater than start of day ({{value}} km)"
   },
   "checkoutCash": {
     "title": "Cash on Hand",

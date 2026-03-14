@@ -6,11 +6,12 @@ import { COLORS } from '../../constants/colors';
 import { getLastOdometerReading } from '../../database';
 import useAuthStore from '../../store/authStore';
 
-export default function OdometerStep({ data, onUpdate, readOnly }) {
+export default function OdometerStep({ data, onUpdate, readOnly, minReading }) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [reading, setReading] = useState(data?.reading || '');
   const [lastReading, setLastReading] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     getLastOdometerReading(user?.id).then((row) => {
@@ -23,6 +24,11 @@ export default function OdometerStep({ data, onUpdate, readOnly }) {
     const cleaned = text.replace(/[^0-9.]/g, '');
     setReading(cleaned);
     const val = parseFloat(cleaned);
+    if (minReading != null && !isNaN(val) && val < minReading) {
+      setError(t('odometerScreen.lessThanStart', { value: minReading }));
+    } else {
+      setError('');
+    }
     onUpdate({ reading: cleaned, value: isNaN(val) ? null : val });
   };
 
@@ -56,6 +62,7 @@ export default function OdometerStep({ data, onUpdate, readOnly }) {
             ? t('odometerScreen.lastReading', { value: lastReading })
             : t('odometerScreen.noLastReading')}
         </Text>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
 
       <View style={styles.iconWrap}>
@@ -79,6 +86,7 @@ const styles = StyleSheet.create({
   },
   unit: { fontSize: 18, color: COLORS.textSecondary, fontWeight: '600' },
   hint: { fontSize: 12, color: COLORS.textSecondary, marginTop: 10, textAlign: 'center' },
+  errorText: { fontSize: 13, color: '#FF3B30', marginTop: 8, textAlign: 'center', fontWeight: '600' },
   iconWrap: { alignItems: 'center', marginTop: 40, opacity: 0.3 },
   readOnlyInput: { opacity: 0.6, backgroundColor: '#F0F0F0' },
 });

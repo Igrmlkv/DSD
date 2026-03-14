@@ -265,8 +265,9 @@
     "confirmButton": "Подтвердить",
     "receiptTitle": "Подтверждение получения",
     "recipientLabel": "ФИО получателя",
-    "signatureZone": "Зона для рукописной подписи",
-    "signatureHint": "(MVP — подтверждение по ФИО)"
+    "clientSignature": "Подпись клиента",
+    "driverSignature": "Подпись водителя / прессейлера",
+    "clientSignatureRequired": "Необходима подпись клиента"
   },
   "inventoryScreen": {
     "completeInventory": "Завершить ревизию?",

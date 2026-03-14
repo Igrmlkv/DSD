@@ -26,6 +26,15 @@ export async function initDatabase() {
     await database.execAsync(sql);
   }
 
+  // Safe migrations for existing databases
+  const migrations = [
+    "ALTER TABLE deliveries ADD COLUMN signature_data TEXT",
+    "ALTER TABLE deliveries ADD COLUMN signature_driver_data TEXT",
+  ];
+  for (const sql of migrations) {
+    try { await database.execAsync(sql); } catch { /* column already exists */ }
+  }
+
   // Check if already seeded
   const result = await database.getFirstAsync('SELECT COUNT(*) as count FROM products');
   if (result.count > 0) {
@@ -604,9 +613,9 @@ export async function createDeliveryWithItems(delivery, items) {
   const id = generateId();
   const now = new Date().toISOString();
   await database.runAsync(
-    `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_confirmed, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-    [id, delivery.order_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, 'delivered', delivery.total_amount || 0, delivery.signature_name || null, now, now]
+    `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+    [id, delivery.order_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, 'delivered', delivery.total_amount || 0, delivery.signature_name || null, delivery.signature_data || null, delivery.signature_driver_data || null, now, now]
   );
   for (const item of items) {
     const diId = generateId();

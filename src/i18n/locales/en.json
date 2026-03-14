@@ -265,8 +265,9 @@
     "confirmButton": "Confirm",
     "receiptTitle": "Receipt confirmation",
     "recipientLabel": "Recipient full name",
-    "signatureZone": "Handwritten signature area",
-    "signatureHint": "(MVP — confirmation by name)"
+    "clientSignature": "Client signature",
+    "driverSignature": "Driver / Preseller signature",
+    "clientSignatureRequired": "Client signature is required"
   },
   "inventoryScreen": {
     "completeInventory": "Complete inventory check?",

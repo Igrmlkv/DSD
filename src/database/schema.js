@@ -163,6 +163,8 @@ const CREATE_TABLES = [
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_transit','delivered','partial','rejected')),
     total_amount REAL DEFAULT 0,
     signature_name TEXT,
+    signature_data TEXT,
+    signature_driver_data TEXT,
     signature_confirmed INTEGER DEFAULT 0,
     notes TEXT,
     synced INTEGER DEFAULT 0,

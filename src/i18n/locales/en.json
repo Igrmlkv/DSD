@@ -691,8 +691,8 @@
     "tourStarted": "Route started successfully!",
     "tourStartedMsg": "You can now begin your route.",
     "alreadyCompleted": "Start-of-day already completed today",
-    "wizardTitle": "Pre-Tour Checklist",
-    "routeStarted": "Route started",
+    "wizardTitle": "Pre-Route Checklist",
+    "routeStarted": "Route in progress",
     "readOnlyBanner": "Route data (read only)"
   },
   "vehicleCheck": {
@@ -728,8 +728,8 @@
     "invalid": "Please enter a valid amount"
   },
   "tourConfirm": {
-    "title": "Tour Confirmation",
-    "subtitle": "Review and confirm to start your tour",
+    "title": "Route Confirmation",
+    "subtitle": "Review and confirm to start your route",
     "vehicleCheck": "Vehicle check",
     "materialsLoaded": "Products loaded",
     "odometer": "Odometer",
@@ -738,6 +738,6 @@
     "passed": "Passed",
     "notDone": "Not done",
     "km": "km",
-    "ready": "All checks completed. Ready to start tour."
+    "ready": "All checks completed. Ready to start route."
   }
 }

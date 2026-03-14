@@ -246,9 +246,8 @@ export default function StartOfDayScreen() {
         );
       }
 
-      Alert.alert(t('startOfDay.tourStarted'), t('startOfDay.tourStartedMsg'), [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      Alert.alert(t('startOfDay.tourStarted'), t('startOfDay.tourStartedMsg'));
+      setReadOnly(true);
     } catch (e) {
       console.error('SOD finish error:', e);
       Alert.alert(t('common.error'), e.message);

@@ -29,14 +29,20 @@ const languageDetector = {
   },
 };
 
-i18n
-  .use(languageDetector)
-  .use(initReactI18next)
-  .init({
-    resources: { ru: { translation: ru }, en: { translation: en } },
-    fallbackLng: 'ru',
-    interpolation: { escapeValue: false },
-    react: { useSuspense: false },
-  });
+let initialized = false;
+
+export function initI18n() {
+  if (initialized) return Promise.resolve(i18n);
+  initialized = true;
+  return i18n
+    .use(languageDetector)
+    .use(initReactI18next)
+    .init({
+      resources: { ru: { translation: ru }, en: { translation: en } },
+      fallbackLng: 'ru',
+      interpolation: { escapeValue: false },
+      react: { useSuspense: false },
+    });
+}
 
 export default i18n;

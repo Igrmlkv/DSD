@@ -1,55 +1,63 @@
 import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, Text, Image, ActivityIndicator, StyleSheet } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { I18nextProvider, useTranslation } from 'react-i18next';
 import YaMap from 'react-native-yamap';
-import './src/i18n';
+import i18n, { initI18n } from './src/i18n';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initDatabase } from './src/database';
 import useSettingsStore from './src/store/settingsStore';
 
 YaMap.init('b86f674c-5cc1-470b-aadf-9ae9091faee9');
 
-export default function App() {
-  const [dbReady, setDbReady] = useState(false);
-  const [dbError, setDbError] = useState(null);
-  const loadSettings = useSettingsStore((s) => s.loadSettings);
+function AppContent() {
   const { t } = useTranslation();
+  return (
+    <NavigationContainer>
+      <AppNavigator />
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState(null);
+  const loadSettings = useSettingsStore((s) => s.loadSettings);
 
   useEffect(() => {
     Promise.all([
+      initI18n(),
       initDatabase(),
       loadSettings(),
     ])
-      .then(() => setDbReady(true))
+      .then(() => setReady(true))
       .catch((err) => {
         console.error('Init error:', err);
-        setDbError(err.message);
+        setError(err.message);
       });
   }, []);
 
-  if (dbError) {
+  if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.error}>{t('app.initError', { error: dbError })}</Text>
+        <Text style={styles.error}>Initialization error: {error}</Text>
       </View>
     );
   }
 
-  if (!dbReady) {
+  if (!ready) {
     return (
       <View style={styles.center}>
         <Image source={require('./logo_2.jpg')} style={styles.logo} />
         <ActivityIndicator size="large" color="#1E3A5F" style={{ marginTop: 20 }} />
-        <Text style={styles.loading}>{t('app.initializing')}</Text>
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
-      <AppNavigator />
-    </NavigationContainer>
+    <I18nextProvider i18n={i18n}>
+      <AppContent />
+    </I18nextProvider>
   );
 }
 

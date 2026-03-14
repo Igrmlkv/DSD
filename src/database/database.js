@@ -30,6 +30,7 @@ export async function initDatabase() {
   const migrations = [
     "ALTER TABLE deliveries ADD COLUMN signature_data TEXT",
     "ALTER TABLE deliveries ADD COLUMN signature_driver_data TEXT",
+    "ALTER TABLE tour_checkins ADD COLUMN current_step INTEGER DEFAULT 0",
   ];
   for (const sql of migrations) {
     try { await database.execAsync(sql); } catch { /* column already exists */ }
@@ -1379,6 +1380,8 @@ export async function getLastOdometerReading(driverId) {
 
 export async function saveVehicleCheckItems(checkinId, items) {
   const database = await getDatabase();
+  // Remove old items for this checkin first to allow re-saving
+  await database.runAsync(`DELETE FROM vehicle_check_items WHERE checkin_id = ?`, [checkinId]);
   for (const item of items) {
     const id = generateId();
     await database.runAsync(
@@ -1386,4 +1389,31 @@ export async function saveVehicleCheckItems(checkinId, items) {
       [id, checkinId, item.question, item.answer || null, item.is_ok ? 1 : 0, item.notes || null]
     );
   }
+}
+
+export async function getVehicleCheckItems(checkinId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM vehicle_check_items WHERE checkin_id = ? ORDER BY rowid`,
+    [checkinId]
+  );
+}
+
+export async function getOrCreateTodayCheckin(driverId, vehicleId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  const existing = await database.getFirstAsync(
+    `SELECT * FROM tour_checkins WHERE driver_id = ? AND type = 'start' AND date(checkin_date) = ? ORDER BY created_at DESC LIMIT 1`,
+    [driverId, today]
+  );
+  if (existing) return existing;
+  // Create new in-progress checkin
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO tour_checkins (id, driver_id, vehicle_id, type, status, current_step, created_at, updated_at)
+     VALUES (?, ?, ?, 'start', 'in_progress', 0, ?, ?)`,
+    [id, driverId, vehicleId || '', now, now]
+  );
+  return database.getFirstAsync(`SELECT * FROM tour_checkins WHERE id = ?`, [id]);
 }

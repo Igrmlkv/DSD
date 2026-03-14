@@ -131,36 +131,39 @@ export default function RouteMapScreen({ route }) {
         polylines={polylines}
       />
 
-      <View style={styles.legend}>
-        {[
-          { color: COLORS.tabBarInactive, label: t('status.pending') },
-          { color: COLORS.accent, label: t('status.inProgress') },
-          { color: '#34C759', label: t('status.completed') },
-          { color: COLORS.error, label: t('status.skipped') },
-        ].map((item) => (
-          <View key={item.label} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-            <Text style={styles.legendText}>{item.label}</Text>
-          </View>
-        ))}
-      </View>
+      <View style={styles.bottomContainer}>
+        <View style={styles.legend}>
+          {[
+            { color: COLORS.tabBarInactive, label: t('status.pending') },
+            { color: COLORS.accent, label: t('status.inProgress') },
+            { color: '#34C759', label: t('status.completed') },
+            { color: COLORS.error, label: t('status.skipped') },
+          ].map((item) => (
+            <View key={item.label} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+              <Text style={styles.legendText}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
 
-      <FlatList
-        data={points}
-        keyExtractor={(item) => item.id}
-        renderItem={renderPoint}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          <Text style={styles.listTitle}>{t('routeMap.routePoints')} ({points.length})</Text>
-        }
-      />
+        <FlatList
+          data={points}
+          keyExtractor={(item) => item.id}
+          renderItem={renderPoint}
+          contentContainerStyle={styles.list}
+          ListHeaderComponent={
+            <Text style={styles.listTitle}>{t('routeMap.routePoints')} ({points.length})</Text>
+          }
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  map: { height: 300 },
+  map: { flex: 7 },
+  bottomContainer: { flex: 3 },
   legend: {
     flexDirection: 'row', justifyContent: 'space-around',
     paddingVertical: 8, paddingHorizontal: 12,

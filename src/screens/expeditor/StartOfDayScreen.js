@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Animated,
+  View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Animated, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import useAuthStore from '../../store/authStore';
 import {
-  createTourCheckin, updateTourCheckin, getTodayTourCheckin,
-  saveVehicleCheckItems, getVehicleByDriver, hasVerifiedLoadingTrip,
+  updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
+  hasVerifiedLoadingTrip, getOrCreateTodayCheckin, getVehicleCheckItems,
 } from '../../database';
 import VehicleCheckStep from './VehicleCheckStep';
 import OdometerStep from './OdometerStep';
@@ -27,6 +27,8 @@ export default function StartOfDayScreen() {
   const [checkinId, setCheckinId] = useState(null);
   const [vehicle, setVehicle] = useState(null);
   const [materialsLoaded, setMaterialsLoaded] = useState(false);
+  const [readOnly, setReadOnly] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Step data
   const [vehicleCheckData, setVehicleCheckData] = useState(null);
@@ -44,15 +46,63 @@ export default function StartOfDayScreen() {
       try {
         const v = await getVehicleByDriver(user?.id);
         setVehicle(v);
-        // Check if already started today
-        const existing = await getTodayTourCheckin(user?.id, 'start');
-        if (existing?.status === 'completed') {
-          Alert.alert('', t('startOfDay.alreadyCompleted'), [
-            { text: 'OK', onPress: () => navigation.goBack() },
-          ]);
+        const checkin = await getOrCreateTodayCheckin(user?.id, v?.id);
+        if (checkin) {
+          setCheckinId(checkin.id);
+
+          if (checkin.status === 'completed') {
+            setReadOnly(true);
+          }
+
+          // Restore saved data from the checkin record
+          if (checkin.vehicle_check) {
+            try {
+              const parsedChecks = JSON.parse(checkin.vehicle_check);
+              setVehicleCheckData({ checks: parsedChecks, notes: checkin.notes || '' });
+            } catch {
+              // Try loading from vehicle_check_items table
+              const items = await getVehicleCheckItems(checkin.id);
+              if (items?.length) {
+                const checks = items.map((it) => ({ key: it.question, checked: !!it.is_ok }));
+                setVehicleCheckData({ checks, notes: checkin.notes || '' });
+              }
+            }
+          } else {
+            const items = await getVehicleCheckItems(checkin.id);
+            if (items?.length) {
+              const checks = items.map((it) => ({ key: it.question, checked: !!it.is_ok }));
+              setVehicleCheckData({ checks, notes: checkin.notes || '' });
+            }
+          }
+
+          if (checkin.odometer_reading != null) {
+            const reading = String(checkin.odometer_reading);
+            setOdometerData({ reading, value: checkin.odometer_reading });
+          }
+
+          if (checkin.cash_amount != null) {
+            const amount = String(checkin.cash_amount);
+            setCashData({ amount, value: checkin.cash_amount });
+          }
+
+          if (checkin.signature_data) {
+            setSignatureData(checkin.signature_data);
+            setHasSignature(true);
+          }
+
+          if (checkin.supervisor_name) {
+            setSupervisorName(checkin.supervisor_name);
+          }
+
+          // Restore to saved step (only for in-progress)
+          if (checkin.status !== 'completed' && checkin.current_step != null && checkin.current_step > 0) {
+            setCurrentStep(checkin.current_step);
+          }
         }
       } catch (e) {
         console.error('SOD init error:', e);
+      } finally {
+        setLoading(false);
       }
     })();
   }, [user?.id]);
@@ -74,22 +124,88 @@ export default function StartOfDayScreen() {
     }).start();
   };
 
-  const goNext = () => {
+  // Save step data to DB after each transition
+  const saveStepData = async (stepName) => {
+    if (!checkinId || readOnly) return;
+    try {
+      switch (stepName) {
+        case 'vehicleCheck':
+          if (vehicleCheckData?.checks) {
+            await updateTourCheckin(checkinId, {
+              vehicle_check: JSON.stringify(vehicleCheckData.checks),
+              notes: vehicleCheckData.notes || null,
+            });
+            await saveVehicleCheckItems(
+              checkinId,
+              vehicleCheckData.checks.map((c) => ({
+                question: c.key,
+                answer: c.checked ? 'yes' : 'no',
+                is_ok: c.checked,
+              }))
+            );
+          }
+          break;
+        case 'odometer':
+          if (odometerData?.value != null) {
+            await updateTourCheckin(checkinId, { odometer_reading: odometerData.value });
+          }
+          break;
+        case 'cash':
+          if (cashData?.value != null) {
+            await updateTourCheckin(checkinId, { cash_amount: cashData.value });
+          }
+          break;
+        case 'signature':
+          if (signatureData) {
+            await updateTourCheckin(checkinId, {
+              signature_data: signatureData,
+              supervisor_name: supervisorName || null,
+            });
+          }
+          break;
+        default:
+          break;
+      }
+    } catch (e) {
+      console.error('SOD save step error:', e);
+    }
+  };
+
+  const goNext = async () => {
     if (currentStep < STEPS.length - 1) {
       // Validate current step
       if (STEPS[currentStep] === 'odometer' && !odometerData?.value) {
         Alert.alert('', t('odometerScreen.invalid'));
         return;
       }
-      setCurrentStep((s) => s + 1);
+
+      // Save the current step's data before advancing
+      await saveStepData(STEPS[currentStep]);
+
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
       animateStep(1);
+
+      // Persist current_step
+      if (checkinId && !readOnly) {
+        updateTourCheckin(checkinId, { current_step: nextStep }).catch(() => {});
+      }
     }
   };
 
-  const goBack = () => {
+  const goBack = async () => {
     if (currentStep > 0) {
-      setCurrentStep((s) => s - 1);
+      // Save current step data before going back (non-read-only)
+      if (!readOnly) {
+        await saveStepData(STEPS[currentStep]);
+      }
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
       animateStep(-1);
+
+      if (checkinId && !readOnly) {
+        updateTourCheckin(checkinId, { current_step: prevStep }).catch(() => {});
+      }
     } else {
       navigation.goBack();
     }
@@ -101,11 +217,13 @@ export default function StartOfDayScreen() {
   }, []);
 
   const handleFinish = async () => {
+    if (readOnly) return;
     try {
-      const id = await createTourCheckin({
-        driver_id: user?.id,
-        vehicle_id: vehicle?.id,
-        type: 'start',
+      // Save signature step data first
+      await saveStepData('signature');
+
+      // Final update: mark as completed with all data
+      await updateTourCheckin(checkinId, {
         status: 'completed',
         vehicle_check: vehicleCheckData ? JSON.stringify(vehicleCheckData.checks) : null,
         odometer_reading: odometerData?.value || null,
@@ -113,11 +231,13 @@ export default function StartOfDayScreen() {
         signature_data: signatureData || null,
         supervisor_name: supervisorName || null,
         notes: vehicleCheckData?.notes || null,
+        current_step: STEPS.length - 1,
       });
 
+      // Ensure vehicle check items are saved
       if (vehicleCheckData?.checks) {
         await saveVehicleCheckItems(
-          id,
+          checkinId,
           vehicleCheckData.checks.map((c) => ({
             question: c.key,
             answer: c.checked ? 'yes' : 'no',
@@ -138,7 +258,7 @@ export default function StartOfDayScreen() {
   const renderStep = () => {
     switch (STEPS[currentStep]) {
       case 'vehicleCheck':
-        return <VehicleCheckStep data={vehicleCheckData} onUpdate={setVehicleCheckData} />;
+        return <VehicleCheckStep data={vehicleCheckData} onUpdate={setVehicleCheckData} readOnly={readOnly} />;
       case 'materials':
         return (
           <View style={styles.centeredStep}>
@@ -153,7 +273,7 @@ export default function StartOfDayScreen() {
                 ? t('tourConfirm.passed')
                 : t('tourConfirm.notDone')}
             </Text>
-            {!materialsLoaded && (
+            {!materialsLoaded && !readOnly && (
               <TouchableOpacity
                 style={styles.loadBtn}
                 onPress={() => navigation.navigate('LoadingTrip')}
@@ -164,10 +284,30 @@ export default function StartOfDayScreen() {
           </View>
         );
       case 'odometer':
-        return <OdometerStep data={odometerData} onUpdate={setOdometerData} />;
+        return <OdometerStep data={odometerData} onUpdate={setOdometerData} readOnly={readOnly} />;
       case 'cash':
-        return <CheckOutCashStep data={cashData} onUpdate={setCashData} />;
+        return <CheckOutCashStep data={cashData} onUpdate={setCashData} readOnly={readOnly} />;
       case 'signature':
+        if (readOnly && signatureData) {
+          return (
+            <View style={styles.signatureStep}>
+              <View style={styles.header}>
+                <Ionicons name="create-outline" size={32} color={COLORS.primary} />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={styles.stepTitle}>{t('tourConfirm.signature')}</Text>
+                  <Text style={styles.stepSubtitle}>{t('signatureScreen.shipmentConfirmation')}</Text>
+                </View>
+              </View>
+              <View style={styles.signatureImageWrap}>
+                <Image
+                  source={{ uri: signatureData }}
+                  style={styles.signatureImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+          );
+        }
         return (
           <View style={styles.signatureStep}>
             <View style={styles.header}>
@@ -235,8 +375,18 @@ export default function StartOfDayScreen() {
 
   const isLastStep = currentStep === STEPS.length - 1;
 
+  if (loading) return null;
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Read-only banner */}
+      {readOnly && (
+        <View style={styles.readOnlyBanner}>
+          <Ionicons name="checkmark-circle" size={18} color={COLORS.white} />
+          <Text style={styles.readOnlyBannerText}>{t('startOfDay.readOnlyBanner')}</Text>
+        </View>
+      )}
+
       {/* Progress indicator */}
       <View style={styles.progressRow}>
         {STEPS.map((_, i) => (
@@ -267,10 +417,17 @@ export default function StartOfDayScreen() {
         </TouchableOpacity>
 
         {isLastStep ? (
-          <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}>
-            <Ionicons name="rocket" size={20} color={COLORS.white} />
-            <Text style={styles.finishBtnText}>{t('startOfDay.finish')}</Text>
-          </TouchableOpacity>
+          readOnly ? (
+            <View style={[styles.finishBtn, styles.finishBtnDisabled]}>
+              <Ionicons name="checkmark-circle" size={20} color={COLORS.white} />
+              <Text style={styles.finishBtnText}>{t('startOfDay.routeStarted')}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}>
+              <Ionicons name="rocket" size={20} color={COLORS.white} />
+              <Text style={styles.finishBtnText}>{t('startOfDay.finish')}</Text>
+            </TouchableOpacity>
+          )
         ) : (
           <TouchableOpacity style={styles.nextBtn} onPress={goNext}>
             <Text style={styles.nextBtnText}>{t('startOfDay.next')}</Text>
@@ -328,6 +485,9 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: '#34C759', borderRadius: 12, paddingVertical: 14,
   },
+  finishBtnDisabled: {
+    backgroundColor: COLORS.textSecondary, opacity: 0.8,
+  },
   finishBtnText: { fontSize: 15, color: COLORS.white, fontWeight: '700' },
   // Step styles
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
@@ -352,5 +512,19 @@ const styles = StyleSheet.create({
   readyText: {
     fontSize: 13, color: COLORS.textSecondary, textAlign: 'center',
     marginTop: 20, paddingHorizontal: 20,
+  },
+  readOnlyBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.primary, paddingVertical: 8, paddingHorizontal: 16,
+  },
+  readOnlyBannerText: {
+    color: COLORS.white, fontSize: 13, fontWeight: '600',
+  },
+  signatureImageWrap: {
+    borderWidth: 2, borderColor: COLORS.border, borderRadius: 12,
+    overflow: 'hidden', backgroundColor: '#fff', height: 200,
+  },
+  signatureImage: {
+    width: '100%', height: '100%',
   },
 });

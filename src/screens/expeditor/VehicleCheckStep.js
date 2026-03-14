@@ -8,18 +8,20 @@ const CHECKLIST_KEYS = [
   'tires', 'brakes', 'lights', 'mirrors', 'fluids', 'documents', 'cleanliness', 'cargo',
 ];
 
-export default function VehicleCheckStep({ data, onUpdate }) {
+export default function VehicleCheckStep({ data, onUpdate, readOnly }) {
   const { t } = useTranslation();
   const [checks, setChecks] = useState(data?.checks || CHECKLIST_KEYS.map((k) => ({ key: k, checked: false })));
   const [notes, setNotes] = useState(data?.notes || '');
 
   const toggleCheck = (index) => {
+    if (readOnly) return;
     const updated = checks.map((c, i) => i === index ? { ...c, checked: !c.checked } : c);
     setChecks(updated);
     onUpdate({ checks: updated, notes });
   };
 
   const handleNotesChange = (text) => {
+    if (readOnly) return;
     setNotes(text);
     onUpdate({ checks, notes: text });
   };
@@ -67,13 +69,14 @@ export default function VehicleCheckStep({ data, onUpdate }) {
       ))}
 
       <TextInput
-        style={styles.notesInput}
+        style={[styles.notesInput, readOnly && styles.readOnlyInput]}
         value={notes}
         onChangeText={handleNotesChange}
         placeholder={t('vehicleCheck.notesPlaceholder')}
         placeholderTextColor={COLORS.tabBarInactive}
         multiline
         numberOfLines={3}
+        editable={!readOnly}
       />
     </ScrollView>
   );
@@ -102,4 +105,5 @@ const styles = StyleSheet.create({
     fontSize: 14, color: COLORS.text, marginTop: 12,
     minHeight: 80, textAlignVertical: 'top',
   },
+  readOnlyInput: { opacity: 0.6, backgroundColor: '#F0F0F0' },
 });

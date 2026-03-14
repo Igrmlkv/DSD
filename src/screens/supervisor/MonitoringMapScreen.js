@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl, Dimensions } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -9,8 +9,6 @@ import { SCREEN_NAMES } from '../../constants/screens';
 import { getExpeditorProgress, getRoutePoints } from '../../database';
 
 const ROUTE_COLORS = ['#2196F3', '#FF5722', '#4CAF50', '#9C27B0', '#FF9800'];
-
-const MAP_HEIGHT = Dimensions.get('window').height * 0.6;
 
 function darkenColor(hex, factor = 0.5) {
   const r = Math.round(parseInt(hex.slice(1, 3), 16) * factor);
@@ -171,31 +169,34 @@ export default function MonitoringMapScreen() {
         polylines={polylines}
       />
 
-      <FlatList
-        data={expeditors}
-        keyExtractor={(item) => item.id + '-' + item.route_id}
-        renderItem={renderExpeditor}
-        contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
-        ListHeaderComponent={
-          <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>{t('monitoringMap.expeditors', { count: expeditors.length })}</Text>
-            <Text style={styles.listHint}>{t('monitoringMap.hint')}</Text>
-          </View>
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>{t('monitoringMap.noActiveRoutes')}</Text>
-          </View>
-        }
-      />
+      <View style={styles.listContainer}>
+        <FlatList
+          data={expeditors}
+          keyExtractor={(item) => item.id + '-' + item.route_id}
+          renderItem={renderExpeditor}
+          contentContainerStyle={styles.list}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <Text style={styles.listTitle}>{t('monitoringMap.expeditors', { count: expeditors.length })}</Text>
+              <Text style={styles.listHint}>{t('monitoringMap.hint')}</Text>
+            </View>
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>{t('monitoringMap.noActiveRoutes')}</Text>
+            </View>
+          }
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  map: { height: MAP_HEIGHT },
+  map: { flex: 7 },
+  listContainer: { flex: 3 },
   list: { padding: 12 },
   listHeader: { marginBottom: 8 },
   listTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text },

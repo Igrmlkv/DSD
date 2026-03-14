@@ -117,4 +117,6 @@ export {
   getTodayTourCheckin,
   getLastOdometerReading,
   saveVehicleCheckItems,
+  getVehicleCheckItems,
+  getOrCreateTodayCheckin,
 } from './database';

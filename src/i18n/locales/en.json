@@ -691,7 +691,9 @@
     "tourStarted": "Route started successfully!",
     "tourStartedMsg": "You can now begin your route.",
     "alreadyCompleted": "Start-of-day already completed today",
-    "wizardTitle": "Pre-Tour Checklist"
+    "wizardTitle": "Pre-Tour Checklist",
+    "routeStarted": "Route started",
+    "readOnlyBanner": "Route data (read only)"
   },
   "vehicleCheck": {
     "title": "Vehicle Safety Check",

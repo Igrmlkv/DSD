@@ -6,7 +6,7 @@ import { COLORS } from '../../constants/colors';
 import { getLastOdometerReading } from '../../database';
 import useAuthStore from '../../store/authStore';
 
-export default function OdometerStep({ data, onUpdate }) {
+export default function OdometerStep({ data, onUpdate, readOnly }) {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const [reading, setReading] = useState(data?.reading || '');
@@ -19,6 +19,7 @@ export default function OdometerStep({ data, onUpdate }) {
   }, [user?.id]);
 
   const handleChange = (text) => {
+    if (readOnly) return;
     const cleaned = text.replace(/[^0-9.]/g, '');
     setReading(cleaned);
     const val = parseFloat(cleaned);
@@ -39,13 +40,14 @@ export default function OdometerStep({ data, onUpdate }) {
         <Text style={styles.label}>{t('odometerScreen.currentReading')}</Text>
         <View style={styles.inputRow}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, readOnly && styles.readOnlyInput]}
             value={reading}
             onChangeText={handleChange}
             placeholder={t('odometerScreen.placeholder')}
             placeholderTextColor={COLORS.tabBarInactive}
             keyboardType="numeric"
             returnKeyType="done"
+            editable={!readOnly}
           />
           <Text style={styles.unit}>{t('tourConfirm.km')}</Text>
         </View>
@@ -78,4 +80,5 @@ const styles = StyleSheet.create({
   unit: { fontSize: 18, color: COLORS.textSecondary, fontWeight: '600' },
   hint: { fontSize: 12, color: COLORS.textSecondary, marginTop: 10, textAlign: 'center' },
   iconWrap: { alignItems: 'center', marginTop: 40, opacity: 0.3 },
+  readOnlyInput: { opacity: 0.6, backgroundColor: '#F0F0F0' },
 });

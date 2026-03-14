@@ -4,11 +4,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 
-export default function CheckOutCashStep({ data, onUpdate }) {
+export default function CheckOutCashStep({ data, onUpdate, readOnly }) {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(data?.amount || '');
 
   const handleChange = (text) => {
+    if (readOnly) return;
     const cleaned = text.replace(/[^0-9.]/g, '');
     setAmount(cleaned);
     const val = parseFloat(cleaned);
@@ -29,13 +30,14 @@ export default function CheckOutCashStep({ data, onUpdate }) {
         <Text style={styles.label}>{t('checkoutCash.amount')}</Text>
         <View style={styles.inputRow}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, readOnly && styles.readOnlyInput]}
             value={amount}
             onChangeText={handleChange}
             placeholder={t('checkoutCash.placeholder')}
             placeholderTextColor={COLORS.tabBarInactive}
             keyboardType="decimal-pad"
             returnKeyType="done"
+            editable={!readOnly}
           />
           <Text style={styles.unit}>₽</Text>
         </View>
@@ -64,4 +66,5 @@ const styles = StyleSheet.create({
   unit: { fontSize: 20, color: COLORS.textSecondary, fontWeight: '600' },
   hint: { fontSize: 12, color: COLORS.textSecondary, marginTop: 10, textAlign: 'center' },
   iconWrap: { alignItems: 'center', marginTop: 40, opacity: 0.3 },
+  readOnlyInput: { opacity: 0.6, backgroundColor: '#F0F0F0' },
 });

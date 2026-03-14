@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
+import { SCREEN_NAMES } from '../../constants/screens';
 import useAuthStore from '../../store/authStore';
 import {
   updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
@@ -246,7 +247,9 @@ export default function StartOfDayScreen() {
         );
       }
 
-      Alert.alert(t('startOfDay.tourStarted'), t('startOfDay.tourStartedMsg'));
+      Alert.alert(t('startOfDay.tourStarted'), t('startOfDay.tourStartedMsg'), [
+        { text: 'OK', onPress: () => navigation.navigate(SCREEN_NAMES.ROUTE_TAB) },
+      ]);
       setReadOnly(true);
     } catch (e) {
       console.error('SOD finish error:', e);

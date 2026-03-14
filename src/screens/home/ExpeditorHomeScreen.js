@@ -78,7 +78,6 @@ export default function ExpeditorHomeScreen() {
   const isRouteCompleted = stats.routeStatus === 'completed';
 
   const quickActions = [
-    { title: t('expeditorHome.actionRoute'), icon: 'map-outline', onPress: () => navigation.navigate(SCREEN_NAMES.ROUTE_TAB) },
     { title: t('expeditorHome.actionStartOfDay'), icon: 'sunny-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, { screen: SCREEN_NAMES.START_OF_DAY }) },
     { title: t('expeditorHome.actionUnloading'), icon: 'download-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, {
       screen: SCREEN_NAMES.VEHICLE_UNLOADING,

@@ -20,9 +20,9 @@ const defaultScreenOptions = {
 export default function WarehouseOpsStack() {
   return (
     <Stack.Navigator screenOptions={defaultScreenOptions}>
+      <Stack.Screen name={SCREEN_NAMES.INVENTORY_CHECK} component={InventoryCheckScreen} options={{ title: i18n.t('nav.inventoryCheck') }} />
       <Stack.Screen name={SCREEN_NAMES.START_OF_DAY} component={StartOfDayScreen} options={{ title: i18n.t('startOfDay.title') }} />
       <Stack.Screen name={SCREEN_NAMES.LOADING_TRIP} component={LoadingTripScreen} options={{ title: i18n.t('nav.loadingTrip') }} />
-      <Stack.Screen name={SCREEN_NAMES.INVENTORY_CHECK} component={InventoryCheckScreen} options={{ title: i18n.t('nav.inventoryCheck') }} />
       <Stack.Screen name={SCREEN_NAMES.CASH_COLLECTION} component={CashCollectionScreen} options={{ title: i18n.t('nav.cashCollection') }} />
       <Stack.Screen name={SCREEN_NAMES.VEHICLE_UNLOADING} component={VehicleUnloadingScreen} options={{ title: i18n.t('nav.vehicleUnloading') }} />
     </Stack.Navigator>

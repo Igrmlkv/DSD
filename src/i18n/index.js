@@ -1,10 +1,12 @@
-import i18n from 'i18next';
+import { createInstance } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as SecureStore from 'expo-secure-store';
 import ru from './locales/ru.json';
 import en from './locales/en.json';
 
 const LANGUAGE_KEY = 'app_language';
+
+const i18n = createInstance();
 
 const languageDetector = {
   type: 'languageDetector',

@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import useAuthStore from '../../store/authStore';
@@ -44,8 +44,6 @@ export default function StartOfDayScreen() {
       try {
         const v = await getVehicleByDriver(user?.id);
         setVehicle(v);
-        const loaded = await hasVerifiedLoadingTrip(user?.id);
-        setMaterialsLoaded(loaded);
         // Check if already started today
         const existing = await getTodayTourCheckin(user?.id, 'start');
         if (existing?.status === 'completed') {
@@ -58,6 +56,13 @@ export default function StartOfDayScreen() {
       }
     })();
   }, [user?.id]);
+
+  // Re-check materials status on focus (after returning from LoadingTripScreen)
+  useFocusEffect(
+    useCallback(() => {
+      hasVerifiedLoadingTrip(user?.id).then(setMaterialsLoaded).catch(() => {});
+    }, [user?.id])
+  );
 
   const animateStep = (direction) => {
     slideAnim.setValue(direction > 0 ? 300 : -300);

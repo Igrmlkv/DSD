@@ -8,7 +8,11 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { initDatabase } from './src/database';
 import useSettingsStore from './src/store/settingsStore';
 
-YaMap.init('b86f674c-5cc1-470b-aadf-9ae9091faee9');
+try {
+  YaMap.init('b86f674c-5cc1-470b-aadf-9ae9091faee9');
+} catch (e) {
+  console.warn('YaMap init skipped:', e.message);
+}
 
 function AppContent() {
   const { t } = useTranslation();

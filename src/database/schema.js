@@ -1,0 +1,400 @@
+const SCHEMA_VERSION = 2;
+
+const CREATE_TABLES = [
+  // --- Справочники ---
+
+  `CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('expeditor','supervisor','admin')),
+    phone TEXT,
+    vehicle_id TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS customers (
+    id TEXT PRIMARY KEY,
+    external_id TEXT,
+    name TEXT NOT NULL,
+    legal_name TEXT,
+    inn TEXT,
+    kpp TEXT,
+    address TEXT NOT NULL,
+    city TEXT,
+    region TEXT,
+    postal_code TEXT,
+    latitude REAL,
+    longitude REAL,
+    contact_person TEXT,
+    phone TEXT,
+    email TEXT,
+    customer_type TEXT CHECK(customer_type IN ('retail','wholesale','horeca')),
+    payment_terms TEXT DEFAULT 'cash',
+    credit_limit REAL DEFAULT 0,
+    debt_amount REAL DEFAULT 0,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS products (
+    id TEXT PRIMARY KEY,
+    external_id TEXT,
+    sku TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    category TEXT,
+    subcategory TEXT,
+    brand TEXT,
+    volume TEXT,
+    unit TEXT DEFAULT 'шт',
+    barcode TEXT,
+    weight REAL,
+    image_url TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS price_lists (
+    id TEXT PRIMARY KEY,
+    product_id TEXT NOT NULL,
+    price_type TEXT DEFAULT 'base',
+    price REAL NOT NULL,
+    currency TEXT DEFAULT 'RUB',
+    valid_from TEXT,
+    valid_to TEXT,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS vehicles (
+    id TEXT PRIMARY KEY,
+    plate_number TEXT NOT NULL UNIQUE,
+    model TEXT,
+    driver_id TEXT,
+    capacity_kg REAL,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES users(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS stock (
+    id TEXT PRIMARY KEY,
+    product_id TEXT NOT NULL,
+    warehouse TEXT DEFAULT 'main',
+    quantity REAL NOT NULL DEFAULT 0,
+    reserved REAL DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  )`,
+
+  // --- Маршруты ---
+
+  `CREATE TABLE IF NOT EXISTS routes (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
+    driver_id TEXT NOT NULL,
+    status TEXT DEFAULT 'planned' CHECK(status IN ('planned','in_progress','completed','cancelled')),
+    vehicle_number TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES users(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS route_points (
+    id TEXT PRIMARY KEY,
+    route_id TEXT NOT NULL,
+    customer_id TEXT NOT NULL,
+    sequence_number INTEGER NOT NULL,
+    planned_arrival TEXT,
+    actual_arrival TEXT,
+    actual_departure TEXT,
+    status TEXT DEFAULT 'pending' CHECK(status IN ('pending','arrived','in_progress','completed','skipped')),
+    latitude REAL,
+    longitude REAL,
+    notes TEXT,
+    FOREIGN KEY (route_id) REFERENCES routes(id),
+    FOREIGN KEY (customer_id) REFERENCES customers(id)
+  )`,
+
+  // --- Документы ---
+
+  `CREATE TABLE IF NOT EXISTS orders (
+    id TEXT PRIMARY KEY,
+    external_id TEXT,
+    customer_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    route_point_id TEXT,
+    order_date TEXT DEFAULT (datetime('now')),
+    status TEXT DEFAULT 'draft' CHECK(status IN ('draft','confirmed','shipped','delivered','cancelled')),
+    total_amount REAL DEFAULT 0,
+    discount_amount REAL DEFAULT 0,
+    notes TEXT,
+    synced INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS order_items (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    quantity REAL NOT NULL,
+    price REAL NOT NULL,
+    discount_percent REAL DEFAULT 0,
+    total REAL NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS deliveries (
+    id TEXT PRIMARY KEY,
+    order_id TEXT,
+    route_point_id TEXT,
+    customer_id TEXT NOT NULL,
+    driver_id TEXT NOT NULL,
+    delivery_date TEXT DEFAULT (datetime('now')),
+    status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_transit','delivered','partial','rejected')),
+    total_amount REAL DEFAULT 0,
+    signature_name TEXT,
+    signature_confirmed INTEGER DEFAULT 0,
+    notes TEXT,
+    synced INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (driver_id) REFERENCES users(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS delivery_items (
+    id TEXT PRIMARY KEY,
+    delivery_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    ordered_quantity REAL NOT NULL,
+    delivered_quantity REAL NOT NULL,
+    price REAL NOT NULL,
+    total REAL NOT NULL,
+    reason_code TEXT,
+    FOREIGN KEY (delivery_id) REFERENCES deliveries(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS returns (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    driver_id TEXT NOT NULL,
+    route_point_id TEXT,
+    return_date TEXT DEFAULT (datetime('now')),
+    reason TEXT CHECK(reason IN ('quality','expired','unsold','damaged','other')),
+    status TEXT DEFAULT 'draft' CHECK(status IN ('draft','pending_approval','approved','rejected','processed')),
+    total_amount REAL DEFAULT 0,
+    notes TEXT,
+    approved_by TEXT,
+    approved_at TEXT,
+    rejection_reason TEXT,
+    synced INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (driver_id) REFERENCES users(id),
+    FOREIGN KEY (approved_by) REFERENCES users(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS return_items (
+    id TEXT PRIMARY KEY,
+    return_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    quantity REAL NOT NULL,
+    price REAL NOT NULL,
+    total REAL NOT NULL,
+    condition TEXT DEFAULT 'normal' CHECK(condition IN ('normal','damaged','expired')),
+    reason TEXT,
+    FOREIGN KEY (return_id) REFERENCES returns(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  )`,
+
+  // --- Финансы ---
+
+  `CREATE TABLE IF NOT EXISTS payments (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    order_id TEXT,
+    route_point_id TEXT,
+    payment_date TEXT DEFAULT (datetime('now')),
+    amount REAL NOT NULL,
+    payment_type TEXT CHECK(payment_type IN ('cash','card','qr','transfer')),
+    status TEXT DEFAULT 'completed',
+    receipt_number TEXT,
+    notes TEXT,
+    synced INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+
+  // --- Загрузка рейса ---
+
+  `CREATE TABLE IF NOT EXISTS loading_trips (
+    id TEXT PRIMARY KEY,
+    driver_id TEXT NOT NULL,
+    vehicle_id TEXT NOT NULL,
+    route_id TEXT,
+    loading_date TEXT DEFAULT (datetime('now')),
+    status TEXT DEFAULT 'planned' CHECK(status IN ('planned','loading','loaded','verified')),
+    total_items INTEGER DEFAULT 0,
+    loaded_items INTEGER DEFAULT 0,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES users(id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS loading_trip_items (
+    id TEXT PRIMARY KEY,
+    loading_trip_id TEXT NOT NULL,
+    product_id TEXT NOT NULL,
+    planned_quantity REAL NOT NULL,
+    actual_quantity REAL DEFAULT 0,
+    scanned INTEGER DEFAULT 0,
+    FOREIGN KEY (loading_trip_id) REFERENCES loading_trips(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
+  )`,
+
+  // --- Инкассация ---
+
+  `CREATE TABLE IF NOT EXISTS cash_collections (
+    id TEXT PRIMARY KEY,
+    driver_id TEXT NOT NULL,
+    route_id TEXT,
+    collection_date TEXT DEFAULT (datetime('now')),
+    expected_amount REAL DEFAULT 0,
+    actual_amount REAL DEFAULT 0,
+    discrepancy REAL DEFAULT 0,
+    status TEXT DEFAULT 'pending' CHECK(status IN ('pending','collected','verified','discrepancy')),
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES users(id)
+  )`,
+
+  // --- Возвраты тары ---
+
+  `CREATE TABLE IF NOT EXISTS packaging_returns (
+    id TEXT PRIMARY KEY,
+    customer_id TEXT NOT NULL,
+    driver_id TEXT NOT NULL,
+    route_point_id TEXT,
+    return_date TEXT DEFAULT (datetime('now')),
+    status TEXT DEFAULT 'draft' CHECK(status IN ('draft','confirmed','processed')),
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (customer_id) REFERENCES customers(id),
+    FOREIGN KEY (driver_id) REFERENCES users(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS packaging_return_items (
+    id TEXT PRIMARY KEY,
+    packaging_return_id TEXT NOT NULL,
+    packaging_type TEXT NOT NULL,
+    expected_quantity REAL DEFAULT 0,
+    actual_quantity REAL DEFAULT 0,
+    condition TEXT DEFAULT 'good' CHECK(condition IN ('good','damaged','missing')),
+    FOREIGN KEY (packaging_return_id) REFERENCES packaging_returns(id)
+  )`,
+
+  // --- Уведомления ---
+
+  `CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT DEFAULT 'info' CHECK(type IN ('info','warning','error','success')),
+    is_read INTEGER DEFAULT 0,
+    related_entity TEXT,
+    related_id TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+
+  // --- Устройства ---
+
+  `CREATE TABLE IF NOT EXISTS devices (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    device_model TEXT,
+    os_version TEXT,
+    app_version TEXT,
+    last_sync_at TEXT,
+    status TEXT DEFAULT 'active' CHECK(status IN ('active','inactive','blocked')),
+    storage_used_mb REAL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+
+  // --- Аудит-лог ---
+
+  `CREATE TABLE IF NOT EXISTS audit_log (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id TEXT,
+    details TEXT,
+    ip_address TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+
+  // --- Синхронизация ---
+
+  `CREATE TABLE IF NOT EXISTS sync_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    action TEXT NOT NULL CHECK(action IN ('create','update','delete')),
+    payload TEXT,
+    synced INTEGER DEFAULT 0,
+    sync_attempts INTEGER DEFAULT 0,
+    last_error TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    synced_at TEXT
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS sync_meta (
+    entity_type TEXT PRIMARY KEY,
+    last_sync_at TEXT,
+    last_server_version TEXT
+  )`,
+
+  // --- Индексы ---
+
+  `CREATE INDEX IF NOT EXISTS idx_customers_city ON customers(city)`,
+  `CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)`,
+  `CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode)`,
+  `CREATE INDEX IF NOT EXISTS idx_routes_date ON routes(date)`,
+  `CREATE INDEX IF NOT EXISTS idx_routes_driver ON routes(driver_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_sync_log_synced ON sync_log(synced)`,
+  `CREATE INDEX IF NOT EXISTS idx_vehicles_driver ON vehicles(driver_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_stock_warehouse ON stock(warehouse)`,
+  `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_log_date ON audit_log(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_returns_status ON returns(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_loading_trips_driver ON loading_trips(driver_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_cash_collections_driver ON cash_collections(driver_id)`,
+];
+
+export { SCHEMA_VERSION, CREATE_TABLES };

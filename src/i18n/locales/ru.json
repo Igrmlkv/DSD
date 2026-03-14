@@ -105,7 +105,8 @@
     "actionRoute": "Маршрут",
     "actionLoading": "Загрузка",
     "actionUnloading": "Выгрузка",
-    "actionStartOfDay": "Начало дня"
+    "actionStartOfDay": "Начало дня",
+    "actionEndOfDay": "Конец дня"
   },
   "supervisorHome": {
     "onRoute": "На маршруте",
@@ -739,5 +740,58 @@
     "notDone": "Не выполнено",
     "km": "км",
     "ready": "Все проверки выполнены. Готов к началу маршрута."
+  },
+  "endOfDay": {
+    "title": "Конец дня",
+    "step": "Шаг {{current}} из {{total}}",
+    "next": "Далее",
+    "back": "Назад",
+    "finish": "Завершить маршрут",
+    "routeCompleted": "Маршрут завершён!",
+    "routeCompletedMsg": "Данные сохранены. Хорошего отдыха!",
+    "readOnlyBanner": "Данные конца дня (только просмотр)",
+    "routeFinished": "Маршрут завершён",
+    "alreadyCompleted": "Конец дня уже оформлен"
+  },
+  "materialCheckIn": {
+    "title": "Приёмка материалов",
+    "subtitle": "Проверьте остатки и возвраты",
+    "expectedQty": "Ожидаемое кол-во",
+    "actualQty": "Фактическое кол-во",
+    "condition": "Состояние",
+    "conditionGood": "Норма",
+    "conditionDamaged": "Повреждён",
+    "conditionExpired": "Просрочен",
+    "discrepancy": "Расхождение",
+    "noItems": "Нет позиций для проверки",
+    "allMatched": "Все позиции совпадают",
+    "itemsWithDiscrepancy": "{{count}} позиций с расхождением",
+    "notes": "Примечания",
+    "notesPlaceholder": "Дополнительные примечания..."
+  },
+  "cashCheckIn": {
+    "title": "Инкассация наличных",
+    "subtitle": "Сверьте ожидаемую и фактическую суммы",
+    "expectedAmount": "Ожидаемая сумма",
+    "actualAmount": "Фактическая сумма",
+    "discrepancy": "Расхождение",
+    "placeholder": "0.00",
+    "noDiscrepancy": "Без расхождений",
+    "hint": "Посчитайте все наличные и сверьте с суммой за день",
+    "notes": "Примечания",
+    "notesPlaceholder": "Дополнительные примечания..."
+  },
+  "endOfDayConfirm": {
+    "title": "Подтверждение конца дня",
+    "subtitle": "Проверьте и подтвердите завершение маршрута",
+    "materialCheckIn": "Приёмка материалов",
+    "cashCheckIn": "Инкассация",
+    "odometer": "Одометр",
+    "vehicleCheck": "Осмотр ТС",
+    "signature": "Подпись супервайзера",
+    "passed": "Пройдено",
+    "notDone": "Не выполнено",
+    "km": "км",
+    "ready": "Все проверки выполнены. Маршрут можно завершить."
   }
 }

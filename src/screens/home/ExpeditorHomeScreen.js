@@ -82,6 +82,7 @@ export default function ExpeditorHomeScreen() {
     { title: t('expeditorHome.actionUnloading'), icon: 'download-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, {
       screen: SCREEN_NAMES.VEHICLE_UNLOADING,
     }) },
+    { title: t('expeditorHome.actionEndOfDay'), icon: 'moon-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, { screen: SCREEN_NAMES.END_OF_DAY }) },
   ];
 
   const formatMoney = (val) =>

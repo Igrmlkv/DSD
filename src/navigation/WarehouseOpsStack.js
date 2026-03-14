@@ -8,6 +8,7 @@ import InventoryCheckScreen from '../screens/expeditor/InventoryCheckScreen';
 import CashCollectionScreen from '../screens/expeditor/CashCollectionScreen';
 import VehicleUnloadingScreen from '../screens/expeditor/VehicleUnloadingScreen';
 import StartOfDayScreen from '../screens/expeditor/StartOfDayScreen';
+import EndOfDayScreen from '../screens/expeditor/EndOfDayScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,7 @@ export default function WarehouseOpsStack() {
       <Stack.Screen name={SCREEN_NAMES.LOADING_TRIP} component={LoadingTripScreen} options={{ title: i18n.t('nav.loadingTrip') }} />
       <Stack.Screen name={SCREEN_NAMES.CASH_COLLECTION} component={CashCollectionScreen} options={{ title: i18n.t('nav.cashCollection') }} />
       <Stack.Screen name={SCREEN_NAMES.VEHICLE_UNLOADING} component={VehicleUnloadingScreen} options={{ title: i18n.t('nav.vehicleUnloading') }} />
+      <Stack.Screen name={SCREEN_NAMES.END_OF_DAY} component={EndOfDayScreen} options={{ title: i18n.t('endOfDay.title') }} />
     </Stack.Navigator>
   );
 }

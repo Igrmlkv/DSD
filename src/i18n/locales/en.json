@@ -105,7 +105,8 @@
     "actionRoute": "Route",
     "actionLoading": "Loading",
     "actionUnloading": "Unloading",
-    "actionStartOfDay": "Start of Day"
+    "actionStartOfDay": "Start of Day",
+    "actionEndOfDay": "End of Day"
   },
   "supervisorHome": {
     "onRoute": "On Route",
@@ -739,5 +740,58 @@
     "notDone": "Not done",
     "km": "km",
     "ready": "All checks completed. Ready to start route."
+  },
+  "endOfDay": {
+    "title": "End of Day",
+    "step": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Complete Route",
+    "routeCompleted": "Route completed!",
+    "routeCompletedMsg": "Data saved. Have a good rest!",
+    "readOnlyBanner": "End of day data (read only)",
+    "routeFinished": "Route completed",
+    "alreadyCompleted": "End of day already completed"
+  },
+  "materialCheckIn": {
+    "title": "Material Check-In",
+    "subtitle": "Verify remaining stock and returns",
+    "expectedQty": "Expected qty",
+    "actualQty": "Actual qty",
+    "condition": "Condition",
+    "conditionGood": "Good",
+    "conditionDamaged": "Damaged",
+    "conditionExpired": "Expired",
+    "discrepancy": "Discrepancy",
+    "noItems": "No items to check",
+    "allMatched": "All items match",
+    "itemsWithDiscrepancy": "{{count}} items with discrepancy",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes..."
+  },
+  "cashCheckIn": {
+    "title": "Cash Check-In",
+    "subtitle": "Reconcile expected and actual amounts",
+    "expectedAmount": "Expected amount",
+    "actualAmount": "Actual amount",
+    "discrepancy": "Discrepancy",
+    "placeholder": "0.00",
+    "noDiscrepancy": "No discrepancy",
+    "hint": "Count all cash and reconcile with today's total",
+    "notes": "Notes",
+    "notesPlaceholder": "Additional notes..."
+  },
+  "endOfDayConfirm": {
+    "title": "End of Day Confirmation",
+    "subtitle": "Review and confirm route completion",
+    "materialCheckIn": "Material Check-In",
+    "cashCheckIn": "Cash Check-In",
+    "odometer": "Odometer",
+    "vehicleCheck": "Vehicle Check",
+    "signature": "Supervisor Signature",
+    "passed": "Done",
+    "notDone": "Not done",
+    "km": "km",
+    "ready": "All checks completed. Route can be finalized."
   }
 }

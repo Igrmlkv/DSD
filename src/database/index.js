@@ -119,4 +119,6 @@ export {
   saveVehicleCheckItems,
   getVehicleCheckItems,
   getOrCreateTodayCheckin,
+  getOrCreateTodayEndCheckin,
+  getTodayPaymentsTotal,
 } from './database';

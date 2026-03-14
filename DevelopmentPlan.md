@@ -155,7 +155,7 @@
 
 ---
 
-### WP-2.2: Invoice / Delivery Note / Receipt Generation
+### WP-2.2: Invoice / Receipt Generation
 
 **Текущее состояние:** Нет формирования документов. Delivery confirmation через SignatureScreen создаёт запись в БД без документа.
 
@@ -178,7 +178,7 @@
 **Новые таблицы:** `invoices`, `invoice_items`, `delivery_notes`, `receipts`
 
 **Новые экраны:**
-- `InvoiceSummaryScreen.js` — предпросмотр invoice перед подтверждением (Delivery preview)
+- `InvoiceSummaryScreen.js` — предпросмотр invoice перед подтверждением (Invoice preview)
 - `DocumentViewScreen.js` — просмотр сформированного документа
 
 ---
@@ -236,8 +236,8 @@
 **Реализация:**
 - Новая роль в `roles.js` и `authService.js`
 - Новый `PreselerNavigator` (или расширение `ExpeditorNavigator`)
-- Модификация `OrderEditScreen` — добавить: item proposal, deal conditions, return items, order references
-- Новый `OrderConfirmationScreen.js` — pricing summary + dual signature + print
+- Модификация `OrderEditScreen` — добавить: deal conditions, return items, order references
+- Новый `OrderConfirmationScreen.js` — pricing summary + signature + print
 
 ---
 

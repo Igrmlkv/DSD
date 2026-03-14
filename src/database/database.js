@@ -31,6 +31,7 @@ export async function initDatabase() {
     "ALTER TABLE deliveries ADD COLUMN signature_data TEXT",
     "ALTER TABLE deliveries ADD COLUMN signature_driver_data TEXT",
     "ALTER TABLE tour_checkins ADD COLUMN current_step INTEGER DEFAULT 0",
+    "ALTER TABLE tour_checkins ADD COLUMN material_check_data TEXT",
   ];
   for (const sql of migrations) {
     try { await database.execAsync(sql); } catch { /* column already exists */ }
@@ -1416,4 +1417,32 @@ export async function getOrCreateTodayCheckin(driverId, vehicleId) {
     [id, driverId, vehicleId || '', now, now]
   );
   return database.getFirstAsync(`SELECT * FROM tour_checkins WHERE id = ?`, [id]);
+}
+
+export async function getOrCreateTodayEndCheckin(driverId, vehicleId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  const existing = await database.getFirstAsync(
+    `SELECT * FROM tour_checkins WHERE driver_id = ? AND type = 'end' AND date(checkin_date) = ? ORDER BY created_at DESC LIMIT 1`,
+    [driverId, today]
+  );
+  if (existing) return existing;
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO tour_checkins (id, driver_id, vehicle_id, type, status, current_step, created_at, updated_at)
+     VALUES (?, ?, ?, 'end', 'in_progress', 0, ?, ?)`,
+    [id, driverId, vehicleId || '', now, now]
+  );
+  return database.getFirstAsync(`SELECT * FROM tour_checkins WHERE id = ?`, [id]);
+}
+
+export async function getTodayPaymentsTotal(driverId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  const result = await database.getFirstAsync(
+    `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE user_id = ? AND date(payment_date) = ?`,
+    [driverId, today]
+  );
+  return result?.total || 0;
 }

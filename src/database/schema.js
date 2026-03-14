@@ -286,6 +286,38 @@ const CREATE_TABLES = [
     FOREIGN KEY (driver_id) REFERENCES users(id)
   )`,
 
+  // --- Start/End of Day (Tour Check-in/Check-out) ---
+
+  `CREATE TABLE IF NOT EXISTS tour_checkins (
+    id TEXT PRIMARY KEY,
+    driver_id TEXT NOT NULL,
+    vehicle_id TEXT NOT NULL,
+    route_id TEXT,
+    type TEXT NOT NULL CHECK(type IN ('start','end')),
+    checkin_date TEXT DEFAULT (datetime('now')),
+    status TEXT DEFAULT 'in_progress' CHECK(status IN ('in_progress','completed')),
+    vehicle_check TEXT,
+    odometer_reading REAL,
+    cash_amount REAL,
+    signature_data TEXT,
+    supervisor_name TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES users(id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS vehicle_check_items (
+    id TEXT PRIMARY KEY,
+    checkin_id TEXT NOT NULL,
+    question TEXT NOT NULL,
+    answer TEXT,
+    is_ok INTEGER DEFAULT 1,
+    notes TEXT,
+    FOREIGN KEY (checkin_id) REFERENCES tour_checkins(id)
+  )`,
+
   // --- Возвраты тары ---
 
   `CREATE TABLE IF NOT EXISTS packaging_returns (
@@ -397,6 +429,8 @@ const CREATE_TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_devices_user ON devices(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_loading_trips_driver ON loading_trips(driver_id)`,
   `CREATE INDEX IF NOT EXISTS idx_cash_collections_driver ON cash_collections(driver_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_tour_checkins_driver ON tour_checkins(driver_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_tour_checkins_type ON tour_checkins(type)`,
 ];
 
 export { SCHEMA_VERSION, CREATE_TABLES };

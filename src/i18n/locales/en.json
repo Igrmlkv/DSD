@@ -680,5 +680,61 @@
     "hoursAgo": "h ago",
     "markAllRead": "Mark all as read ({{count}})",
     "noNotifications": "No notifications"
+  },
+  "startOfDay": {
+    "title": "Start of Day",
+    "step": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Start Tour",
+    "tourStarted": "Tour started successfully!",
+    "tourStartedMsg": "You can now begin your route.",
+    "alreadyCompleted": "Start-of-day already completed today",
+    "wizardTitle": "Pre-Tour Checklist"
+  },
+  "vehicleCheck": {
+    "title": "Vehicle Safety Check",
+    "subtitle": "Check all items before departure",
+    "tires": "Tires condition OK",
+    "brakes": "Brakes working properly",
+    "lights": "Lights and signals functional",
+    "mirrors": "Mirrors adjusted correctly",
+    "fluids": "Oil / coolant / washer fluid levels OK",
+    "documents": "Documents present (license, insurance)",
+    "cleanliness": "Vehicle interior clean",
+    "cargo": "Cargo area secured",
+    "allChecked": "All items checked",
+    "itemsRemaining": "{{count}} items remaining",
+    "notesPlaceholder": "Additional notes (optional)"
+  },
+  "odometerScreen": {
+    "title": "Odometer Reading",
+    "subtitle": "Enter current odometer value",
+    "currentReading": "Current reading (km)",
+    "placeholder": "e.g. 45230",
+    "lastReading": "Last reading: {{value}} km",
+    "noLastReading": "No previous reading recorded",
+    "invalid": "Please enter a valid odometer reading"
+  },
+  "checkoutCash": {
+    "title": "Cash on Hand",
+    "subtitle": "Enter cash amount before departure",
+    "amount": "Cash amount",
+    "placeholder": "0.00",
+    "hint": "Count all cash, coins and receipts",
+    "invalid": "Please enter a valid amount"
+  },
+  "tourConfirm": {
+    "title": "Tour Confirmation",
+    "subtitle": "Review and confirm to start your tour",
+    "vehicleCheck": "Vehicle check",
+    "materialsLoaded": "Materials loaded",
+    "odometer": "Odometer",
+    "cashOnHand": "Cash on hand",
+    "signature": "Supervisor signature",
+    "passed": "Passed",
+    "notDone": "Not done",
+    "km": "km",
+    "ready": "All checks completed. Ready to start tour."
   }
 }

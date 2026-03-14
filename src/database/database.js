@@ -1317,11 +1317,73 @@ export async function getDbStats() {
     'returns', 'return_items', 'payments',
     'loading_trips', 'loading_trip_items', 'cash_collections',
     'packaging_returns', 'packaging_return_items',
-    'notifications', 'devices', 'audit_log',
+    'notifications', 'devices', 'audit_log', 'tour_checkins',
   ];
   for (const table of tables) {
     const result = await database.getFirstAsync(`SELECT COUNT(*) as count FROM ${table}`);
     stats[table] = result.count;
   }
   return stats;
+}
+
+// =====================================================
+// TOUR CHECK-IN / CHECK-OUT (Start/End of Day)
+// =====================================================
+
+export async function createTourCheckin(checkin) {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO tour_checkins (id, driver_id, vehicle_id, route_id, type, status, vehicle_check, odometer_reading, cash_amount, signature_data, supervisor_name, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, checkin.driver_id, checkin.vehicle_id, checkin.route_id || null, checkin.type, checkin.status || 'in_progress', checkin.vehicle_check || null, checkin.odometer_reading || null, checkin.cash_amount || null, checkin.signature_data || null, checkin.supervisor_name || null, checkin.notes || null, now, now]
+  );
+  return id;
+}
+
+export async function updateTourCheckin(id, updates) {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  const fields = [];
+  const values = [];
+  for (const [key, val] of Object.entries(updates)) {
+    fields.push(`${key} = ?`);
+    values.push(val);
+  }
+  fields.push('updated_at = ?');
+  values.push(now);
+  values.push(id);
+  await database.runAsync(
+    `UPDATE tour_checkins SET ${fields.join(', ')} WHERE id = ?`,
+    values
+  );
+}
+
+export async function getTodayTourCheckin(driverId, type) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  return database.getFirstAsync(
+    `SELECT * FROM tour_checkins WHERE driver_id = ? AND type = ? AND date(checkin_date) = ? ORDER BY created_at DESC LIMIT 1`,
+    [driverId, type, today]
+  );
+}
+
+export async function getLastOdometerReading(driverId) {
+  const database = await getDatabase();
+  return database.getFirstAsync(
+    `SELECT odometer_reading FROM tour_checkins WHERE driver_id = ? AND odometer_reading IS NOT NULL ORDER BY created_at DESC LIMIT 1`,
+    [driverId]
+  );
+}
+
+export async function saveVehicleCheckItems(checkinId, items) {
+  const database = await getDatabase();
+  for (const item of items) {
+    const id = generateId();
+    await database.runAsync(
+      `INSERT INTO vehicle_check_items (id, checkin_id, question, answer, is_ok, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, checkinId, item.question, item.answer || null, item.is_ok ? 1 : 0, item.notes || null]
+    );
+  }
 }

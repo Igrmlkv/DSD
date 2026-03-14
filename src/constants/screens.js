@@ -32,6 +32,7 @@ export const SCREEN_NAMES = {
   SIGNATURE: 'Signature',
   SCANNING: 'Scanning',
   VEHICLE_UNLOADING: 'VehicleUnloading',
+  START_OF_DAY: 'StartOfDay',
 
   // Supervisor stack screens
   MONITORING_MAP: 'MonitoringMap',

@@ -110,4 +110,11 @@ export {
 
   // Stats
   getDbStats,
+
+  // Tour Check-in/Check-out
+  createTourCheckin,
+  updateTourCheckin,
+  getTodayTourCheckin,
+  getLastOdometerReading,
+  saveVehicleCheckItems,
 } from './database';

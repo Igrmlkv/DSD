@@ -89,13 +89,13 @@ export default function CashCheckInStep({ data, onUpdate, readOnly, expectedAmou
         <Ionicons
           name={hasDisc ? 'alert-circle' : 'checkmark-circle'}
           size={22}
-          color={hasDisc ? COLORS.error : '#34C759'}
+          color={hasDisc ? COLORS.error : COLORS.success}
         />
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.discLabel}>{t('cashCheckIn.discrepancy')}</Text>
           <Text style={[
             styles.discValue,
-            { color: hasDisc ? COLORS.error : '#34C759' },
+            { color: hasDisc ? COLORS.error : COLORS.success },
           ]}>
             {discrepancy != null ? formatMoney(discrepancy) : t('cashCheckIn.noDiscrepancy')}
           </Text>
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   discCard: {
     flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 16, marginBottom: 12,
   },
-  discCardOk: { backgroundColor: '#34C75912' },
+  discCardOk: { backgroundColor: COLORS.success + '12' },
   discCardWarn: { backgroundColor: COLORS.error + '12' },
   discLabel: { fontSize: 12, color: COLORS.textSecondary },
   discValue: { fontSize: 18, fontWeight: '700', marginTop: 2 },

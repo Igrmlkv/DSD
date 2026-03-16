@@ -93,8 +93,8 @@ export default function CashCollectionScreen() {
 
       {discrepancy !== 0 && (
         <View style={[styles.discrepancyCard, discrepancy < 0 ? styles.negative : styles.positive]}>
-          <Ionicons name={discrepancy < 0 ? 'alert-circle' : 'information-circle'} size={20} color={discrepancy < 0 ? COLORS.error : '#34C759'} />
-          <Text style={[styles.discrepancyText, { color: discrepancy < 0 ? COLORS.error : '#34C759' }]}>
+          <Ionicons name={discrepancy < 0 ? 'alert-circle' : 'information-circle'} size={20} color={discrepancy < 0 ? COLORS.error : COLORS.success} />
+          <Text style={[styles.discrepancyText, { color: discrepancy < 0 ? COLORS.error : COLORS.success }]}>
             {t('cashCollection.discrepancyLine', { amount: (discrepancy > 0 ? '+' : '') + discrepancy.toLocaleString() })}
           </Text>
         </View>
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   currency: { fontSize: 20, fontWeight: '600', color: COLORS.textSecondary },
   discrepancyCard: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, padding: 12, marginTop: 10 },
   negative: { backgroundColor: COLORS.error + '10' },
-  positive: { backgroundColor: '#34C75910' },
+  positive: { backgroundColor: COLORS.success + '10' },
   discrepancyText: { fontSize: 14, fontWeight: '600' },
   notesInput: { backgroundColor: COLORS.white, borderRadius: 10, padding: 12, marginTop: 16, fontSize: 14, color: COLORS.text },
   submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.primary, borderRadius: 12, padding: 16, marginTop: 24 },

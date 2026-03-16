@@ -2,6 +2,7 @@ export {
   // Core
   getDatabase,
   initDatabase,
+  resetAndSeedDatabase,
   generateId,
 
   // Products
@@ -19,6 +20,7 @@ export {
   getRoutePoints,
   updateRoutePointStatus,
   updateRouteStatus,
+  getActiveVisitCustomer,
 
   // Orders
   getAllOrders,
@@ -33,6 +35,7 @@ export {
   increaseStock,
   deleteOrder,
   saveOrderItems,
+  saveOrderWithItems,
 
   // Deliveries
   getDeliveries,
@@ -41,6 +44,7 @@ export {
   createDelivery,
   createDeliveryWithItems,
   updateDeliveryStatus,
+  processShipmentDelivery,
 
   // Returns
   getReturns,
@@ -121,4 +125,39 @@ export {
   getOrCreateTodayCheckin,
   getOrCreateTodayEndCheckin,
   getTodayPaymentsTotal,
+
+  // Expenses
+  getExpenseTypes,
+  ensureExpenseTypes,
+  getTodayExpenses,
+  getTodayExpensesTotal,
+  createExpense,
+  updateExpense,
+  deleteExpense,
+
+  // Visit Reports
+  createVisitReport,
+  getVisitReportByPoint,
+  getVisitReportsByRoute,
+
+  // Inventory Adjustments
+  ensureAdjustmentReasons,
+  getAdjustmentReasons,
+  createInventoryAdjustment,
+  getInventoryAdjustments,
+  getInventoryAdjustmentItems,
+
+  // On Hand Inventory
+  createOnHandInventory,
+  getOnHandInventory,
+  getOnHandInventoryItems,
+  getLatestOnHandForCustomer,
+  discardOnHandInventory,
+  cancelOnHandInventory,
+
+  // Supervisor Auth
+  verifySupervisorPassword,
+
+  // Empties
+  getEmptiesStock,
 } from './database';

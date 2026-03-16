@@ -1,5 +1,12 @@
 import * as SQLite from 'expo-sqlite';
 import { CREATE_TABLES } from './schema';
+import { DEFAULT_VAT_PERCENT } from '../constants/config';
+import {
+  ORDER_STATUS, ROUTE_STATUS, VISIT_STATUS, DELIVERY_STATUS, RETURN_STATUS,
+  LOADING_TRIP_STATUS, ADJUSTMENT_STATUS,
+  CASH_COLLECTION_STATUS, PACKAGING_RETURN_STATUS, ON_HAND_INVENTORY_STATUS,
+  CHECKIN_STATUS, TOUR_CHECKIN_TYPE,
+} from '../constants/statuses';
 
 let db = null;
 
@@ -13,7 +20,7 @@ export function generateId() {
 
 export async function getDatabase() {
   if (db) return db;
-  db = await SQLite.openDatabaseAsync('dsd_mini_v3.db');
+  db = await SQLite.openDatabaseAsync('dsd_mini_v8.db');
   await db.execAsync('PRAGMA journal_mode = WAL');
   await db.execAsync('PRAGMA foreign_keys = ON');
   return db;
@@ -32,10 +39,23 @@ export async function initDatabase() {
     "ALTER TABLE deliveries ADD COLUMN signature_driver_data TEXT",
     "ALTER TABLE tour_checkins ADD COLUMN current_step INTEGER DEFAULT 0",
     "ALTER TABLE tour_checkins ADD COLUMN material_check_data TEXT",
+    "ALTER TABLE customers ADD COLUMN ship_to_name TEXT",
+    "ALTER TABLE customers ADD COLUMN visit_time_from TEXT",
+    "ALTER TABLE customers ADD COLUMN visit_time_to TEXT",
+    "ALTER TABLE customers ADD COLUMN delivery_notes_text TEXT",
+    "ALTER TABLE customers ADD COLUMN vat_rate REAL DEFAULT 22",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_warehouse_product ON stock(warehouse, product_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_tour_checkins_daily ON tour_checkins(driver_id, type, date(checkin_date))",
   ];
   for (const sql of migrations) {
     try { await database.execAsync(sql); } catch { /* column already exists */ }
   }
+
+  // Ensure expense types exist (idempotent)
+  try { await ensureExpenseTypes(); } catch { /* table may not exist yet on first run */ }
+
+  // Ensure adjustment reasons exist (idempotent)
+  try { await ensureAdjustmentReasons(); } catch { /* ignore */ }
 
   // Check if already seeded
   const result = await database.getFirstAsync('SELECT COUNT(*) as count FROM products');
@@ -94,8 +114,8 @@ async function seedDatabase(database) {
     // Customers
     for (const c of CUSTOMERS) {
       await database.runAsync(
-        `INSERT INTO customers (id, name, legal_name, inn, kpp, address, city, region, postal_code, latitude, longitude, contact_person, phone, customer_type, payment_terms, credit_limit, debt_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [c.id, c.name, c.legal_name, c.inn, c.kpp, c.address, c.city, c.region, c.postal_code, c.latitude, c.longitude, c.contact_person, c.phone, c.customer_type, c.payment_terms, c.credit_limit, c.debt_amount]
+        `INSERT INTO customers (id, name, ship_to_name, legal_name, inn, kpp, address, city, region, postal_code, latitude, longitude, contact_person, phone, visit_time_from, visit_time_to, delivery_notes_text, vat_rate, customer_type, payment_terms, credit_limit, debt_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [c.id, c.name, c.ship_to_name || null, c.legal_name, c.inn, c.kpp, c.address, c.city, c.region, c.postal_code, c.latitude, c.longitude, c.contact_person, c.phone, c.visit_time_from || null, c.visit_time_to || null, c.delivery_notes_text || null, c.vat_rate ?? DEFAULT_VAT_PERCENT, c.customer_type, c.payment_terms, c.credit_limit, c.debt_amount]
       );
     }
 
@@ -276,11 +296,77 @@ async function seedDatabase(database) {
       );
     }
 
+    // Adjustment Reasons (seed)
+    const adjustmentReasons = [
+      { id: 'ar-breakage', code: 'breakage', name_ru: 'Бой / Повреждение', name_en: 'Breakage', sort_order: 1 },
+      { id: 'ar-theft', code: 'theft', name_ru: 'Хищение', name_en: 'Theft', sort_order: 2 },
+      { id: 'ar-incorrect-freight', code: 'incorrect_freight', name_ru: 'Некорректная накладная', name_en: 'Incorrect freight list', sort_order: 3 },
+      { id: 'ar-truck-transfer', code: 'truck_transfer', name_ru: 'Перемещение между машинами', name_en: 'Truck-to-truck transfer', sort_order: 4 },
+      { id: 'ar-expired', code: 'expired', name_ru: 'Истёк срок годности', name_en: 'Expired', sort_order: 5 },
+      { id: 'ar-recount', code: 'recount', name_ru: 'Пересчёт', name_en: 'Recount', sort_order: 6 },
+    ];
+    for (const ar of adjustmentReasons) {
+      await database.runAsync(
+        `INSERT INTO adjustment_reasons (id, code, name_ru, name_en, is_active, sort_order) VALUES (?, ?, ?, ?, 1, ?)`,
+        [ar.id, ar.code, ar.name_ru, ar.name_en, ar.sort_order]
+      );
+    }
+
     await database.execAsync('COMMIT');
   } catch (error) {
     await database.execAsync('ROLLBACK');
     throw error;
   }
+}
+
+export async function resetAndSeedDatabase() {
+  const database = await getDatabase();
+
+  // Disable FK checks temporarily for clean delete
+  await database.execAsync('PRAGMA foreign_keys = OFF');
+
+  const tables = [
+    'on_hand_inventory_items', 'on_hand_inventory',
+    'inventory_adjustment_items', 'inventory_adjustments', 'adjustment_reasons',
+    'visit_report_photos', 'visit_reports',
+    'receipts', 'delivery_notes', 'invoice_items', 'invoices',
+    'expenses', 'expense_types',
+    'sync_meta', 'sync_log',
+    'audit_log', 'devices', 'notifications',
+    'packaging_return_items', 'packaging_returns',
+    'vehicle_check_items', 'tour_checkins',
+    'cash_collections',
+    'loading_trip_items', 'loading_trips',
+    'payments',
+    'return_items', 'returns',
+    'delivery_items', 'deliveries',
+    'order_items', 'orders',
+    'route_points', 'routes',
+    'stock', 'vehicles',
+    'price_lists', 'products',
+    'customers', 'users',
+  ];
+
+  await database.execAsync('BEGIN TRANSACTION');
+  try {
+    for (const table of tables) {
+      await database.execAsync(`DELETE FROM ${table}`);
+    }
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
+
+  await database.execAsync('PRAGMA foreign_keys = ON');
+
+  // Re-seed
+  await seedDatabase(database);
+  // Re-ensure idempotent data
+  try { await ensureExpenseTypes(); } catch { /* ignore */ }
+  try { await ensureAdjustmentReasons(); } catch { /* ignore */ }
+
+  console.log('Database reset and re-seeded successfully!');
 }
 
 // =====================================================
@@ -388,8 +474,8 @@ export async function updateRoutePointStatus(pointId, status) {
   const database = await getDatabase();
   const now = new Date().toISOString();
   const fields = { status };
-  if (status === 'arrived') fields.actual_arrival = now;
-  if (status === 'completed') fields.actual_departure = now;
+  if (status === VISIT_STATUS.ARRIVED) fields.actual_arrival = now;
+  if (status === VISIT_STATUS.COMPLETED) fields.actual_departure = now;
 
   await database.runAsync(
     `UPDATE route_points SET status = ?, actual_arrival = COALESCE(?, actual_arrival), actual_departure = COALESCE(?, actual_departure) WHERE id = ?`,
@@ -404,6 +490,20 @@ export async function updateRouteStatus(routeId, status) {
     `UPDATE routes SET status = ?, updated_at = ? WHERE id = ?`,
     [status, now, routeId]
   );
+}
+
+export async function getActiveVisitCustomer(driverId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().slice(0, 10);
+  const row = await database.getFirstAsync(`
+    SELECT rp.id as point_id, rp.customer_id, c.name as customer_name, r.id as route_id
+    FROM route_points rp
+    JOIN routes r ON r.id = rp.route_id
+    JOIN customers c ON c.id = rp.customer_id
+    WHERE r.driver_id = ? AND r.date = ? AND rp.status = '${VISIT_STATUS.IN_PROGRESS}'
+    LIMIT 1
+  `, [driverId, today]);
+  return row || null;
 }
 
 // =====================================================
@@ -469,7 +569,7 @@ export async function createOrder(order) {
   const now = new Date().toISOString();
   await database.runAsync(
     `INSERT INTO orders (id, customer_id, user_id, route_point_id, order_date, status, total_amount, discount_amount, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 'draft', ?, 0, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, '${ORDER_STATUS.DRAFT}', ?, 0, ?, ?, ?)`,
     [id, order.customer_id, order.user_id, order.route_point_id || null, now, order.total_amount || 0, order.notes || null, now, now]
   );
   return id;
@@ -478,17 +578,22 @@ export async function createOrder(order) {
 export async function updateOrder(id, fields) {
   const database = await getDatabase();
   const now = new Date().toISOString();
-  await database.runAsync(
-    `UPDATE orders SET customer_id = ?, total_amount = ?, discount_amount = ?, notes = ?, status = ?, updated_at = ? WHERE id = ?`,
-    [fields.customer_id, fields.total_amount || 0, fields.discount_amount || 0, fields.notes || null, fields.status || 'draft', now, id]
-  );
+  const setClauses = ['updated_at = ?'];
+  const params = [now];
+  if (fields.customer_id !== undefined) { setClauses.push('customer_id = ?'); params.push(fields.customer_id); }
+  if (fields.total_amount !== undefined) { setClauses.push('total_amount = ?'); params.push(fields.total_amount); }
+  if (fields.discount_amount !== undefined) { setClauses.push('discount_amount = ?'); params.push(fields.discount_amount); }
+  if (fields.notes !== undefined) { setClauses.push('notes = ?'); params.push(fields.notes); }
+  if (fields.status !== undefined) { setClauses.push('status = ?'); params.push(fields.status); }
+  params.push(id);
+  await database.runAsync(`UPDATE orders SET ${setClauses.join(', ')} WHERE id = ?`, params);
 }
 
 export async function shipOrdersByRoutePoint(routePointId) {
   const database = await getDatabase();
   const now = new Date().toISOString();
   await database.runAsync(
-    `UPDATE orders SET status = 'shipped', updated_at = ? WHERE route_point_id = ? AND status IN ('draft', 'confirmed')`,
+    `UPDATE orders SET status = '${ORDER_STATUS.SHIPPED}', updated_at = ? WHERE route_point_id = ? AND status IN ('${ORDER_STATUS.DRAFT}', '${ORDER_STATUS.CONFIRMED}')`,
     [now, routePointId]
   );
 }
@@ -500,13 +605,20 @@ export async function shipOrdersByRoutePoint(routePointId) {
 export async function decreaseStock(warehouse, items) {
   const database = await getDatabase();
   const now = new Date().toISOString();
-  for (const item of items) {
-    if (item.quantity > 0) {
-      await database.runAsync(
-        `UPDATE stock SET quantity = MAX(0, quantity - ?), updated_at = ? WHERE warehouse = ? AND product_id = ?`,
-        [item.quantity, now, warehouse, item.product_id]
-      );
+  try {
+    await database.execAsync('BEGIN TRANSACTION');
+    for (const item of items) {
+      if (item.quantity > 0) {
+        await database.runAsync(
+          `UPDATE stock SET quantity = MAX(0, quantity - ?), updated_at = ? WHERE warehouse = ? AND product_id = ?`,
+          [item.quantity, now, warehouse, item.product_id]
+        );
+      }
     }
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
   }
 }
 
@@ -517,40 +629,94 @@ export async function decreaseStock(warehouse, items) {
 export async function increaseStock(warehouse, items) {
   const database = await getDatabase();
   const now = new Date().toISOString();
-  for (const item of items) {
-    if (item.quantity > 0) {
-      // Try update existing row
-      const result = await database.runAsync(
-        `UPDATE stock SET quantity = quantity + ?, updated_at = ? WHERE warehouse = ? AND product_id = ?`,
-        [item.quantity, now, warehouse, item.product_id]
-      );
-      if (result.changes === 0) {
-        // Insert new row if product not yet in stock
-        const id = generateId();
+  try {
+    await database.execAsync('BEGIN TRANSACTION');
+    for (const item of items) {
+      if (item.quantity > 0) {
         await database.runAsync(
-          `INSERT INTO stock (id, product_id, warehouse, quantity, reserved, updated_at) VALUES (?, ?, ?, ?, 0, ?)`,
-          [id, item.product_id, warehouse, item.quantity, now]
+          `INSERT INTO stock (id, product_id, warehouse, quantity, reserved, updated_at)
+           VALUES (?, ?, ?, ?, 0, ?)
+           ON CONFLICT(warehouse, product_id) DO UPDATE SET
+             quantity = quantity + excluded.quantity,
+             updated_at = excluded.updated_at`,
+          [generateId(), item.product_id, warehouse, item.quantity, now]
         );
       }
     }
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
   }
 }
 
 export async function deleteOrder(id) {
   const database = await getDatabase();
-  await database.runAsync(`DELETE FROM order_items WHERE order_id = ?`, [id]);
-  await database.runAsync(`DELETE FROM orders WHERE id = ?`, [id]);
+  try {
+    await database.execAsync('BEGIN TRANSACTION');
+    await database.runAsync(`DELETE FROM order_items WHERE order_id = ?`, [id]);
+    await database.runAsync(`DELETE FROM orders WHERE id = ?`, [id]);
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
 }
 
 export async function saveOrderItems(orderId, items) {
   const database = await getDatabase();
-  await database.runAsync(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
-  for (const item of items) {
-    const itemId = generateId();
-    await database.runAsync(
-      `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, total) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.total]
-    );
+  try {
+    await database.execAsync('BEGIN TRANSACTION');
+    await database.runAsync(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
+    for (const item of items) {
+      const itemId = generateId();
+      await database.runAsync(
+        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, total) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.total]
+      );
+    }
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
+}
+
+export async function saveOrderWithItems(orderData, items, isEdit = false) {
+  const database = await getDatabase();
+  await database.execAsync('BEGIN TRANSACTION');
+  try {
+    let orderId;
+    const now = new Date().toISOString();
+    if (isEdit) {
+      orderId = orderData.id;
+      await database.runAsync(
+        `UPDATE orders SET customer_id=?, total_amount=?, discount_amount=?, notes=?, status=?, updated_at=? WHERE id=?`,
+        [orderData.customer_id, orderData.total_amount, orderData.discount_amount || 0, orderData.notes || null, orderData.status || ORDER_STATUS.DRAFT, now, orderId]
+      );
+    } else {
+      orderId = generateId();
+      await database.runAsync(
+        `INSERT INTO orders (id, customer_id, user_id, route_point_id, order_date, status, total_amount, discount_amount, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, '${ORDER_STATUS.DRAFT}', ?, 0, ?, ?, ?)`,
+        [orderId, orderData.customer_id, orderData.user_id, orderData.route_point_id || null, now, orderData.total_amount || 0, orderData.notes || null, now, now]
+      );
+    }
+
+    await database.runAsync(`DELETE FROM order_items WHERE order_id = ?`, [orderId]);
+    for (const item of items) {
+      const itemId = generateId();
+      await database.runAsync(
+        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, total) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.total]
+      );
+    }
+
+    await database.execAsync('COMMIT');
+    return orderId;
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
   }
 }
 
@@ -585,7 +751,7 @@ export async function createDelivery(delivery) {
   const now = new Date().toISOString();
   await database.runAsync(
     `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, '${DELIVERY_STATUS.PENDING}', ?, ?, ?)`,
     [id, delivery.order_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, delivery.total_amount || 0, now, now]
   );
   return id;
@@ -614,19 +780,26 @@ export async function createDeliveryWithItems(delivery, items) {
   const database = await getDatabase();
   const id = generateId();
   const now = new Date().toISOString();
-  await database.runAsync(
-    `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-    [id, delivery.order_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, 'delivered', delivery.total_amount || 0, delivery.signature_name || null, delivery.signature_data || null, delivery.signature_driver_data || null, now, now]
-  );
-  for (const item of items) {
-    const diId = generateId();
+  try {
+    await database.execAsync('BEGIN TRANSACTION');
     await database.runAsync(
-      `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [diId, id, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null]
+      `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+      [id, delivery.order_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, DELIVERY_STATUS.DELIVERED, delivery.total_amount || 0, delivery.signature_name || null, delivery.signature_data || null, delivery.signature_driver_data || null, now, now]
     );
+    for (const item of items) {
+      const diId = generateId();
+      await database.runAsync(
+        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [diId, id, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null]
+      );
+    }
+    await database.execAsync('COMMIT');
+    return id;
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
   }
-  return id;
 }
 
 export async function updateDeliveryStatus(id, status, signatureName = null) {
@@ -636,6 +809,54 @@ export async function updateDeliveryStatus(id, status, signatureName = null) {
     `UPDATE deliveries SET status = ?, signature_name = COALESCE(?, signature_name), signature_confirmed = CASE WHEN ? IS NOT NULL THEN 1 ELSE signature_confirmed END, updated_at = ? WHERE id = ?`,
     [status, signatureName, signatureName, now, id]
   );
+}
+
+export async function processShipmentDelivery({ pointId, customerId, driverId, totalAmount, signatureName, signatureData, signatureDriverData, shipmentItems, vehicleId }) {
+  const database = await getDatabase();
+  await database.execAsync('BEGIN TRANSACTION');
+  try {
+    const now = new Date().toISOString();
+
+    // 1. Update order statuses to 'shipped'
+    await database.runAsync(
+      `UPDATE orders SET status = '${ORDER_STATUS.SHIPPED}', updated_at = ? WHERE route_point_id = ? AND status IN ('${ORDER_STATUS.DRAFT}', '${ORDER_STATUS.CONFIRMED}')`,
+      [now, pointId]
+    );
+
+    // 2. Create delivery + items
+    const deliveryId = generateId();
+    await database.runAsync(
+      `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
+       VALUES (?, NULL, ?, ?, ?, ?, '${DELIVERY_STATUS.DELIVERED}', ?, ?, ?, ?, 1, ?, ?)`,
+      [deliveryId, pointId, customerId, driverId, now, totalAmount, signatureName, signatureData, signatureDriverData, now, now]
+    );
+
+    for (const item of shipmentItems) {
+      const itemId = generateId();
+      await database.runAsync(
+        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, deliveryId, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null]
+      );
+    }
+
+    // 3. Decrease vehicle stock
+    if (vehicleId) {
+      for (const item of shipmentItems) {
+        if (item.delivered_quantity > 0) {
+          await database.runAsync(
+            `UPDATE stock SET quantity = MAX(0, quantity - ?), updated_at = ? WHERE product_id = ? AND warehouse = ?`,
+            [item.delivered_quantity, now, item.product_id, vehicleId]
+          );
+        }
+      }
+    }
+
+    await database.execAsync('COMMIT');
+    return deliveryId;
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
 }
 
 // =====================================================
@@ -670,7 +891,7 @@ export async function getReturnsPendingApproval() {
     FROM returns r
     JOIN customers c ON c.id = r.customer_id
     JOIN users u ON u.id = r.driver_id
-    WHERE r.status = 'pending_approval'
+    WHERE r.status = '${RETURN_STATUS.PENDING_APPROVAL}'
     ORDER BY r.return_date DESC
   `);
 }
@@ -704,7 +925,7 @@ export async function createReturn(ret) {
   const now = new Date().toISOString();
   await database.runAsync(
     `INSERT INTO returns (id, customer_id, driver_id, route_point_id, return_date, reason, status, total_amount, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending_approval', ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, '${RETURN_STATUS.PENDING_APPROVAL}', ?, ?, ?)`,
     [id, ret.customer_id, ret.driver_id, ret.route_point_id || null, now, ret.reason, ret.total_amount || 0, ret.notes || null, now]
   );
   return id;
@@ -714,7 +935,7 @@ export async function approveReturn(returnId, supervisorId) {
   const database = await getDatabase();
   const now = new Date().toISOString();
   await database.runAsync(
-    `UPDATE returns SET status = 'approved', approved_by = ?, approved_at = ? WHERE id = ?`,
+    `UPDATE returns SET status = '${RETURN_STATUS.APPROVED}', approved_by = ?, approved_at = ? WHERE id = ?`,
     [supervisorId, now, returnId]
   );
 }
@@ -723,7 +944,7 @@ export async function rejectReturn(returnId, supervisorId, reason) {
   const database = await getDatabase();
   const now = new Date().toISOString();
   await database.runAsync(
-    `UPDATE returns SET status = 'rejected', approved_by = ?, approved_at = ?, rejection_reason = ? WHERE id = ?`,
+    `UPDATE returns SET status = '${RETURN_STATUS.REJECTED}', approved_by = ?, approved_at = ?, rejection_reason = ? WHERE id = ?`,
     [supervisorId, now, reason, returnId]
   );
 }
@@ -756,11 +977,18 @@ export async function createPayment(payment) {
   const database = await getDatabase();
   const id = generateId();
   const now = new Date().toISOString();
-  await database.runAsync(
-    `INSERT INTO payments (id, customer_id, user_id, order_id, route_point_id, payment_date, amount, payment_type, status, receipt_number, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`,
-    [id, payment.customer_id, payment.user_id, payment.order_id || null, payment.route_point_id || null, now, payment.amount, payment.payment_type, payment.receipt_number || null, payment.notes || null, now]
-  );
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      `INSERT INTO payments (id, customer_id, user_id, order_id, route_point_id, payment_date, amount, payment_type, status, receipt_number, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`,
+      [id, payment.customer_id, payment.user_id, payment.order_id || null, payment.route_point_id || null, now, payment.amount, payment.payment_type, payment.receipt_number || null, payment.notes || null, now]
+    );
+    // Subtract payment amount from customer's debt (never below 0)
+    await database.runAsync(
+      `UPDATE customers SET debt_amount = MAX(0, debt_amount - ?) WHERE id = ?`,
+      [payment.amount, payment.customer_id]
+    );
+  });
   return id;
 }
 
@@ -835,7 +1063,7 @@ export async function getAvailableVehicleStock(vehicleId, driverId, excludeOrder
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
       WHERE o.user_id = ?
-        AND o.status IN ('draft', 'confirmed')
+        AND o.status IN ('${ORDER_STATUS.DRAFT}', '${ORDER_STATUS.CONFIRMED}')
         AND (? IS NULL OR o.id != ?)
         AND (? IS NULL OR o.route_point_id IS NULL OR o.route_point_id != ?)
       GROUP BY oi.product_id
@@ -882,7 +1110,7 @@ export async function getUnloadingData(vehicleId, driverId) {
 export async function hasVerifiedLoadingTrip(driverId) {
   const database = await getDatabase();
   const result = await database.getFirstAsync(
-    `SELECT COUNT(*) as count FROM loading_trips WHERE driver_id = ? AND status = 'verified'`,
+    `SELECT COUNT(*) as count FROM loading_trips WHERE driver_id = ? AND status = '${LOADING_TRIP_STATUS.VERIFIED}'`,
     [driverId]
   );
   return result.count > 0;
@@ -941,7 +1169,7 @@ export async function updateLoadingTripStatus(tripId, status) {
   );
 
   // When verified, sync vehicle stock to actual loaded quantities
-  if (status === 'verified') {
+  if (status === LOADING_TRIP_STATUS.VERIFIED) {
     const trip = await database.getFirstAsync(
       `SELECT vehicle_id FROM loading_trips WHERE id = ?`, [tripId]
     );
@@ -1001,7 +1229,7 @@ export async function createCashCollection(collection) {
   const id = generateId();
   const now = new Date().toISOString();
   const discrepancy = (collection.actual_amount || 0) - (collection.expected_amount || 0);
-  const status = discrepancy === 0 ? 'collected' : 'discrepancy';
+  const status = discrepancy === 0 ? CASH_COLLECTION_STATUS.COLLECTED : CASH_COLLECTION_STATUS.DISCREPANCY;
   await database.runAsync(
     `INSERT INTO cash_collections (id, driver_id, route_id, collection_date, expected_amount, actual_amount, discrepancy, status, notes, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -1047,7 +1275,7 @@ export async function createPackagingReturn(pr) {
   const now = new Date().toISOString();
   await database.runAsync(
     `INSERT INTO packaging_returns (id, customer_id, driver_id, route_point_id, return_date, status, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, 'draft', ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, '${PACKAGING_RETURN_STATUS.DRAFT}', ?, ?)`,
     [id, pr.customer_id, pr.driver_id, pr.route_point_id || null, now, pr.notes || null, now]
   );
   return id;
@@ -1055,13 +1283,20 @@ export async function createPackagingReturn(pr) {
 
 export async function savePackagingReturnItems(packagingReturnId, items) {
   const database = await getDatabase();
-  await database.runAsync(`DELETE FROM packaging_return_items WHERE packaging_return_id = ?`, [packagingReturnId]);
-  for (const item of items) {
-    const itemId = generateId();
-    await database.runAsync(
-      `INSERT INTO packaging_return_items (id, packaging_return_id, packaging_type, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
-      [itemId, packagingReturnId, item.packaging_type, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good']
-    );
+  await database.execAsync('BEGIN TRANSACTION');
+  try {
+    await database.runAsync(`DELETE FROM packaging_return_items WHERE packaging_return_id = ?`, [packagingReturnId]);
+    for (const item of items) {
+      const itemId = generateId();
+      await database.runAsync(
+        `INSERT INTO packaging_return_items (id, packaging_return_id, packaging_type, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
+        [itemId, packagingReturnId, item.packaging_type, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good']
+      );
+    }
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
   }
 }
 
@@ -1234,11 +1469,11 @@ export async function getSupervisorStats(date = null) {
   const targetDate = date || new Date().toISOString().split('T')[0];
 
   const expeditorsOnRoute = await database.getFirstAsync(`
-    SELECT COUNT(DISTINCT r.driver_id) as count FROM routes r WHERE r.date = ? AND r.status IN ('planned','in_progress')
+    SELECT COUNT(DISTINCT r.driver_id) as count FROM routes r WHERE r.date = ? AND r.status IN ('${ROUTE_STATUS.PLANNED}','${ROUTE_STATUS.IN_PROGRESS}')
   `, [targetDate]);
 
   const totalPoints = await database.getFirstAsync(`
-    SELECT COUNT(*) as total, SUM(CASE WHEN rp.status = 'completed' THEN 1 ELSE 0 END) as completed
+    SELECT COUNT(*) as total, SUM(CASE WHEN rp.status = '${VISIT_STATUS.COMPLETED}' THEN 1 ELSE 0 END) as completed
     FROM route_points rp
     JOIN routes r ON r.id = rp.route_id
     WHERE r.date = ?
@@ -1251,7 +1486,7 @@ export async function getSupervisorStats(date = null) {
 
   const pendingReturns = await database.getFirstAsync(`
     SELECT COUNT(*) as count, COALESCE(SUM(total_amount), 0) as total_amount
-    FROM returns WHERE status = 'pending_approval'
+    FROM returns WHERE status = '${RETURN_STATUS.PENDING_APPROVAL}'
   `);
 
   return {
@@ -1274,8 +1509,8 @@ export async function getExpeditorProgress(date = null) {
       u.id, u.full_name,
       r.id as route_id, r.status as route_status, r.vehicle_number,
       COUNT(rp.id) as total_points,
-      SUM(CASE WHEN rp.status = 'completed' THEN 1 ELSE 0 END) as completed_points,
-      SUM(CASE WHEN rp.status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_points,
+      SUM(CASE WHEN rp.status = '${VISIT_STATUS.COMPLETED}' THEN 1 ELSE 0 END) as completed_points,
+      SUM(CASE WHEN rp.status = '${VISIT_STATUS.IN_PROGRESS}' THEN 1 ELSE 0 END) as in_progress_points,
       MAX(rp.actual_arrival) as last_activity
     FROM users u
     JOIN routes r ON r.driver_id = u.id AND r.date = ?
@@ -1339,7 +1574,7 @@ export async function createTourCheckin(checkin) {
   await database.runAsync(
     `INSERT INTO tour_checkins (id, driver_id, vehicle_id, route_id, type, status, vehicle_check, odometer_reading, cash_amount, signature_data, supervisor_name, notes, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, checkin.driver_id, checkin.vehicle_id, checkin.route_id || null, checkin.type, checkin.status || 'in_progress', checkin.vehicle_check || null, checkin.odometer_reading || null, checkin.cash_amount || null, checkin.signature_data || null, checkin.supervisor_name || null, checkin.notes || null, now, now]
+    [id, checkin.driver_id, checkin.vehicle_id, checkin.route_id || null, checkin.type, checkin.status || CHECKIN_STATUS.IN_PROGRESS, checkin.vehicle_check || null, checkin.odometer_reading || null, checkin.cash_amount || null, checkin.signature_data || null, checkin.supervisor_name || null, checkin.notes || null, now, now]
   );
   return id;
 }
@@ -1381,14 +1616,20 @@ export async function getLastOdometerReading(driverId) {
 
 export async function saveVehicleCheckItems(checkinId, items) {
   const database = await getDatabase();
-  // Remove old items for this checkin first to allow re-saving
-  await database.runAsync(`DELETE FROM vehicle_check_items WHERE checkin_id = ?`, [checkinId]);
-  for (const item of items) {
-    const id = generateId();
-    await database.runAsync(
-      `INSERT INTO vehicle_check_items (id, checkin_id, question, answer, is_ok, notes) VALUES (?, ?, ?, ?, ?, ?)`,
-      [id, checkinId, item.question, item.answer || null, item.is_ok ? 1 : 0, item.notes || null]
-    );
+  await database.execAsync('BEGIN TRANSACTION');
+  try {
+    await database.runAsync(`DELETE FROM vehicle_check_items WHERE checkin_id = ?`, [checkinId]);
+    for (const item of items) {
+      const id = generateId();
+      await database.runAsync(
+        `INSERT INTO vehicle_check_items (id, checkin_id, question, answer, is_ok, notes) VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, checkinId, item.question, item.answer || null, item.is_ok ? 1 : 0, item.notes || null]
+      );
+    }
+    await database.execAsync('COMMIT');
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
   }
 }
 
@@ -1403,38 +1644,38 @@ export async function getVehicleCheckItems(checkinId) {
 export async function getOrCreateTodayCheckin(driverId, vehicleId) {
   const database = await getDatabase();
   const today = new Date().toISOString().split('T')[0];
-  const existing = await database.getFirstAsync(
-    `SELECT * FROM tour_checkins WHERE driver_id = ? AND type = 'start' AND date(checkin_date) = ? ORDER BY created_at DESC LIMIT 1`,
-    [driverId, today]
-  );
-  if (existing) return existing;
-  // Create new in-progress checkin
   const id = generateId();
   const now = new Date().toISOString();
+
+  // INSERT OR IGNORE — if a record already exists for today, do nothing
   await database.runAsync(
-    `INSERT INTO tour_checkins (id, driver_id, vehicle_id, type, status, current_step, created_at, updated_at)
-     VALUES (?, ?, ?, 'start', 'in_progress', 0, ?, ?)`,
-    [id, driverId, vehicleId || '', now, now]
+    `INSERT OR IGNORE INTO tour_checkins (id, driver_id, vehicle_id, type, status, current_step, checkin_date, created_at, updated_at)
+     VALUES (?, ?, ?, '${TOUR_CHECKIN_TYPE.START}', '${CHECKIN_STATUS.IN_PROGRESS}', 0, ?, ?, ?)`,
+    [id, driverId, vehicleId || '', now, now, now]
   );
-  return database.getFirstAsync(`SELECT * FROM tour_checkins WHERE id = ?`, [id]);
+
+  return database.getFirstAsync(
+    `SELECT * FROM tour_checkins WHERE driver_id = ? AND type = '${TOUR_CHECKIN_TYPE.START}' AND date(checkin_date) = ? ORDER BY created_at DESC LIMIT 1`,
+    [driverId, today]
+  );
 }
 
 export async function getOrCreateTodayEndCheckin(driverId, vehicleId) {
   const database = await getDatabase();
   const today = new Date().toISOString().split('T')[0];
-  const existing = await database.getFirstAsync(
-    `SELECT * FROM tour_checkins WHERE driver_id = ? AND type = 'end' AND date(checkin_date) = ? ORDER BY created_at DESC LIMIT 1`,
-    [driverId, today]
-  );
-  if (existing) return existing;
   const id = generateId();
   const now = new Date().toISOString();
+
   await database.runAsync(
-    `INSERT INTO tour_checkins (id, driver_id, vehicle_id, type, status, current_step, created_at, updated_at)
-     VALUES (?, ?, ?, 'end', 'in_progress', 0, ?, ?)`,
-    [id, driverId, vehicleId || '', now, now]
+    `INSERT OR IGNORE INTO tour_checkins (id, driver_id, vehicle_id, type, status, current_step, checkin_date, created_at, updated_at)
+     VALUES (?, ?, ?, '${TOUR_CHECKIN_TYPE.END}', '${CHECKIN_STATUS.IN_PROGRESS}', 0, ?, ?, ?)`,
+    [id, driverId, vehicleId || '', now, now, now]
   );
-  return database.getFirstAsync(`SELECT * FROM tour_checkins WHERE id = ?`, [id]);
+
+  return database.getFirstAsync(
+    `SELECT * FROM tour_checkins WHERE driver_id = ? AND type = '${TOUR_CHECKIN_TYPE.END}' AND date(checkin_date) = ? ORDER BY created_at DESC LIMIT 1`,
+    [driverId, today]
+  );
 }
 
 export async function getTodayPaymentsTotal(driverId) {
@@ -1445,4 +1686,360 @@ export async function getTodayPaymentsTotal(driverId) {
     [driverId, today]
   );
   return result?.total || 0;
+}
+
+// =====================================================
+// EXPENSES
+// =====================================================
+
+export async function getExpenseTypes() {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM expense_types WHERE is_active = 1 ORDER BY sort_order, name`
+  );
+}
+
+export async function ensureExpenseTypes() {
+  const database = await getDatabase();
+  const count = await database.getFirstAsync('SELECT COUNT(*) as cnt FROM expense_types');
+  if (count?.cnt > 0) return;
+  const types = [
+    { id: 'et-gas', name: 'Gas / Fuel', icon: 'flame-outline', sort_order: 1 },
+    { id: 'et-tolls', name: 'Highway Tolls', icon: 'car-outline', sort_order: 2 },
+    { id: 'et-parking', name: 'Parking', icon: 'navigate-outline', sort_order: 3 },
+    { id: 'et-meals', name: 'Meals', icon: 'restaurant-outline', sort_order: 4 },
+    { id: 'et-maintenance', name: 'Vehicle Maintenance', icon: 'build-outline', sort_order: 5 },
+    { id: 'et-other', name: 'Other', icon: 'ellipsis-horizontal-outline', sort_order: 99 },
+  ];
+  for (const t of types) {
+    await database.runAsync(
+      `INSERT OR IGNORE INTO expense_types (id, name, icon, sort_order) VALUES (?, ?, ?, ?)`,
+      [t.id, t.name, t.icon, t.sort_order]
+    );
+  }
+}
+
+export async function getTodayExpenses(driverId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  return database.getAllAsync(
+    `SELECT e.*, et.name as type_name, et.icon as type_icon
+     FROM expenses e
+     LEFT JOIN expense_types et ON et.id = e.expense_type_id
+     WHERE e.driver_id = ? AND date(e.created_at) = ?
+     ORDER BY e.created_at DESC`,
+    [driverId, today]
+  );
+}
+
+export async function getTodayExpensesTotal(driverId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  const result = await database.getFirstAsync(
+    `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE driver_id = ? AND date(created_at) = ?`,
+    [driverId, today]
+  );
+  return result?.total || 0;
+}
+
+export async function createExpense(expense) {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO expenses (id, tour_checkin_id, driver_id, expense_type_id, expense_type_name, amount, currency, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'RUB', ?, ?, ?)`,
+    [id, expense.tour_checkin_id || null, expense.driver_id, expense.expense_type_id,
+     expense.expense_type_name || null, expense.amount, expense.notes || null, now, now]
+  );
+  return id;
+}
+
+export async function updateExpense(id, { amount, notes }) {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `UPDATE expenses SET amount = ?, notes = ?, updated_at = ? WHERE id = ?`,
+    [amount, notes || null, now, id]
+  );
+}
+
+export async function deleteExpense(id) {
+  const database = await getDatabase();
+  await database.runAsync(`DELETE FROM expenses WHERE id = ?`, [id]);
+}
+
+// ==================== Visit Reports ====================
+
+export async function createVisitReport({ routePointId, routeId, customerId, userId, checklist, notes, photos }) {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO visit_reports (id, route_point_id, route_id, customer_id, user_id, checklist, notes, status, visit_date, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted', ?, ?, ?)`,
+    [id, routePointId, routeId || null, customerId || null, userId, JSON.stringify(checklist), notes || null, now, now, now]
+  );
+  if (photos && photos.length > 0) {
+    for (const uri of photos) {
+      const photoId = generateId();
+      await database.runAsync(
+        `INSERT INTO visit_report_photos (id, visit_report_id, uri, created_at) VALUES (?, ?, ?, ?)`,
+        [photoId, id, uri, now]
+      );
+    }
+  }
+  return id;
+}
+
+export async function getVisitReportByPoint(routePointId) {
+  const database = await getDatabase();
+  const report = await database.getFirstAsync(
+    `SELECT * FROM visit_reports WHERE route_point_id = ? ORDER BY created_at DESC LIMIT 1`,
+    [routePointId]
+  );
+  if (!report) return null;
+  report.checklist = JSON.parse(report.checklist || '{}');
+  const photos = await database.getAllAsync(
+    `SELECT * FROM visit_report_photos WHERE visit_report_id = ? ORDER BY created_at`,
+    [report.id]
+  );
+  report.photos = photos.map((p) => p.uri);
+  return report;
+}
+
+export async function getVisitReportsByRoute(routeId) {
+  const database = await getDatabase();
+  const reports = await database.getAllAsync(
+    `SELECT vr.*, c.name as customer_name FROM visit_reports vr
+     LEFT JOIN customers c ON vr.customer_id = c.id
+     WHERE vr.route_id = ? ORDER BY vr.created_at DESC`,
+    [routeId]
+  );
+  return reports.map((r) => ({ ...r, checklist: JSON.parse(r.checklist || '{}') }));
+}
+
+// =====================================================
+// ADJUSTMENT REASONS
+// =====================================================
+
+export async function ensureAdjustmentReasons() {
+  const database = await getDatabase();
+  const existing = await database.getFirstAsync('SELECT COUNT(*) as count FROM adjustment_reasons');
+  if (existing.count > 0) return;
+
+  const reasons = [
+    { id: 'ar-breakage', code: 'breakage', name_ru: 'Бой / Повреждение', name_en: 'Breakage', sort_order: 1 },
+    { id: 'ar-theft', code: 'theft', name_ru: 'Хищение', name_en: 'Theft', sort_order: 2 },
+    { id: 'ar-incorrect-freight', code: 'incorrect_freight', name_ru: 'Некорректная накладная', name_en: 'Incorrect freight list', sort_order: 3 },
+    { id: 'ar-truck-transfer', code: 'truck_transfer', name_ru: 'Перемещение между машинами', name_en: 'Truck-to-truck transfer', sort_order: 4 },
+    { id: 'ar-expired', code: 'expired', name_ru: 'Истёк срок годности', name_en: 'Expired', sort_order: 5 },
+    { id: 'ar-recount', code: 'recount', name_ru: 'Пересчёт', name_en: 'Recount', sort_order: 6 },
+  ];
+  for (const r of reasons) {
+    await database.runAsync(
+      `INSERT OR IGNORE INTO adjustment_reasons (id, code, name_ru, name_en, is_active, sort_order) VALUES (?, ?, ?, ?, 1, ?)`,
+      [r.id, r.code, r.name_ru, r.name_en, r.sort_order]
+    );
+  }
+}
+
+export async function getAdjustmentReasons() {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM adjustment_reasons WHERE is_active = 1 ORDER BY sort_order`
+  );
+}
+
+// =====================================================
+// INVENTORY ADJUSTMENTS
+// =====================================================
+
+export async function createInventoryAdjustment({ vehicleId, warehouse, userId, supervisorUserId, notes, items }) {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+
+  await database.execAsync('BEGIN TRANSACTION');
+  try {
+    await database.runAsync(
+      `INSERT INTO inventory_adjustments (id, vehicle_id, warehouse, user_id, supervisor_user_id, status, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, '${ADJUSTMENT_STATUS.CONFIRMED}', ?, ?, ?)`,
+      [id, vehicleId || null, warehouse || 'main', userId, supervisorUserId || null, notes || null, now, now]
+    );
+
+    for (const item of items) {
+      const itemId = generateId();
+      const difference = item.adjusted_qty - item.previous_qty;
+      await database.runAsync(
+        `INSERT INTO inventory_adjustment_items (id, adjustment_id, product_id, reason_id, previous_qty, adjusted_qty, difference, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, id, item.product_id, item.reason_id, item.previous_qty, item.adjusted_qty, difference, item.notes || null]
+      );
+
+      // Apply the stock change
+      const wh = vehicleId || warehouse || 'main';
+      if (difference > 0) {
+        await database.runAsync(
+          `UPDATE stock SET quantity = quantity + ?, updated_at = ? WHERE product_id = ? AND warehouse = ?`,
+          [difference, now, item.product_id, wh]
+        );
+      } else if (difference < 0) {
+        await database.runAsync(
+          `UPDATE stock SET quantity = MAX(0, quantity + ?), updated_at = ? WHERE product_id = ? AND warehouse = ?`,
+          [difference, now, item.product_id, wh]
+        );
+      }
+    }
+
+    await database.execAsync('COMMIT');
+    return id;
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
+}
+
+export async function getInventoryAdjustments(vehicleId) {
+  const database = await getDatabase();
+  const where = vehicleId ? 'WHERE ia.vehicle_id = ?' : '';
+  const params = vehicleId ? [vehicleId] : [];
+  return database.getAllAsync(
+    `SELECT ia.*, u.full_name as user_name, su.full_name as supervisor_name
+     FROM inventory_adjustments ia
+     LEFT JOIN users u ON ia.user_id = u.id
+     LEFT JOIN users su ON ia.supervisor_user_id = su.id
+     ${where}
+     ORDER BY ia.created_at DESC`,
+    params
+  );
+}
+
+export async function getInventoryAdjustmentItems(adjustmentId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT iai.*, p.name as product_name, p.sku, ar.code as reason_code,
+            ar.name_ru as reason_name_ru, ar.name_en as reason_name_en
+     FROM inventory_adjustment_items iai
+     JOIN products p ON iai.product_id = p.id
+     JOIN adjustment_reasons ar ON iai.reason_id = ar.id
+     WHERE iai.adjustment_id = ?`,
+    [adjustmentId]
+  );
+}
+
+// =====================================================
+// ON HAND INVENTORY (customer shelf stock)
+// =====================================================
+
+export async function createOnHandInventory({ customerId, routePointId, userId, notes, items }) {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+
+  await database.execAsync('BEGIN TRANSACTION');
+  try {
+    await database.runAsync(
+      `INSERT INTO on_hand_inventory (id, customer_id, route_point_id, user_id, status, notes, created_at, updated_at)
+       VALUES (?, ?, ?, ?, '${ON_HAND_INVENTORY_STATUS.CAPTURED}', ?, ?, ?)`,
+      [id, customerId, routePointId || null, userId, notes || null, now, now]
+    );
+
+    for (const item of items) {
+      const itemId = generateId();
+      await database.runAsync(
+        `INSERT INTO on_hand_inventory_items (id, on_hand_id, product_id, quantity, notes)
+         VALUES (?, ?, ?, ?, ?)`,
+        [itemId, id, item.product_id, item.quantity, item.notes || null]
+      );
+    }
+
+    await database.execAsync('COMMIT');
+    return id;
+  } catch (error) {
+    await database.execAsync('ROLLBACK');
+    throw error;
+  }
+}
+
+export async function getOnHandInventory(customerId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT ohi.*, u.full_name as user_name
+     FROM on_hand_inventory ohi
+     LEFT JOIN users u ON ohi.user_id = u.id
+     WHERE ohi.customer_id = ? AND ohi.status = '${ON_HAND_INVENTORY_STATUS.CAPTURED}'
+     ORDER BY ohi.created_at DESC`,
+    [customerId]
+  );
+}
+
+export async function getOnHandInventoryItems(onHandId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT ohii.*, p.name as product_name, p.sku
+     FROM on_hand_inventory_items ohii
+     JOIN products p ON ohii.product_id = p.id
+     WHERE ohii.on_hand_id = ?
+     ORDER BY p.name`,
+    [onHandId]
+  );
+}
+
+export async function getLatestOnHandForCustomer(customerId) {
+  const database = await getDatabase();
+  const record = await database.getFirstAsync(
+    `SELECT * FROM on_hand_inventory WHERE customer_id = ? AND status = '${ON_HAND_INVENTORY_STATUS.CAPTURED}' ORDER BY created_at DESC LIMIT 1`,
+    [customerId]
+  );
+  if (!record) return null;
+  const items = await getOnHandInventoryItems(record.id);
+  return { ...record, items };
+}
+
+export async function discardOnHandInventory(onHandId) {
+  const database = await getDatabase();
+  await database.runAsync(
+    `UPDATE on_hand_inventory SET status = '${ON_HAND_INVENTORY_STATUS.DISCARDED}', updated_at = datetime('now') WHERE id = ?`,
+    [onHandId]
+  );
+}
+
+export async function cancelOnHandInventory(onHandId) {
+  const database = await getDatabase();
+  await database.runAsync(
+    `UPDATE on_hand_inventory SET status = '${ON_HAND_INVENTORY_STATUS.CANCELLED}', updated_at = datetime('now') WHERE id = ?`,
+    [onHandId]
+  );
+}
+
+// =====================================================
+// SUPERVISOR AUTH HELPER
+// =====================================================
+
+export async function verifySupervisorPassword(password) {
+  const database = await getDatabase();
+  const supervisor = await database.getFirstAsync(
+    `SELECT * FROM users WHERE role = 'supervisor' AND password_hash = ? AND is_active = 1`,
+    [password]
+  );
+  return supervisor || null;
+}
+
+// =====================================================
+// EMPTIES (packaging stock on vehicle)
+// =====================================================
+
+export async function getEmptiesStock(vehicleId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT pr.id, pr.customer_id, c.name as customer_name, pr.return_date, pr.status,
+            pri.packaging_type, pri.expected_quantity, pri.actual_quantity, pri.condition
+     FROM packaging_returns pr
+     JOIN packaging_return_items pri ON pri.packaging_return_id = pr.id
+     LEFT JOIN customers c ON pr.customer_id = c.id
+     WHERE pr.driver_id IN (SELECT driver_id FROM vehicles WHERE id = ?)
+     ORDER BY pr.return_date DESC`,
+    [vehicleId]
+  );
 }

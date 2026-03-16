@@ -7,7 +7,7 @@ import { COLORS } from '../../constants/colors';
 import { getDevices } from '../../database';
 
 const STATUS_ICONS = {
-  active: { icon: 'checkmark-circle', color: '#34C759' },
+  active: { icon: 'checkmark-circle', color: COLORS.success },
   inactive: { icon: 'pause-circle', color: COLORS.tabBarInactive },
   blocked: { icon: 'close-circle', color: COLORS.error },
 };
@@ -113,7 +113,7 @@ export default function DeviceManagementScreen() {
           <Text style={styles.summaryLabel}>{t('deviceManagement.total')}</Text>
         </View>
         <View style={styles.summaryItem}>
-          <Text style={[styles.summaryValue, { color: '#34C759' }]}>{devices.filter((d) => d.status === 'active').length}</Text>
+          <Text style={[styles.summaryValue, { color: COLORS.success }]}>{devices.filter((d) => d.status === 'active').length}</Text>
           <Text style={styles.summaryLabel}>{t('deviceManagement.activeCount')}</Text>
         </View>
         <View style={styles.summaryItem}>

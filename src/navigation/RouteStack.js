@@ -12,6 +12,10 @@ import PackagingReturnsScreen from '../screens/expeditor/PackagingReturnsScreen'
 import PaymentScreen from '../screens/expeditor/PaymentScreen';
 import SignatureScreen from '../screens/expeditor/SignatureScreen';
 import ScanningScreen from '../screens/expeditor/ScanningScreen';
+import InvoiceSummaryScreen from '../screens/expeditor/InvoiceSummaryScreen';
+import DocumentViewScreen from '../screens/expeditor/DocumentViewScreen';
+import PrintPreviewScreen from '../screens/expeditor/PrintPreviewScreen';
+import CustomerDetailScreen from '../screens/shared/CustomerDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +37,10 @@ export default function RouteStack() {
       <Stack.Screen name={SCREEN_NAMES.PAYMENT} component={PaymentScreen} options={{ title: i18n.t('nav.payment') }} />
       <Stack.Screen name={SCREEN_NAMES.SIGNATURE} component={SignatureScreen} options={{ title: i18n.t('nav.signature') }} />
       <Stack.Screen name={SCREEN_NAMES.SCANNING} component={ScanningScreen} options={{ title: i18n.t('nav.scanning') }} />
+      <Stack.Screen name={SCREEN_NAMES.INVOICE_SUMMARY} component={InvoiceSummaryScreen} options={{ title: i18n.t('nav.invoiceSummary') }} />
+      <Stack.Screen name={SCREEN_NAMES.DOCUMENT_VIEW} component={DocumentViewScreen} options={{ title: i18n.t('nav.documentView') }} />
+      <Stack.Screen name={SCREEN_NAMES.PRINT_PREVIEW} component={PrintPreviewScreen} options={{ title: i18n.t('nav.printPreview') }} />
+      <Stack.Screen name={SCREEN_NAMES.CUSTOMER_DETAIL} component={CustomerDetailScreen} options={{ title: i18n.t('nav.customerDetail') }} />
     </Stack.Navigator>
   );
 }

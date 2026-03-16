@@ -1,17 +1,20 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Animated, Image,
+  View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { CHECKIN_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
   getOrCreateTodayEndCheckin, getVehicleCheckItems,
   getUnloadingData, getTodayPaymentsTotal, getTodayTourCheckin,
+  getTodayExpensesTotal,
 } from '../../database';
 import MaterialCheckInStep from './MaterialCheckInStep';
 import CashCheckInStep from './CashCheckInStep';
@@ -30,6 +33,7 @@ export default function EndOfDayScreen() {
   const [checkinId, setCheckinId] = useState(null);
   const [vehicle, setVehicle] = useState(null);
   const [readOnly, setReadOnly] = useState(false);
+  const [dayNotStarted, setDayNotStarted] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // External data
@@ -61,13 +65,19 @@ export default function EndOfDayScreen() {
           setUnloadingData(uData);
         }
 
-        // Load expected cash total
+        // Load expected cash total (payments minus expenses)
         const cashTotal = await getTodayPaymentsTotal(user?.id);
-        setExpectedCashAmount(cashTotal);
+        const expensesTotal = await getTodayExpensesTotal(user?.id);
+        setExpectedCashAmount(cashTotal - expensesTotal);
 
-        // Load start-of-day odometer for validation
+        // Check if start-of-day was completed
         const startCheckin = await getTodayTourCheckin(user?.id, 'start');
-        if (startCheckin?.odometer_reading) {
+        if (!startCheckin || startCheckin.status !== CHECKIN_STATUS.COMPLETED) {
+          setDayNotStarted(true);
+          setLoading(false);
+          return;
+        }
+        if (startCheckin.odometer_reading) {
           setStartOdometer(startCheckin.odometer_reading);
         }
 
@@ -75,7 +85,7 @@ export default function EndOfDayScreen() {
         if (checkin) {
           setCheckinId(checkin.id);
 
-          if (checkin.status === 'completed') {
+          if (checkin.status === CHECKIN_STATUS.COMPLETED) {
             setReadOnly(true);
           }
 
@@ -133,7 +143,7 @@ export default function EndOfDayScreen() {
           }
 
           // Restore to saved step (only for in-progress)
-          if (checkin.status !== 'completed' && checkin.current_step != null && checkin.current_step > 0) {
+          if (checkin.status !== CHECKIN_STATUS.COMPLETED && checkin.current_step != null && checkin.current_step > 0) {
             setCurrentStep(checkin.current_step);
           }
         }
@@ -259,7 +269,7 @@ export default function EndOfDayScreen() {
       await saveStepData('signature');
 
       await updateTourCheckin(checkinId, {
-        status: 'completed',
+        status: CHECKIN_STATUS.COMPLETED,
         material_check_data: materialData ? JSON.stringify(materialData) : null,
         vehicle_check: vehicleCheckData ? JSON.stringify(vehicleCheckData.checks) : null,
         odometer_reading: odometerData?.value || null,
@@ -282,7 +292,10 @@ export default function EndOfDayScreen() {
       }
 
       Alert.alert(t('endOfDay.routeCompleted'), t('endOfDay.routeCompletedMsg'), [
-        { text: 'OK', onPress: () => navigation.navigate(SCREEN_NAMES.EXPEDITOR_HOME) },
+        { text: 'OK', onPress: () => {
+          const home = user?.role === 'preseller' ? SCREEN_NAMES.PRESELLER_HOME : SCREEN_NAMES.EXPEDITOR_HOME;
+          navigation.getParent()?.navigate(home);
+        } },
       ]);
       setReadOnly(true);
     } catch (e) {
@@ -405,6 +418,22 @@ export default function EndOfDayScreen() {
 
   if (loading) return null;
 
+  if (dayNotStarted) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.blockedContainer}>
+          <Ionicons name="sunny-outline" size={64} color={COLORS.tabBarInactive} />
+          <Text style={styles.blockedTitle}>{t('endOfDay.dayNotStartedTitle')}</Text>
+          <Text style={styles.blockedSubtitle}>{t('endOfDay.dayNotStartedMsg')}</Text>
+          <TouchableOpacity style={styles.blockedBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={20} color={COLORS.white} />
+            <Text style={styles.blockedBtnText}>{t('common.back')}</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Read-only banner */}
@@ -470,7 +499,7 @@ export default function EndOfDayScreen() {
 function SummaryRow({ icon, label, value, ok }) {
   return (
     <View style={styles.summaryRow}>
-      <Ionicons name={icon} size={22} color={ok ? '#34C759' : COLORS.textSecondary} />
+      <Ionicons name={icon} size={22} color={ok ? COLORS.success : COLORS.textSecondary} />
       <Text style={styles.summaryLabel}>{label}</Text>
       <Text style={[styles.summaryValue, ok && styles.summaryValueOk]}>{value}</Text>
     </View>
@@ -511,7 +540,7 @@ const styles = StyleSheet.create({
   nextBtnText: { fontSize: 15, color: COLORS.white, fontWeight: '700' },
   finishBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#34C759', borderRadius: 12, paddingVertical: 14,
+    backgroundColor: COLORS.success, borderRadius: 12, paddingVertical: 14,
   },
   finishBtnDisabled: {
     backgroundColor: COLORS.textSecondary, opacity: 0.8,
@@ -529,7 +558,7 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   summaryLabel: { flex: 1, fontSize: 14, color: COLORS.text },
   summaryValue: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
-  summaryValueOk: { color: '#34C759' },
+  summaryValueOk: { color: COLORS.success },
   readyText: {
     fontSize: 13, color: COLORS.textSecondary, textAlign: 'center',
     marginTop: 20, paddingHorizontal: 20,
@@ -548,4 +577,18 @@ const styles = StyleSheet.create({
   signatureImage: {
     width: '100%', height: '100%',
   },
+  blockedContainer: {
+    flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32,
+  },
+  blockedTitle: {
+    fontSize: 20, fontWeight: '700', color: COLORS.text, marginTop: 20, textAlign: 'center',
+  },
+  blockedSubtitle: {
+    fontSize: 14, color: COLORS.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 20,
+  },
+  blockedBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 24, marginTop: 28,
+  },
+  blockedBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '600' },
 });

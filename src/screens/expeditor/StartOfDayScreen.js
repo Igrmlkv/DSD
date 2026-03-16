@@ -1,12 +1,14 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Alert, SafeAreaView, Animated, Image,
+  View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { CHECKIN_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
@@ -17,12 +19,14 @@ import OdometerStep from './OdometerStep';
 import CheckOutCashStep from './CheckOutCashStep';
 import SignaturePad from '../../components/SignaturePad';
 
-const STEPS = ['vehicleCheck', 'materials', 'odometer', 'cash', 'signature', 'confirm'];
+const EXPEDITOR_STEPS = ['vehicleCheck', 'materials', 'odometer', 'cash', 'signature', 'confirm'];
+const PRESELLER_STEPS = ['vehicleCheck', 'odometer', 'cash', 'signature', 'confirm'];
 
 export default function StartOfDayScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
+  const STEPS = user?.role === 'preseller' ? PRESELLER_STEPS : EXPEDITOR_STEPS;
 
   const [currentStep, setCurrentStep] = useState(0);
   const [checkinId, setCheckinId] = useState(null);
@@ -51,7 +55,7 @@ export default function StartOfDayScreen() {
         if (checkin) {
           setCheckinId(checkin.id);
 
-          if (checkin.status === 'completed') {
+          if (checkin.status === CHECKIN_STATUS.COMPLETED) {
             setReadOnly(true);
           }
 
@@ -96,7 +100,7 @@ export default function StartOfDayScreen() {
           }
 
           // Restore to saved step (only for in-progress)
-          if (checkin.status !== 'completed' && checkin.current_step != null && checkin.current_step > 0) {
+          if (checkin.status !== CHECKIN_STATUS.COMPLETED && checkin.current_step != null && checkin.current_step > 0) {
             setCurrentStep(checkin.current_step);
           }
         }
@@ -225,7 +229,7 @@ export default function StartOfDayScreen() {
 
       // Final update: mark as completed with all data
       await updateTourCheckin(checkinId, {
-        status: 'completed',
+        status: CHECKIN_STATUS.COMPLETED,
         vehicle_check: vehicleCheckData ? JSON.stringify(vehicleCheckData.checks) : null,
         odometer_reading: odometerData?.value || null,
         cash_amount: cashData?.value || null,
@@ -248,7 +252,13 @@ export default function StartOfDayScreen() {
       }
 
       Alert.alert(t('startOfDay.tourStarted'), t('startOfDay.tourStartedMsg'), [
-        { text: 'OK', onPress: () => navigation.navigate(SCREEN_NAMES.ROUTE_TAB) },
+        { text: 'OK', onPress: () => {
+          if (user?.role === 'preseller') {
+            navigation.navigate(SCREEN_NAMES.ROUTE_LIST);
+          } else {
+            navigation.navigate(SCREEN_NAMES.ROUTE_TAB);
+          }
+        } },
       ]);
       setReadOnly(true);
     } catch (e) {
@@ -267,7 +277,7 @@ export default function StartOfDayScreen() {
             <Ionicons
               name={materialsLoaded ? 'checkmark-circle' : 'cube-outline'}
               size={64}
-              color={materialsLoaded ? '#34C759' : COLORS.accent}
+              color={materialsLoaded ? COLORS.success : COLORS.accent}
             />
             <Text style={styles.stepTitle}>{t('tourConfirm.materialsLoaded')}</Text>
             <Text style={styles.stepSubtitle}>
@@ -278,7 +288,7 @@ export default function StartOfDayScreen() {
             {!materialsLoaded && !readOnly && (
               <TouchableOpacity
                 style={styles.loadBtn}
-                onPress={() => navigation.navigate('LoadingTrip')}
+                onPress={() => navigation.navigate(SCREEN_NAMES.LOADING_TRIP)}
               >
                 <Text style={styles.loadBtnText}>{t('nav.loadingTrip')}</Text>
               </TouchableOpacity>
@@ -341,12 +351,14 @@ export default function StartOfDayScreen() {
                 value={vehicleCheckData?.checks?.every((c) => c.checked) ? t('tourConfirm.passed') : t('tourConfirm.notDone')}
                 ok={vehicleCheckData?.checks?.every((c) => c.checked)}
               />
-              <SummaryRow
-                icon="cube-outline"
-                label={t('tourConfirm.materialsLoaded')}
-                value={materialsLoaded ? t('tourConfirm.passed') : t('tourConfirm.notDone')}
-                ok={materialsLoaded}
-              />
+              {STEPS.includes('materials') && (
+                <SummaryRow
+                  icon="cube-outline"
+                  label={t('tourConfirm.materialsLoaded')}
+                  value={materialsLoaded ? t('tourConfirm.passed') : t('tourConfirm.notDone')}
+                  ok={materialsLoaded}
+                />
+              )}
               <SummaryRow
                 icon="speedometer-outline"
                 label={t('tourConfirm.odometer')}
@@ -444,7 +456,7 @@ export default function StartOfDayScreen() {
 function SummaryRow({ icon, label, value, ok }) {
   return (
     <View style={styles.summaryRow}>
-      <Ionicons name={icon} size={22} color={ok ? '#34C759' : COLORS.textSecondary} />
+      <Ionicons name={icon} size={22} color={ok ? COLORS.success : COLORS.textSecondary} />
       <Text style={styles.summaryLabel}>{label}</Text>
       <Text style={[styles.summaryValue, ok && styles.summaryValueOk]}>{value}</Text>
     </View>
@@ -485,7 +497,7 @@ const styles = StyleSheet.create({
   nextBtnText: { fontSize: 15, color: COLORS.white, fontWeight: '700' },
   finishBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#34C759', borderRadius: 12, paddingVertical: 14,
+    backgroundColor: COLORS.success, borderRadius: 12, paddingVertical: 14,
   },
   finishBtnDisabled: {
     backgroundColor: COLORS.textSecondary, opacity: 0.8,
@@ -510,7 +522,7 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   summaryLabel: { flex: 1, fontSize: 14, color: COLORS.text },
   summaryValue: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
-  summaryValueOk: { color: '#34C759' },
+  summaryValueOk: { color: COLORS.success },
   readyText: {
     fontSize: 13, color: COLORS.textSecondary, textAlign: 'center',
     marginTop: 20, paddingHorizontal: 20,

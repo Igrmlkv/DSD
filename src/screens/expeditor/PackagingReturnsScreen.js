@@ -42,7 +42,7 @@ export default function PackagingReturnsScreen({ route }) {
   };
 
   const conditionLabel = (c) => c === 'good' ? t('packagingScreen.condition.good') : c === 'damaged' ? t('packagingScreen.condition.damaged') : t('packagingScreen.condition.missing');
-  const conditionColor = (c) => c === 'good' ? '#34C759' : c === 'damaged' ? COLORS.accent : COLORS.error;
+  const conditionColor = (c) => c === 'good' ? COLORS.success : c === 'damaged' ? COLORS.accent : COLORS.error;
 
   const handleSubmit = async () => {
     const activeItems = items.filter((i) => i.actual_quantity > 0);

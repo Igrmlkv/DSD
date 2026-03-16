@@ -7,6 +7,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
+import { LOADING_TRIP_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getLoadingTrips, getLoadingTripItems, updateLoadingTripItem, updateLoadingTripStatus,
@@ -36,7 +37,7 @@ export default function LoadingTripScreen() {
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  const isVerified = trip?.status === 'verified';
+  const isVerified = trip?.status === LOADING_TRIP_STATUS.VERIFIED;
 
   // --- Qty adjustment ---
   const adjustQty = async (item, delta) => {
@@ -128,7 +129,7 @@ export default function LoadingTripScreen() {
 
   const finalizeTrip = async () => {
     if (trip) {
-      await updateLoadingTripStatus(trip.id, 'verified');
+      await updateLoadingTripStatus(trip.id, LOADING_TRIP_STATUS.VERIFIED);
       Alert.alert(t('common.done'), t('loadingTrip.tripConfirmed'));
       await loadData();
     }
@@ -145,7 +146,7 @@ export default function LoadingTripScreen() {
       <View style={[styles.itemCard, item.scanned && styles.itemScanned, isDiff && item.scanned && styles.itemMismatch]}>
         <View style={styles.checkBox}>
           {item.scanned ? (
-            <Ionicons name={isFull ? 'checkmark-circle' : 'alert-circle'} size={26} color={isFull ? '#34C759' : COLORS.accent} />
+            <Ionicons name={isFull ? 'checkmark-circle' : 'alert-circle'} size={26} color={isFull ? COLORS.success : COLORS.accent} />
           ) : (
             <Ionicons name="ellipse-outline" size={26} color={COLORS.border} />
           )}
@@ -191,7 +192,7 @@ export default function LoadingTripScreen() {
           </View>
           <View style={[styles.statusBadge, isVerified && styles.statusDone]}>
             <Text style={[styles.statusText, isVerified && styles.statusTextDone]}>
-              {isVerified ? t('loadingTrip.verified') : trip.status === 'loaded' ? t('loadingTrip.loaded') : t('loadingTrip.loadingLabel')}
+              {isVerified ? t('loadingTrip.verified') : trip.status === LOADING_TRIP_STATUS.LOADED ? t('loadingTrip.loaded') : t('loadingTrip.loadingLabel')}
             </Text>
           </View>
         </View>
@@ -282,9 +283,9 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
   headerSub: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: COLORS.accent + '20' },
-  statusDone: { backgroundColor: '#34C75920' },
+  statusDone: { backgroundColor: COLORS.success + '20' },
   statusText: { fontSize: 12, fontWeight: '600', color: COLORS.accent },
-  statusTextDone: { color: '#34C759' },
+  statusTextDone: { color: COLORS.success },
   readOnlyBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: COLORS.textSecondary, padding: 10,
@@ -292,13 +293,13 @@ const styles = StyleSheet.create({
   readOnlyText: { color: COLORS.white, fontSize: 13, fontWeight: '600' },
   progressWrap: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: COLORS.white },
   progressBg: { height: 4, backgroundColor: COLORS.border, borderRadius: 2 },
-  progressFill: { height: 4, backgroundColor: '#34C759', borderRadius: 2 },
+  progressFill: { height: 4, backgroundColor: COLORS.success, borderRadius: 2 },
   list: { padding: 12, paddingBottom: 100 },
   itemCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white,
     borderRadius: 10, padding: 12, gap: 10, marginBottom: 6,
   },
-  itemScanned: { backgroundColor: '#34C75908' },
+  itemScanned: { backgroundColor: COLORS.success + '08' },
   itemMismatch: { borderLeftWidth: 3, borderLeftColor: COLORS.accent },
   checkBox: { width: 30 },
   itemInfo: { flex: 1 },

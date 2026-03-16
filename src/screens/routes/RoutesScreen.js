@@ -8,6 +8,7 @@ import { getRoutesByDate, getRoutePoints } from '../../database';
 import useAuthStore from '../../store/authStore';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
+import { ROUTE_STATUS } from '../../constants/statuses';
 
 const STATUS_COLORS = {
   planned: COLORS.secondary,
@@ -96,7 +97,7 @@ export default function RoutesScreen() {
 
   function renderRoute({ item }) {
     const stColor = STATUS_COLORS[item.status];
-    const stLabel = t('routesScreen.statuses.' + (item.status === 'in_progress' ? 'inProgress' : item.status || 'planned'));
+    const stLabel = t('routesScreen.statuses.' + (item.status === ROUTE_STATUS.IN_PROGRESS ? 'inProgress' : item.status || 'planned'));
     const routePoints = points[item.id] || [];
     const isExpanded = expandedRoute === item.id;
 

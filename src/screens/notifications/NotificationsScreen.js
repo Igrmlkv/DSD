@@ -15,7 +15,7 @@ const TYPE_CONFIG = {
   info: { icon: 'information-circle', color: COLORS.secondary },
   warning: { icon: 'warning', color: COLORS.accent },
   error: { icon: 'alert-circle', color: COLORS.error },
-  success: { icon: 'checkmark-circle', color: '#34C759' },
+  success: { icon: 'checkmark-circle', color: COLORS.success },
 };
 
 export default function NotificationsScreen() {

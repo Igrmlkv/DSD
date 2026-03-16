@@ -5,13 +5,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import AppMapView from '../../components/AppMapView';
 import { COLORS } from '../../constants/colors';
+import { DEFAULT_MAP_CENTER } from '../../constants/config';
+import { VISIT_STATUS } from '../../constants/statuses';
 import { getRoutePoints } from '../../database';
 
 const STATUS_COLORS = {
   pending: COLORS.tabBarInactive,
   arrived: COLORS.secondary,
   in_progress: COLORS.accent,
-  completed: '#34C759',
+  completed: COLORS.success,
   skipped: COLORS.error,
 };
 
@@ -32,19 +34,10 @@ export default function RouteMapScreen({ route }) {
   useEffect(() => {
     if (mapRef.current && validPoints.length > 0) {
       const timer = setTimeout(() => {
-        if (validPoints.length === 1) {
-          mapRef.current.setCenter(validPoints[0].latitude, validPoints[0].longitude, 14);
-        } else {
-          const lats = validPoints.map((p) => p.latitude);
-          const lons = validPoints.map((p) => p.longitude);
-          const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-          const centerLon = (Math.min(...lons) + Math.max(...lons)) / 2;
-          const latDelta = (Math.max(...lats) - Math.min(...lats)) * 1.5;
-          const lonDelta = (Math.max(...lons) - Math.min(...lons)) * 1.5;
-          const delta = Math.max(latDelta, lonDelta, 0.01);
-          const zoom = Math.max(5, Math.min(15, 12 - Math.log2(delta / 0.01)));
-          mapRef.current.setCenter(centerLat, centerLon, zoom);
-        }
+        mapRef.current.fitToPoints(
+          validPoints.map((p) => ({ lat: p.latitude, lon: p.longitude })),
+          48
+        );
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -95,7 +88,7 @@ export default function RouteMapScreen({ route }) {
   const firstPoint = validPoints[0];
 
   const renderPoint = ({ item, index }) => {
-    const isCompleted = item.status === 'completed';
+    const isCompleted = item.status === VISIT_STATUS.COMPLETED;
     const color = STATUS_COLORS[item.status] || COLORS.tabBarInactive;
     return (
       <View style={[styles.pointRow, isCompleted && styles.pointCompleted]}>
@@ -123,9 +116,9 @@ export default function RouteMapScreen({ route }) {
         ref={mapRef}
         style={styles.map}
         initialRegion={{
-          lat: firstPoint?.latitude || 55.75,
-          lon: firstPoint?.longitude || 37.62,
-          zoom: 11,
+          lat: firstPoint?.latitude || DEFAULT_MAP_CENTER.latitude,
+          lon: firstPoint?.longitude || DEFAULT_MAP_CENTER.longitude,
+          zoom: DEFAULT_MAP_CENTER.zoom,
         }}
         markers={markers}
         polylines={polylines}
@@ -136,7 +129,7 @@ export default function RouteMapScreen({ route }) {
           {[
             { color: COLORS.tabBarInactive, label: t('status.pending') },
             { color: COLORS.accent, label: t('status.inProgress') },
-            { color: '#34C759', label: t('status.completed') },
+            { color: COLORS.success, label: t('status.completed') },
             { color: COLORS.error, label: t('status.skipped') },
           ].map((item) => (
             <View key={item.label} style={styles.legendItem}>

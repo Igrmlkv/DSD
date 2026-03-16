@@ -4,13 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
+import { VISIT_STATUS } from '../../constants/statuses';
 import { getRoutePoints, getDeliveries, getReturns } from '../../database';
 
 const STATUS_COLORS = {
   pending: COLORS.tabBarInactive,
   arrived: COLORS.secondary,
   in_progress: COLORS.accent,
-  completed: '#34C759',
+  completed: COLORS.success,
   skipped: COLORS.error,
 };
 
@@ -39,14 +40,14 @@ export default function ExpeditorRouteDetailScreen({ route }) {
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
-  const completed = points.filter((p) => p.status === 'completed').length;
+  const completed = points.filter((p) => p.status === VISIT_STATUS.COMPLETED).length;
 
   const renderPoint = ({ item, index }) => {
     const color = STATUS_COLORS[item.status] || COLORS.tabBarInactive;
     return (
       <View style={styles.pointRow}>
         <View style={[styles.pointDot, { backgroundColor: color }]}>
-          {item.status === 'completed' && <Ionicons name="checkmark" size={12} color={COLORS.white} />}
+          {item.status === VISIT_STATUS.COMPLETED && <Ionicons name="checkmark" size={12} color={COLORS.white} />}
         </View>
         <View style={styles.pointInfo}>
           <Text style={styles.pointName}>{index + 1}. {item.customer_name}</Text>
@@ -65,7 +66,7 @@ export default function ExpeditorRouteDetailScreen({ route }) {
           </View>
         </View>
         <Text style={[styles.statusLabel, { color }]}>
-          {item.status === 'completed' ? t('expeditorRouteDetail.completed') : item.status === 'in_progress' ? t('expeditorRouteDetail.inProgress') : item.status === 'arrived' ? t('expeditorRouteDetail.onSite') : t('expeditorRouteDetail.pending')}
+          {item.status === VISIT_STATUS.COMPLETED ? t('expeditorRouteDetail.completed') : item.status === VISIT_STATUS.IN_PROGRESS ? t('expeditorRouteDetail.inProgress') : item.status === VISIT_STATUS.ARRIVED ? t('expeditorRouteDetail.onSite') : t('expeditorRouteDetail.pending')}
         </Text>
       </View>
     );

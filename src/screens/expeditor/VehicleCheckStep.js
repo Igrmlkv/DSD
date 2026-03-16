@@ -60,7 +60,7 @@ export default function VehicleCheckStep({ data, onUpdate, readOnly }) {
           <Ionicons
             name={item.checked ? 'checkmark-circle' : 'ellipse-outline'}
             size={26}
-            color={item.checked ? '#34C759' : COLORS.border}
+            color={item.checked ? COLORS.success : COLORS.border}
           />
           <Text style={[styles.checkText, item.checked && styles.checkTextDone]}>
             {t(`vehicleCheck.${item.key}`)}
@@ -90,14 +90,14 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
   progressRow: { marginBottom: 16 },
   progressBg: { height: 6, backgroundColor: COLORS.border, borderRadius: 3, marginBottom: 6 },
-  progressFill: { height: 6, backgroundColor: '#34C759', borderRadius: 3 },
+  progressFill: { height: 6, backgroundColor: COLORS.success, borderRadius: 3 },
   progressText: { fontSize: 12, color: COLORS.textSecondary, textAlign: 'center' },
   checkItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: COLORS.white, borderRadius: 12, padding: 16,
     marginBottom: 8,
   },
-  checkItemDone: { backgroundColor: '#34C75908' },
+  checkItemDone: { backgroundColor: COLORS.success + '08' },
   checkText: { fontSize: 15, color: COLORS.text, flex: 1 },
   checkTextDone: { color: COLORS.textSecondary, textDecorationLine: 'line-through' },
   notesInput: {

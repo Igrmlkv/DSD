@@ -15,6 +15,17 @@ export const ROLES = {
       SCREEN_NAMES.PROFILE_TAB,
     ],
   },
+  preseller: {
+    key: 'preseller',
+    get label() { return i18n.t('roles.preseller'); },
+    get description() { return i18n.t('roles.presSellerDesc'); },
+    icon: 'briefcase',
+    tabs: [
+      SCREEN_NAMES.PRESELLER_HOME,
+      SCREEN_NAMES.ROUTE_TAB,
+      SCREEN_NAMES.PROFILE_TAB,
+    ],
+  },
   supervisor: {
     key: 'supervisor',
     get label() { return i18n.t('roles.supervisor'); },

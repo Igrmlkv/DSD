@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 14, color: COLORS.textSecondary },
   infoValue: { fontSize: 14, fontWeight: '500', color: COLORS.text },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#34C759' },
-  statusText: { fontSize: 14, fontWeight: '500', color: '#34C759' },
+  statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.success },
+  statusText: { fontSize: 14, fontWeight: '500', color: COLORS.success },
   version: { textAlign: 'center', fontSize: 12, color: COLORS.tabBarInactive, marginTop: 24 },
 });

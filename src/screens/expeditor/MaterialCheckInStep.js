@@ -57,7 +57,7 @@ export default function MaterialCheckInStep({ data, onUpdate, readOnly, unloadin
 
   const conditionColor = (c) => {
     switch (c) {
-      case 'good': return '#34C759';
+      case 'good': return COLORS.success;
       case 'damaged': return COLORS.error;
       case 'expired': return '#FF9500';
       default: return COLORS.textSecondary;
@@ -79,9 +79,9 @@ export default function MaterialCheckInStep({ data, onUpdate, readOnly, unloadin
         <Ionicons
           name={discrepancyCount > 0 ? 'alert-circle' : 'checkmark-circle'}
           size={18}
-          color={discrepancyCount > 0 ? COLORS.error : '#34C759'}
+          color={discrepancyCount > 0 ? COLORS.error : COLORS.success}
         />
-        <Text style={[styles.badgeText, { color: discrepancyCount > 0 ? COLORS.error : '#34C759' }]}>
+        <Text style={[styles.badgeText, { color: discrepancyCount > 0 ? COLORS.error : COLORS.success }]}>
           {discrepancyCount > 0
             ? t('materialCheckIn.itemsWithDiscrepancy', { count: discrepancyCount })
             : items.length > 0 ? t('materialCheckIn.allMatched') : t('materialCheckIn.noItems')}
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: 10, padding: 10, marginBottom: 16,
   },
-  badgeOk: { backgroundColor: '#34C75912' },
+  badgeOk: { backgroundColor: COLORS.success + '12' },
   badgeWarn: { backgroundColor: COLORS.error + '12' },
   badgeText: { fontSize: 13, fontWeight: '600' },
   emptyWrap: { alignItems: 'center', paddingVertical: 40 },

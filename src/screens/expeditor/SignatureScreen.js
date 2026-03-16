@@ -4,7 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
-import { shipOrdersByRoutePoint, decreaseStock, createDeliveryWithItems } from '../../database';
+import { SCREEN_NAMES } from '../../constants/screens';
+import { processShipmentDelivery } from '../../database';
+import { createInvoiceFromDelivery } from '../../services/invoiceService';
 import useAuthStore from '../../store/authStore';
 import SignaturePad from '../../components/SignaturePad';
 
@@ -64,42 +66,52 @@ export default function SignatureScreen({ route }) {
             text: t('signatureScreen.confirmButton'),
             onPress: async () => {
               try {
+                let createdDeliveryId = null;
                 if (type === 'shipment' && pointId) {
-                  await shipOrdersByRoutePoint(pointId);
-                  if (shipmentItems?.length > 0) {
-                    const totalAmount = shipmentItems.reduce(
-                      (s, i) => s + (i.delivered || 0) * (i.price || 0), 0
-                    );
-                    await createDeliveryWithItems(
-                      {
-                        route_point_id: pointId,
-                        customer_id: customerId,
-                        driver_id: user?.id,
-                        total_amount: totalAmount,
-                        signature_name: recipientName.trim(),
-                        signature_data: clientSigData,
-                        signature_driver_data: driverSigData,
-                      },
-                      shipmentItems
-                        .filter((i) => i.delivered > 0)
-                        .map((i) => ({
-                          product_id: i.product_id,
-                          ordered_quantity: i.quantity || 0,
-                          delivered_quantity: i.delivered,
-                          price: i.price || 0,
-                        }))
-                    );
-                  }
-                  if (user?.vehicleId && shipmentItems?.length > 0) {
-                    const stockItems = shipmentItems
-                      .filter((i) => i.delivered > 0)
-                      .map((i) => ({ product_id: i.product_id, quantity: i.delivered }));
-                    if (stockItems.length > 0) {
-                      await decreaseStock(user.vehicleId, stockItems);
-                    }
+                  const deliveredItems = (shipmentItems || [])
+                    .filter((i) => i.delivered > 0)
+                    .map((i) => ({
+                      product_id: i.product_id,
+                      ordered_quantity: i.quantity || 0,
+                      delivered_quantity: i.delivered,
+                      price: i.price || 0,
+                    }));
+                  const totalAmount = deliveredItems.reduce(
+                    (s, i) => s + i.delivered_quantity * i.price, 0
+                  );
+                  if (deliveredItems.length > 0) {
+                    createdDeliveryId = await processShipmentDelivery({
+                      pointId,
+                      customerId,
+                      driverId: user?.id,
+                      totalAmount,
+                      signatureName: recipientName.trim(),
+                      signatureData: clientSigData,
+                      signatureDriverData: driverSigData,
+                      shipmentItems: deliveredItems,
+                      vehicleId: user?.vehicleId,
+                    });
                   }
                 }
                 setConfirmed(true);
+
+                // Create invoice from the delivery
+                if (type === 'shipment' && createdDeliveryId) {
+                  try {
+                    const invoiceResult = await createInvoiceFromDelivery(createdDeliveryId);
+                    Alert.alert(t('common.done'), t('signatureScreen.signatureConfirmed'), [
+                      {
+                        text: t('invoice.viewInvoice'),
+                        onPress: () => navigation.replace(SCREEN_NAMES.INVOICE_SUMMARY, { invoiceId: invoiceResult.id }),
+                      },
+                      { text: 'OK', onPress: () => navigation.goBack() },
+                    ]);
+                    return;
+                  } catch (invoiceErr) {
+                    console.warn('Invoice creation skipped:', invoiceErr.message);
+                  }
+                }
+
                 Alert.alert(t('common.done'), t('signatureScreen.signatureConfirmed'), [
                   { text: 'OK', onPress: () => navigation.goBack() },
                 ]);
@@ -228,7 +240,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginTop: 20,
   },
-  confirmedBtn: { backgroundColor: '#34C759' },
+  confirmedBtn: { backgroundColor: COLORS.success },
   disabledBtn: { opacity: 0.5 },
   confirmText: { color: COLORS.white, fontSize: 17, fontWeight: '700' },
 });

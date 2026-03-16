@@ -7,6 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import { getRoutesByDate, getRoutePoints, updateRouteStatus } from '../../database';
 
@@ -19,21 +20,27 @@ export default function RouteListScreen() {
     pending: { label: t('status.pending'), color: COLORS.tabBarInactive, icon: 'time-outline' },
     arrived: { label: t('status.arrived'), color: COLORS.secondary, icon: 'location' },
     in_progress: { label: t('status.inProgress'), color: COLORS.accent, icon: 'construct' },
-    completed: { label: t('status.completed'), color: '#34C759', icon: 'checkmark-circle' },
+    completed: { label: t('status.completed'), color: COLORS.success, icon: 'checkmark-circle' },
     skipped: { label: t('status.skipped'), color: COLORS.error, icon: 'close-circle' },
   };
-  const [route, setRoute] = useState(null);
+  const [routes, setRoutes] = useState([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [points, setPoints] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  const route = routes[selectedIdx] || null;
 
   const loadData = useCallback(async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const routes = await getRoutesByDate(today, user.id);
-      if (routes.length > 0) {
-        setRoute(routes[0]);
-        const pts = await getRoutePoints(routes[0].id);
+      const allRoutes = await getRoutesByDate(today, user.id);
+      setRoutes(allRoutes);
+      if (allRoutes.length > 0) {
+        const idx = Math.min(selectedIdx, allRoutes.length - 1);
+        const pts = await getRoutePoints(allRoutes[idx].id);
         setPoints(pts);
+      } else {
+        setPoints([]);
       }
     } catch (e) {
       console.error('RouteList load error:', e);
@@ -50,7 +57,7 @@ export default function RouteListScreen() {
 
   const handleStartRoute = async () => {
     if (route) {
-      await updateRouteStatus(route.id, 'in_progress');
+      await updateRouteStatus(route.id, ROUTE_STATUS.IN_PROGRESS);
       await loadData();
     }
   };
@@ -61,7 +68,7 @@ export default function RouteListScreen() {
       {
         text: t('routeList.complete'), onPress: async () => {
           if (route) {
-            await updateRouteStatus(route.id, 'completed');
+            await updateRouteStatus(route.id, ROUTE_STATUS.COMPLETED);
             await loadData();
           }
         },
@@ -69,10 +76,10 @@ export default function RouteListScreen() {
     ]);
   };
 
-  const isRouteActive = route?.status === 'in_progress';
-  const isRouteCompleted = route?.status === 'completed';
-  const isRoutePlanned = route?.status === 'planned';
-  const completedCount = points.filter((p) => p.status === 'completed').length;
+  const isRouteActive = route?.status === ROUTE_STATUS.IN_PROGRESS;
+  const isRouteCompleted = route?.status === ROUTE_STATUS.COMPLETED;
+  const isRoutePlanned = route?.status === ROUTE_STATUS.PLANNED;
+  const completedCount = points.filter((p) => p.status === VISIT_STATUS.COMPLETED).length;
 
   const canAccessPoints = isRouteActive || isRouteCompleted;
 
@@ -87,9 +94,10 @@ export default function RouteListScreen() {
             Alert.alert('', t('routeList.startRouteFirst'));
             return;
           }
-          navigation.navigate(SCREEN_NAMES.VISIT, {
+          const visitScreen = user?.role === 'preseller' ? SCREEN_NAMES.PRESELLER_VISIT : SCREEN_NAMES.VISIT;
+          navigation.navigate(visitScreen, {
             pointId: item.id, routeId: route?.id, customerId: item.customer_id,
-            customerName: item.customer_name, pointStatus: isRouteCompleted ? 'completed' : item.status,
+            customerName: item.customer_name, pointStatus: isRouteCompleted ? VISIT_STATUS.COMPLETED : item.status,
           });
         }}
       >
@@ -125,8 +133,33 @@ export default function RouteListScreen() {
     );
   };
 
+  const switchRoute = async (idx) => {
+    setSelectedIdx(idx);
+    try {
+      const pts = await getRoutePoints(routes[idx].id);
+      setPoints(pts);
+    } catch (e) { console.error(e); }
+  };
+
   return (
     <View style={styles.container}>
+      {/* Переключатель маршрутов */}
+      {routes.length > 1 && (
+        <View style={styles.routeSwitcher}>
+          {routes.map((r, idx) => (
+            <TouchableOpacity
+              key={r.id}
+              style={[styles.routeTab, idx === selectedIdx && styles.routeTabActive]}
+              onPress={() => switchRoute(idx)}
+            >
+              <Text style={[styles.routeTabText, idx === selectedIdx && styles.routeTabTextActive]}>
+                {t('routeList.routeN', { n: idx + 1 })}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Заголовок маршрута */}
       {route && (
         <View style={styles.header}>
@@ -187,6 +220,17 @@ export default function RouteListScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  routeSwitcher: {
+    flexDirection: 'row', backgroundColor: COLORS.white, paddingHorizontal: 12, paddingVertical: 8, gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border,
+  },
+  routeTab: {
+    flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  routeTabActive: { backgroundColor: COLORS.primary },
+  routeTabText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+  routeTabTextActive: { color: COLORS.white },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: COLORS.white, padding: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border,
@@ -206,7 +250,7 @@ const styles = StyleSheet.create({
   startBtnText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
   completeBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#34C759', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+    backgroundColor: COLORS.success, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
   },
   completeBtnText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
   progressContainer: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: COLORS.white },

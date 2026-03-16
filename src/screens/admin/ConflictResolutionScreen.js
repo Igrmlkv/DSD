@@ -132,7 +132,7 @@ export default function ConflictResolutionScreen() {
       }
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Ionicons name="checkmark-circle-outline" size={48} color="#34C759" />
+          <Ionicons name="checkmark-circle-outline" size={48} color={COLORS.success} />
           <Text style={styles.emptyText}>{t('conflictResolution.noConflicts')}</Text>
           <Text style={styles.emptySubtext}>{t('conflictResolution.allSynced')}</Text>
         </View>

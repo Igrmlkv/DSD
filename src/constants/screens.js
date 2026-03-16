@@ -34,6 +34,10 @@ export const SCREEN_NAMES = {
   VEHICLE_UNLOADING: 'VehicleUnloading',
   START_OF_DAY: 'StartOfDay',
   END_OF_DAY: 'EndOfDay',
+  EXPENSES: 'Expenses',
+  INVOICE_SUMMARY: 'InvoiceSummary',
+  DOCUMENT_VIEW: 'DocumentView',
+  PRINT_PREVIEW: 'PrintPreview',
 
   // Supervisor stack screens
   MONITORING_MAP: 'MonitoringMap',
@@ -50,6 +54,23 @@ export const SCREEN_NAMES = {
   CONFLICT_RESOLUTION: 'ConflictResolution',
   AUDIT_LOG: 'AuditLog',
   SYSTEM_SETTINGS: 'SystemSettings',
+
+  // Inventory extended
+  ADJUST_INVENTORY: 'AdjustInventory',
+  CAPTURE_ON_HAND: 'CaptureOnHand',
+
+  // Preseller screens
+  PRESELLER_HOME: 'PresellerHome',
+  PRESELLER_VISIT: 'PresellerVisit',
+  ORDER_CONFIRMATION: 'OrderConfirmation',
+  VISIT_REPORT: 'VisitReport',
+
+  // Order screens (shared)
+  ORDERS_LIST: 'OrdersList',
+  ORDER_EDIT: 'OrderEdit',
+
+  // Customer / Material screens
+  CUSTOMER_DETAIL: 'CustomerDetail',
 
   // Shared screens
   PROFILE: 'Profile',

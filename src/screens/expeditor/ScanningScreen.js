@@ -63,7 +63,7 @@ export default function ScanningScreen({ route }) {
       {/* Результат */}
       {result && (
         <View style={styles.resultCard}>
-          <Ionicons name="checkmark-circle" size={24} color="#34C759" />
+          <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
           <View style={styles.resultInfo}>
             <Text style={styles.resultName}>{result.name}</Text>
             <Text style={styles.resultSku}>{result.sku} • {result.base_price} ₽</Text>
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   searchBtn: { width: 50, borderRadius: 10, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center' },
   resultCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 12,
-    backgroundColor: '#34C75910', borderRadius: 12, padding: 14, marginBottom: 12,
+    backgroundColor: COLORS.success + '10', borderRadius: 12, padding: 14, marginBottom: 12,
   },
   resultInfo: { flex: 1 },
   resultName: { fontSize: 15, fontWeight: '600', color: COLORS.text },

@@ -1,12 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput, SectionList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { ORDER_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getOrdersByRoutePoint, getOrderItems, getAvailableVehicleStock,
@@ -19,8 +20,10 @@ export default function ShipmentScreen({ route }) {
   const user = useAuthStore((s) => s.user);
   const navigation = useNavigation();
   const [items, setItems] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [deliveredQty, setDeliveredQty] = useState({});
   const [isShipped, setIsShipped] = useState(false);
+  const [collapsedOrders, setCollapsedOrders] = useState({});
 
   // Vehicle stock map: product_id -> available qty
   const [stockMap, setStockMap] = useState({});
@@ -30,15 +33,16 @@ export default function ShipmentScreen({ route }) {
   const [vehicleStock, setVehicleStock] = useState([]);
   const [stockSearch, setStockSearch] = useState('');
 
+
   useFocusEffect(useCallback(() => {
     (async () => {
       try {
-        const orders = await getOrdersByRoutePoint(pointId);
-        const hasShipped = orders.some((o) => o.status === 'shipped' || o.status === 'delivered');
+        const fetchedOrders = await getOrdersByRoutePoint(pointId);
+        setOrders(fetchedOrders);
+        const hasShipped = fetchedOrders.some((o) => o.status === ORDER_STATUS.SHIPPED || o.status === ORDER_STATUS.DELIVERED);
 
         if (hasShipped) {
           setIsShipped(true);
-          // Load from delivery_items to show all items including added ones
           const delivery = await getDeliveryByRoutePoint(pointId);
           if (delivery) {
             const dItems = await getDeliveryItems(delivery.id);
@@ -52,15 +56,15 @@ export default function ShipmentScreen({ route }) {
               quantity: di.ordered_quantity,
               total: di.ordered_quantity * di.price,
               isAdded: di.ordered_quantity === 0,
+              orderId: '_delivery',
             }));
             setItems(mapped);
             const qtyMap = {};
             dItems.forEach((di) => { qtyMap[di.id] = di.delivered_quantity; });
             setDeliveredQty(qtyMap);
           } else {
-            // Fallback to order items if no delivery record
             let allItems = [];
-            for (const o of orders) {
+            for (const o of fetchedOrders) {
               const oi = await getOrderItems(o.id);
               allItems = [...allItems, ...oi.map((i) => ({ ...i, orderId: o.id }))];
             }
@@ -70,9 +74,8 @@ export default function ShipmentScreen({ route }) {
             setDeliveredQty(initial);
           }
         } else {
-          // Not shipped yet — load from order items for editing
           let allItems = [];
-          for (const o of orders) {
+          for (const o of fetchedOrders) {
             const oi = await getOrderItems(o.id);
             allItems = [...allItems, ...oi.map((i) => ({ ...i, orderId: o.id }))];
           }
@@ -81,7 +84,6 @@ export default function ShipmentScreen({ route }) {
           allItems.forEach((i) => { initial[i.id] = i.quantity; });
           setDeliveredQty(initial);
 
-          // Load available vehicle stock (minus other unshipped orders)
           if (user?.vehicleId) {
             const stock = await getAvailableVehicleStock(user.vehicleId, user.id, null, pointId);
             const map = {};
@@ -173,7 +175,7 @@ export default function ShipmentScreen({ route }) {
       price: stockItem.base_price || 0,
       quantity: 0, // plan is 0, since it's an extra item
       total: 0,
-      orderId: null,
+      orderId: '_added',
       isAdded: true,
       maxFromStock: stockItem.available_quantity,
     };
@@ -190,6 +192,29 @@ export default function ShipmentScreen({ route }) {
       return next;
     });
   };
+
+  const toggleOrder = (orderId) => {
+    setCollapsedOrders((prev) => ({ ...prev, [orderId]: !prev[orderId] }));
+  };
+
+  const sections = useMemo(() => {
+    const grouped = {};
+    for (const item of items) {
+      const key = item.orderId || '_unknown';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(item);
+    }
+    return Object.entries(grouped).map(([orderId, data]) => {
+      const order = orders.find((o) => o.id === orderId);
+      const label = orderId === '_delivery'
+        ? t('shipmentScreen.deliveredItems')
+        : orderId === '_added'
+          ? t('shipmentScreen.addedItems')
+          : `${t('shipmentScreen.orderLabel')} #${orderId.slice(-6)}`;
+      const sectionTotal = data.reduce((s, i) => s + (deliveredQty[i.id] || 0) * i.price, 0);
+      return { key: orderId, label, order, sectionTotal, data };
+    });
+  }, [items, orders, deliveredQty, t]);
 
   const totalPlan = items.reduce((s, i) => s + i.total, 0);
   const totalFact = items.reduce((s, i) => s + (deliveredQty[i.id] || 0) * i.price, 0);
@@ -281,11 +306,26 @@ export default function ShipmentScreen({ route }) {
         </View>
       )}
 
-      <FlatList
-        data={items}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.id}
-        renderItem={renderItem}
         contentContainerStyle={styles.list}
+        stickySectionHeadersEnabled={false}
+        renderSectionHeader={({ section }) => {
+          const isCollapsed = collapsedOrders[section.key];
+          return (
+            <TouchableOpacity style={styles.sectionHeader} onPress={() => toggleOrder(section.key)} activeOpacity={0.7}>
+              <Ionicons name={isCollapsed ? 'chevron-forward' : 'chevron-down'} size={18} color={COLORS.primary} />
+              <Text style={styles.sectionTitle}>{section.label}</Text>
+              <Text style={styles.sectionTotal}>{section.sectionTotal.toLocaleString()} ₽</Text>
+              <Text style={styles.sectionCount}>{section.data.length} {t('shipmentScreen.itemsShort')}</Text>
+            </TouchableOpacity>
+          );
+        }}
+        renderItem={({ item, section }) => {
+          if (collapsedOrders[section.key]) return null;
+          return renderItem({ item });
+        }}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="cart-outline" size={48} color={COLORS.tabBarInactive} />
@@ -367,6 +407,14 @@ const styles = StyleSheet.create({
   },
   readOnlyText: { color: COLORS.white, fontSize: 13, fontWeight: '600' },
   list: { padding: 12, paddingBottom: 120 },
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: COLORS.white, borderRadius: 10, padding: 12, marginBottom: 6, marginTop: 8,
+    borderLeftWidth: 3, borderLeftColor: COLORS.primary,
+  },
+  sectionTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  sectionTotal: { fontSize: 13, fontWeight: '600', color: COLORS.text },
+  sectionCount: { fontSize: 11, color: COLORS.textSecondary },
   itemRow: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.white,
     borderRadius: 10, padding: 12, gap: 10, marginBottom: 6,

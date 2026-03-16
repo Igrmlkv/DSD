@@ -9,10 +9,10 @@ import { getAuditLog } from '../../database';
 const ACTION_ICONS = {
   login: { icon: 'log-in', color: COLORS.primary },
   logout: { icon: 'log-out', color: COLORS.tabBarInactive },
-  create: { icon: 'add-circle', color: '#34C759' },
+  create: { icon: 'add-circle', color: COLORS.success },
   update: { icon: 'create', color: COLORS.secondary },
   delete: { icon: 'trash', color: COLORS.error },
-  approve: { icon: 'checkmark-circle', color: '#34C759' },
+  approve: { icon: 'checkmark-circle', color: COLORS.success },
   reject: { icon: 'close-circle', color: COLORS.error },
   sync: { icon: 'sync', color: COLORS.info },
   export: { icon: 'download', color: COLORS.accent },

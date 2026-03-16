@@ -7,6 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getRoutesByDate, getRoutePoints, getPayments,
@@ -21,7 +22,7 @@ export default function ExpeditorHomeScreen() {
   const [stats, setStats] = useState({
     totalPoints: 0, completedPoints: 0,
     totalPayments: 0, paymentCount: 0,
-    routeStatus: 'planned', vehiclePlate: '',
+    routeStatus: ROUTE_STATUS.PLANNED, vehiclePlate: '',
     unreadNotifications: 0,
   });
 
@@ -29,18 +30,18 @@ export default function ExpeditorHomeScreen() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const routes = await getRoutesByDate(today, user.id);
-      let totalPoints = 0, completedPoints = 0, routeStatus = 'planned';
+      let totalPoints = 0, completedPoints = 0, routeStatus = ROUTE_STATUS.PLANNED;
 
       if (routes.length > 0) {
         routeStatus = routes[0].status;
         for (const route of routes) {
           const points = await getRoutePoints(route.id);
           totalPoints += points.length;
-          completedPoints += points.filter((p) => p.status === 'completed').length;
+          completedPoints += points.filter((p) => p.status === VISIT_STATUS.COMPLETED).length;
         }
         // Auto-detect route completed: all points done
-        if (totalPoints > 0 && completedPoints === totalPoints && routeStatus === 'in_progress') {
-          routeStatus = 'completed';
+        if (totalPoints > 0 && completedPoints === totalPoints && routeStatus === ROUTE_STATUS.IN_PROGRESS) {
+          routeStatus = ROUTE_STATUS.COMPLETED;
         }
       }
 
@@ -75,13 +76,12 @@ export default function ExpeditorHomeScreen() {
     setRefreshing(false);
   };
 
-  const isRouteCompleted = stats.routeStatus === 'completed';
+  const isRouteCompleted = stats.routeStatus === ROUTE_STATUS.COMPLETED;
 
   const quickActions = [
     { title: t('expeditorHome.actionStartOfDay'), icon: 'sunny-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, { screen: SCREEN_NAMES.START_OF_DAY }) },
-    { title: t('expeditorHome.actionUnloading'), icon: 'download-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, {
-      screen: SCREEN_NAMES.VEHICLE_UNLOADING,
-    }) },
+    { title: t('expeditorHome.actionInventory'), icon: 'clipboard-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, { screen: SCREEN_NAMES.INVENTORY_CHECK }) },
+    { title: t('expeditorHome.actionExpenses'), icon: 'receipt-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, { screen: SCREEN_NAMES.EXPENSES }) },
     { title: t('expeditorHome.actionEndOfDay'), icon: 'moon-outline', onPress: () => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, { screen: SCREEN_NAMES.END_OF_DAY }) },
   ];
 
@@ -141,22 +141,22 @@ export default function ExpeditorHomeScreen() {
       {/* Статус маршрута */}
       <View style={[
         styles.statusBar,
-        stats.routeStatus === 'in_progress' && styles.statusActive,
-        stats.routeStatus === 'completed' && styles.statusCompleted,
+        stats.routeStatus === ROUTE_STATUS.IN_PROGRESS && styles.statusActive,
+        stats.routeStatus === ROUTE_STATUS.COMPLETED && styles.statusCompleted,
       ]}>
         <Ionicons
-          name={stats.routeStatus === 'completed' ? 'checkmark-circle' :
-                stats.routeStatus === 'in_progress' ? 'navigate' : 'time-outline'}
+          name={stats.routeStatus === ROUTE_STATUS.COMPLETED ? 'checkmark-circle' :
+                stats.routeStatus === ROUTE_STATUS.IN_PROGRESS ? 'navigate' : 'time-outline'}
           size={20}
-          color={stats.routeStatus === 'in_progress' || stats.routeStatus === 'completed'
+          color={stats.routeStatus === ROUTE_STATUS.IN_PROGRESS || stats.routeStatus === ROUTE_STATUS.COMPLETED
             ? COLORS.white : COLORS.primary}
         />
         <Text style={[
           styles.statusText,
-          (stats.routeStatus === 'in_progress' || stats.routeStatus === 'completed') && styles.statusTextActive,
+          (stats.routeStatus === ROUTE_STATUS.IN_PROGRESS || stats.routeStatus === ROUTE_STATUS.COMPLETED) && styles.statusTextActive,
         ]}>
-          {stats.routeStatus === 'in_progress' ? t('expeditorHome.routeInProgress') :
-           stats.routeStatus === 'completed' ? t('expeditorHome.routeCompleted') : t('expeditorHome.routePlanned')}
+          {stats.routeStatus === ROUTE_STATUS.IN_PROGRESS ? t('expeditorHome.routeInProgress') :
+           stats.routeStatus === ROUTE_STATUS.COMPLETED ? t('expeditorHome.routeCompleted') : t('expeditorHome.routePlanned')}
         </Text>
       </View>
 
@@ -213,5 +213,5 @@ const styles = StyleSheet.create({
     width: 56, height: 56, borderRadius: 28, backgroundColor: COLORS.primary + '12',
     justifyContent: 'center', alignItems: 'center',
   },
-  actionLabel: { fontSize: 13, fontWeight: '500', color: COLORS.text },
+  actionLabel: { fontSize: 13, fontWeight: '500', color: COLORS.text, textAlign: 'center' },
 });

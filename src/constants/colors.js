@@ -7,6 +7,7 @@ export const COLORS = {
   secondary: '#4396D8',     // Light Blue — вторичные действия
   info: '#6A69AB',          // Purple — информационные элементы
   error: '#E46544',         // Coral — ошибки, деструктивные действия
+  success: '#34C759',       // Green — успешные действия
 
   // Нейтральные
   background: '#F5F5F5',

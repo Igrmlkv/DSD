@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   confirmedBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#34C759', padding: 10,
+    backgroundColor: COLORS.success, padding: 10,
   },
   confirmedText: { color: COLORS.white, fontSize: 13, fontWeight: '600' },
   summaryBar: {

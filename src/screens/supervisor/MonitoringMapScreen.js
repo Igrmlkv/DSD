@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import AppMapView from '../../components/AppMapView';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { VISIT_STATUS, ROUTE_STATUS } from '../../constants/statuses';
 import { getExpeditorProgress, getRoutePoints } from '../../database';
 
 const ROUTE_COLORS = ['#2196F3', '#FF5722', '#4CAF50', '#9C27B0', '#FF9800'];
@@ -50,15 +51,10 @@ export default function MonitoringMapScreen() {
   useEffect(() => {
     if (mapRef.current && allPoints.length > 0) {
       const timer = setTimeout(() => {
-        const lats = allPoints.map((p) => p.latitude);
-        const lons = allPoints.map((p) => p.longitude);
-        const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
-        const centerLon = (Math.min(...lons) + Math.max(...lons)) / 2;
-        const latDelta = (Math.max(...lats) - Math.min(...lats)) * 1.5;
-        const lonDelta = (Math.max(...lons) - Math.min(...lons)) * 1.5;
-        const delta = Math.max(latDelta, lonDelta, 0.01);
-        const zoom = Math.max(5, Math.min(14, 12 - Math.log2(delta / 0.01)));
-        mapRef.current.setCenter(centerLat, centerLon, zoom);
+        mapRef.current.fitToPoints(
+          allPoints.map((p) => ({ lat: p.latitude, lon: p.longitude })),
+          48
+        );
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -76,7 +72,7 @@ export default function MonitoringMapScreen() {
     if (!isVisible || pts.length === 0) return;
 
     pts.forEach((point, ptIndex) => {
-      const isCompleted = point.status === 'completed';
+      const isCompleted = point.status === VISIT_STATUS.COMPLETED;
       const markerColor = isCompleted ? darkenColor(routeColor, 0.5) : routeColor;
       markers.push({
         id: `${exp.route_id}-${point.id}`,
@@ -109,7 +105,7 @@ export default function MonitoringMapScreen() {
 
   const renderExpeditor = ({ item, index }) => {
     const progress = item.total_points > 0 ? (item.completed_points / item.total_points) * 100 : 0;
-    const isActive = item.route_status === 'in_progress';
+    const isActive = item.route_status === ROUTE_STATUS.IN_PROGRESS;
     const routeColor = ROUTE_COLORS[index % ROUTE_COLORS.length];
     const isSelected = selectedExpeditor === item.route_id;
 
@@ -141,7 +137,7 @@ export default function MonitoringMapScreen() {
             <Text style={styles.cardMeta}>{item.vehicle_number}</Text>
           </View>
           <View style={[styles.statusBadge, isActive ? styles.badgeActive : styles.badgePlanned]}>
-            <View style={[styles.statusDot, { backgroundColor: isActive ? '#34C759' : COLORS.tabBarInactive }]} />
+            <View style={[styles.statusDot, { backgroundColor: isActive ? COLORS.success : COLORS.tabBarInactive }]} />
             <Text style={styles.statusText}>{isActive ? t('monitoringMap.inTransit') : t('monitoringMap.plan')}</Text>
           </View>
         </View>
@@ -214,7 +210,7 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 15, fontWeight: '600', color: COLORS.text },
   cardMeta: { fontSize: 12, color: COLORS.textSecondary, marginTop: 1 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeActive: { backgroundColor: '#34C75915' },
+  badgeActive: { backgroundColor: COLORS.success + '15' },
   badgePlanned: { backgroundColor: COLORS.border + '40' },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontWeight: '500', color: COLORS.text },

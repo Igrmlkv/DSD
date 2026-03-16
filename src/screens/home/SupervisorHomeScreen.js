@@ -7,6 +7,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { ROUTE_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getSupervisorStats, getExpeditorProgress, getUnreadNotificationCount,
@@ -131,10 +132,10 @@ export default function SupervisorHomeScreen() {
             </View>
             <View style={[
               styles.expBadge,
-              exp.route_status === 'in_progress' ? styles.badgeActive : styles.badgePlanned,
+              exp.route_status === ROUTE_STATUS.IN_PROGRESS ? styles.badgeActive : styles.badgePlanned,
             ]}>
               <Text style={styles.expBadgeText}>
-                {exp.route_status === 'in_progress' ? t('supervisorHome.inTransit') : t('supervisorHome.plan')}
+                {exp.route_status === ROUTE_STATUS.IN_PROGRESS ? t('supervisorHome.inTransit') : t('supervisorHome.plan')}
               </Text>
             </View>
           </TouchableOpacity>

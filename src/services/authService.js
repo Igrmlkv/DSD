@@ -1,4 +1,5 @@
 import { saveTokens, saveUserData, clearAll } from './secureStorage';
+import { LOGIN_MOCK_DELAY_MS } from '../constants/config';
 
 // 4 тестовых аккаунта согласно DSD_Mobile_App.md v1.1
 // 3 роли: expeditor, supervisor, admin
@@ -39,6 +40,19 @@ const MOCK_USERS = {
       phone: '+79057778899',
     },
   },
+  sokolov: {
+    password: '1',
+    user: {
+      id: 'usr-005',
+      username: 'sokolov',
+      fullName: 'Соколов Артём Владимирович',
+      role: 'preseller',
+      phone: '+79261234500',
+      vehicleId: 'veh-003',
+      vehiclePlate: 'Е789ОР77',
+      vehicleModel: 'Lada Largus',
+    },
+  },
   admin: {
     password: '1',
     user: {
@@ -58,7 +72,7 @@ export const TEST_ACCOUNTS = Object.values(MOCK_USERS).map((m) => ({
 }));
 
 export async function login(username, password) {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  await new Promise((resolve) => setTimeout(resolve, LOGIN_MOCK_DELAY_MS));
 
   const mockUser = MOCK_USERS[username];
 

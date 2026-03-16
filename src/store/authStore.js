@@ -17,11 +17,14 @@ const useAuthStore = create((set) => ({
   },
 
   logout: async () => {
-    await authService.logout();
-    set({
-      user: null,
-      isAuthenticated: false,
-    });
+    try {
+      await authService.logout();
+    } finally {
+      set({
+        user: null,
+        isAuthenticated: false,
+      });
+    }
   },
 
   restoreSession: async () => {

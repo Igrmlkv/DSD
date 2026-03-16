@@ -1,16 +1,20 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
+  Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
+import { VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getCustomerById, getOrdersByRoutePoint, updateRoutePointStatus,
+  getDeliveryByRoutePoint, getOrderById, getActiveVisitCustomer,
 } from '../../database';
+import { getInvoiceByDelivery } from '../../services/invoiceService';
 
 export default function VisitScreen({ route }) {
   const { t } = useTranslation();
@@ -19,20 +23,28 @@ export default function VisitScreen({ route }) {
   const navigation = useNavigation();
   const [customer, setCustomer] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [visitStatus, setVisitStatus] = useState(initialStatus || 'pending');
+  const [invoiceId, setInvoiceId] = useState(null);
+  const [visitStatus, setVisitStatus] = useState(initialStatus || VISIT_STATUS.PENDING);
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [qrCode, setQrCode] = useState('');
 
-  const isCompleted = visitStatus === 'completed' || visitStatus === 'skipped';
-  const visitStarted = visitStatus === 'in_progress' || isCompleted;
+  const isCompleted = visitStatus === VISIT_STATUS.COMPLETED || visitStatus === VISIT_STATUS.SKIPPED;
+  const visitStarted = visitStatus === VISIT_STATUS.IN_PROGRESS || isCompleted;
 
   const loadData = useCallback(async () => {
     try {
-      if (customerId) {
-        const c = await getCustomerById(customerId);
-        setCustomer(c);
-      }
-      if (pointId) {
-        const ord = await getOrdersByRoutePoint(pointId);
-        setOrders(ord);
+      const [c, ord, delivery] = await Promise.all([
+        customerId ? getCustomerById(customerId) : null,
+        pointId ? getOrdersByRoutePoint(pointId) : [],
+        pointId ? getDeliveryByRoutePoint(pointId) : null,
+      ]);
+      if (c) setCustomer(c);
+      setOrders(ord || []);
+      if (delivery) {
+        const invoice = await getInvoiceByDelivery(delivery.id);
+        setInvoiceId(invoice?.id || null);
+      } else {
+        setInvoiceId(null);
       }
     } catch (e) {
       console.error('Visit load error:', e);
@@ -42,9 +54,29 @@ export default function VisitScreen({ route }) {
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
   const handleStartVisit = async () => {
-    if (pointId) {
-      await updateRoutePointStatus(pointId, 'in_progress');
-      setVisitStatus('in_progress');
+    if (!pointId) return;
+    try {
+      const activeVisit = await getActiveVisitCustomer(user?.id);
+      if (activeVisit && activeVisit.point_id !== pointId) {
+        Alert.alert(
+          t('visit.activeVisitExists'),
+          t('visit.activeVisitMsg', { customer: activeVisit.customer_name }),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('visit.goToActiveVisit'),
+              onPress: () => navigation.navigate(SCREEN_NAMES.ROUTE_LIST),
+            },
+          ]
+        );
+        return;
+      }
+      await updateRoutePointStatus(pointId, VISIT_STATUS.IN_PROGRESS);
+      setVisitStatus(VISIT_STATUS.IN_PROGRESS);
+    } catch (e) {
+      console.error('Start visit error:', e);
+      await updateRoutePointStatus(pointId, VISIT_STATUS.IN_PROGRESS);
+      setVisitStatus(VISIT_STATUS.IN_PROGRESS);
     }
   };
 
@@ -54,12 +86,36 @@ export default function VisitScreen({ route }) {
       {
         text: t('visit.yesComplete'), onPress: async () => {
           if (pointId) {
-            await updateRoutePointStatus(pointId, 'completed');
+            await updateRoutePointStatus(pointId, VISIT_STATUS.COMPLETED);
             navigation.goBack();
           }
         },
       },
     ]);
+  };
+
+  const handleQrScan = async () => {
+    const code = qrCode.trim();
+    if (!code) return;
+    try {
+      const order = await getOrderById(code);
+      if (!order) {
+        Alert.alert(t('visit.qrNotFound'), t('visit.qrNotFoundMsg', { code }));
+        setQrCode('');
+        return;
+      }
+      setQrCode('');
+      setShowQrModal(false);
+      navigation.navigate(SCREEN_NAMES.SHIPMENT, {
+        pointId: order.route_point_id || pointId,
+        customerId: order.customer_id || customerId,
+        customerName,
+        routeId,
+        readOnly: isCompleted,
+      });
+    } catch (e) {
+      Alert.alert(t('common.error'), e.message);
+    }
   };
 
   const navParams = { pointId, customerId, customerName, routeId, readOnly: isCompleted };
@@ -73,6 +129,16 @@ export default function VisitScreen({ route }) {
       onPress: () => navigation.navigate(SCREEN_NAMES.PACKAGING_RETURNS, navParams) },
     { key: 'payment', title: t('visit.payment'), subtitle: customer?.debt_amount > 0 ? `${t('visit.debtLabel')}: ${customer.debt_amount.toLocaleString()} ₽` : t('visit.noDebt'), icon: 'wallet-outline', color: COLORS.accent,
       onPress: () => navigation.navigate(SCREEN_NAMES.PAYMENT, navParams) },
+    { key: 'qrscan', title: t('visit.scanQr'), subtitle: t('visit.scanQrSub'), icon: 'qr-code-outline', color: COLORS.secondary,
+      onPress: () => setShowQrModal(true) },
+    { key: 'invoices', title: t('visit.invoices'), subtitle: t('visit.invoicesSub'), icon: 'document-text-outline', color: '#8E44AD',
+      onPress: () => {
+        if (invoiceId) {
+          navigation.navigate(SCREEN_NAMES.INVOICE_SUMMARY, { invoiceId, ...navParams });
+        } else {
+          Alert.alert('', t('visit.noInvoice'));
+        }
+      } },
   ];
 
   return (
@@ -86,13 +152,18 @@ export default function VisitScreen({ route }) {
       )}
 
       {/* Информация о клиенте */}
-      <View style={styles.customerCard}>
+      <TouchableOpacity
+        style={styles.customerCard}
+        onPress={() => navigation.navigate(SCREEN_NAMES.CUSTOMER_DETAIL, { customerId })}
+        activeOpacity={0.7}
+      >
         <View style={styles.customerHeader}>
           <Ionicons name="storefront" size={24} color={COLORS.primary} />
           <View style={styles.customerInfo}>
             <Text style={styles.customerName}>{customerName || customer?.name}</Text>
             <Text style={styles.customerAddress} numberOfLines={2}>{customer?.address}</Text>
           </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.tabBarInactive} />
         </View>
         {customer && (
           <View style={styles.customerMeta}>
@@ -116,11 +187,11 @@ export default function VisitScreen({ route }) {
             )}
           </View>
         )}
-      </View>
+      </TouchableOpacity>
 
       {/* Кнопка старта/завершения */}
       {!isCompleted && (
-        visitStatus === 'pending' ? (
+        visitStatus === VISIT_STATUS.PENDING ? (
           <TouchableOpacity style={styles.startBtn} onPress={handleStartVisit}>
             <Ionicons name="play-circle" size={22} color={COLORS.white} />
             <Text style={styles.startBtnText}>{t('visit.startVisit')}</Text>
@@ -173,6 +244,37 @@ export default function VisitScreen({ route }) {
           ))}
         </>
       )}
+      {/* QR Scan Modal */}
+      <Modal visible={showQrModal} transparent animationType="fade">
+        <KeyboardAvoidingView style={styles.qrOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.qrContent}>
+            <View style={styles.qrHeader}>
+              <Ionicons name="qr-code" size={32} color={COLORS.primary} />
+              <Text style={styles.qrTitle}>{t('visit.scanQrTitle')}</Text>
+            </View>
+            <Text style={styles.qrSubtitle}>{t('visit.scanQrHint')}</Text>
+            <TextInput
+              style={styles.qrInput}
+              value={qrCode}
+              onChangeText={setQrCode}
+              placeholder={t('visit.qrPlaceholder')}
+              placeholderTextColor={COLORS.tabBarInactive}
+              autoFocus
+              returnKeyType="search"
+              onSubmitEditing={handleQrScan}
+            />
+            <View style={styles.qrButtons}>
+              <TouchableOpacity style={styles.qrCancelBtn} onPress={() => { setShowQrModal(false); setQrCode(''); }}>
+                <Text style={styles.qrCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.qrSearchBtn} onPress={handleQrScan}>
+                <Ionicons name="search" size={18} color={COLORS.white} />
+                <Text style={styles.qrSearchText}>{t('visit.findOrder')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -202,7 +304,7 @@ const styles = StyleSheet.create({
   startBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '600' },
   endBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#34C759', borderRadius: 12, padding: 14, marginBottom: 20,
+    backgroundColor: COLORS.success, borderRadius: 12, padding: 14, marginBottom: 20,
   },
   endBtnText: { color: COLORS.white, fontSize: 16, fontWeight: '600' },
   sectionTitle: { fontSize: 17, fontWeight: '600', color: COLORS.text, marginBottom: 12 },
@@ -225,4 +327,16 @@ const styles = StyleSheet.create({
   orderNum: { fontSize: 14, fontWeight: '500', color: COLORS.text },
   orderStatus: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   orderAmount: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  // QR modal
+  qrOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  qrContent: { backgroundColor: COLORS.white, borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 },
+  qrHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
+  qrTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  qrSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 16, lineHeight: 18 },
+  qrInput: { backgroundColor: COLORS.background, borderRadius: 10, padding: 14, fontSize: 16, color: COLORS.text, marginBottom: 16 },
+  qrButtons: { flexDirection: 'row', gap: 12 },
+  qrCancelBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: COLORS.background, alignItems: 'center' },
+  qrCancelText: { fontSize: 15, fontWeight: '600', color: COLORS.textSecondary },
+  qrSearchBtn: { flex: 1, flexDirection: 'row', padding: 14, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  qrSearchText: { fontSize: 15, fontWeight: '600', color: COLORS.white },
 });

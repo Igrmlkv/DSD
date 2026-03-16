@@ -165,7 +165,7 @@ export default function UserEditScreen({ route }) {
           style={[styles.statusChip, form.is_active === 1 && styles.statusActive]}
           onPress={() => updateField('is_active', 1)}
         >
-          <View style={[styles.statusDot, { backgroundColor: '#34C759' }]} />
+          <View style={[styles.statusDot, { backgroundColor: COLORS.success }]} />
           <Text style={[styles.statusChipText, form.is_active === 1 && styles.statusChipTextActive]}>{t('userEdit.active')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   roleChipTextActive: { color: COLORS.white },
   statusRow: { flexDirection: 'row', gap: 8 },
   statusChip: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border },
-  statusActive: { borderColor: '#34C759', backgroundColor: '#34C75910' },
+  statusActive: { borderColor: COLORS.success, backgroundColor: COLORS.success + '10' },
   statusInactive: { borderColor: COLORS.error, backgroundColor: COLORS.error + '10' },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   statusChipText: { fontSize: 13, fontWeight: '500', color: COLORS.text },

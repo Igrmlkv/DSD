@@ -125,7 +125,7 @@ export default function ReturnApprovalScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await loadData(); setRefreshing(false); }} colors={[COLORS.primary]} />}
       ListEmptyComponent={
         <View style={styles.empty}>
-          <Ionicons name="checkmark-circle-outline" size={48} color="#34C759" />
+          <Ionicons name="checkmark-circle-outline" size={48} color={COLORS.success} />
           <Text style={styles.emptyText}>{t('returnApproval.noReturns')}</Text>
         </View>
       }
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   rejectBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.error, borderRadius: 10, padding: 10 },
   rejectText: { fontSize: 14, fontWeight: '600', color: COLORS.error },
-  approveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#34C759', borderRadius: 10, padding: 10 },
+  approveBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: COLORS.success, borderRadius: 10, padding: 10 },
   approveText: { fontSize: 14, fontWeight: '600', color: COLORS.white },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
   emptyText: { fontSize: 16, color: COLORS.textSecondary, marginTop: 12 },

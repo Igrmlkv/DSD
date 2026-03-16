@@ -8,9 +8,10 @@ import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../store/authStore';
 import {
   getAllCustomers, getProductsWithPrices, getOrderById, getOrderItems,
-  createOrder, updateOrder, saveOrderItems, getAvailableVehicleStock,
+  saveOrderWithItems, getAvailableVehicleStock,
 } from '../../database';
 import { COLORS } from '../../constants/colors';
+import { ORDER_STATUS } from '../../constants/statuses';
 
 function formatMoney(v) {
   return Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' R';
@@ -20,15 +21,18 @@ export default function OrderEditScreen({ route, navigation }) {
   const { t } = useTranslation();
   const orderId = route.params?.orderId;
   const readOnly = route.params?.readOnly || false;
+  const pointId = route.params?.pointId || null;
+  const routeId = route.params?.routeId || null;
   const isEdit = !!orderId;
   const user = useAuthStore((state) => state.user);
+  const isPreseller = user?.role === 'preseller';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   // Order state
-  const [customerId, setCustomerId] = useState(null);
-  const [customerName, setCustomerName] = useState('');
+  const [customerId, setCustomerId] = useState(route.params?.customerId || null);
+  const [customerName, setCustomerName] = useState(route.params?.customerName || '');
   const [lines, setLines] = useState([]); // { product_id, name, sku, volume, price, quantity, total }
   const [notes, setNotes] = useState('');
 
@@ -42,6 +46,7 @@ export default function OrderEditScreen({ route, navigation }) {
   const [products, setProducts] = useState([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
+  const [selectedPickerIds, setSelectedPickerIds] = useState(new Set());
 
   useEffect(() => {
     loadData();
@@ -54,7 +59,7 @@ export default function OrderEditScreen({ route, navigation }) {
       setProducts(prods);
 
       // Load available vehicle stock (stock minus unshipped orders)
-      if (user?.vehicleId) {
+      if (user?.vehicleId && !isPreseller) {
         const stock = await getAvailableVehicleStock(user.vehicleId, user.id, orderId || null);
         const map = {};
         for (const s of stock) {
@@ -94,20 +99,45 @@ export default function OrderEditScreen({ route, navigation }) {
     setCustomerSearch('');
   }
 
+  function togglePickerItem(p) {
+    setSelectedPickerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+      return next;
+    });
+  }
+
+  function addSelectedProducts() {
+    const existing = new Set(lines.map((l) => l.product_id));
+    const toAdd = products.filter((p) => selectedPickerIds.has(p.id) && !existing.has(p.id));
+    const newLines = toAdd.map((p) => {
+      const available = stockMap[p.id] || 0;
+      const price = p.base_price || 0;
+      return {
+        product_id: p.id, name: p.name, sku: p.sku, volume: p.volume,
+        price, quantity: 1, discount_percent: 0, total: price, maxStock: isPreseller ? null : available,
+      };
+    });
+    setLines((prev) => [...prev, ...newLines]);
+    setSelectedPickerIds(new Set());
+    setShowProductPicker(false);
+    setProductSearch('');
+  }
+
   function addProduct(p) {
     if (lines.find((l) => l.product_id === p.id)) {
       Alert.alert('', t('orderEdit.alreadyAdded'));
       return;
     }
     const available = stockMap[p.id] || 0;
-    if (user?.vehicleId && available <= 0) {
+    if (!isPreseller && user?.vehicleId && available <= 0) {
       Alert.alert(t('orderEdit.noStockTitle'), t('orderEdit.noStock', { name: p.name }));
       return;
     }
     const price = p.base_price || 0;
     setLines((prev) => [...prev, {
       product_id: p.id, name: p.name, sku: p.sku, volume: p.volume,
-      price, quantity: 1, discount_percent: 0, total: price, maxStock: available,
+      price, quantity: 1, discount_percent: 0, total: price, maxStock: isPreseller ? null : available,
     }]);
     setShowProductPicker(false);
     setProductSearch('');
@@ -149,30 +179,17 @@ export default function OrderEditScreen({ route, navigation }) {
 
     setSaving(true);
     try {
-      let id = orderId;
-      if (isEdit) {
-        await updateOrder(id, {
-          customer_id: customerId,
-          total_amount: totalAmount,
-          discount_amount: 0,
-          notes,
-          status: 'draft',
-        });
-      } else {
-        id = await createOrder({
-          customer_id: customerId,
-          user_id: user.id,
-          total_amount: totalAmount,
-          notes,
-        });
-      }
-      await saveOrderItems(id, lines.map((l) => ({
+      const orderData = isEdit
+        ? { id: orderId, customer_id: customerId, total_amount: totalAmount, discount_amount: 0, notes, status: ORDER_STATUS.DRAFT }
+        : { customer_id: customerId, user_id: user.id, route_point_id: pointId, total_amount: totalAmount, notes };
+      const itemsData = lines.map((l) => ({
         product_id: l.product_id,
         quantity: l.quantity,
         price: l.price,
         discount_percent: l.discount_percent || 0,
         total: l.total,
-      })));
+      }));
+      await saveOrderWithItems(orderData, itemsData, isEdit);
       navigation.goBack();
     } catch (e) {
       console.error(e);
@@ -234,12 +251,15 @@ export default function OrderEditScreen({ route, navigation }) {
       const q = productSearch.toLowerCase();
       return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q);
     });
+    const selCount = selectedPickerIds.size;
     return (
-      <Modal visible={showProductPicker} animationType="slide" onRequestClose={() => setShowProductPicker(false)}>
+      <Modal visible={showProductPicker} animationType="slide" onRequestClose={() => { setShowProductPicker(false); setSelectedPickerIds(new Set()); }}>
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{t('orderEdit.addProductTitle')}</Text>
-            <TouchableOpacity onPress={() => { setShowProductPicker(false); setProductSearch(''); }}>
+            <Text style={styles.modalTitle}>
+              {t('orderEdit.addProductTitle')}{selCount > 0 ? ` (${selCount})` : ''}
+            </Text>
+            <TouchableOpacity onPress={() => { setShowProductPicker(false); setProductSearch(''); setSelectedPickerIds(new Set()); }}>
               <Ionicons name="close" size={24} color={COLORS.text} />
             </TouchableOpacity>
           </View>
@@ -259,17 +279,21 @@ export default function OrderEditScreen({ route, navigation }) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => {
               const available = stockMap[item.id] || 0;
-              const noStock = user?.vehicleId && available <= 0;
+              const noStock = !isPreseller && user?.vehicleId && available <= 0;
+              const selected = selectedPickerIds.has(item.id);
               return (
                 <TouchableOpacity
-                  style={[styles.pickerRow, noStock && styles.pickerRowDisabled]}
-                  onPress={() => addProduct(item)}
+                  style={[styles.pickerRow, noStock && styles.pickerRowDisabled, selected && styles.pickerRowSelected]}
+                  onPress={() => noStock ? null : togglePickerItem(item)}
                   disabled={noStock}
                 >
+                  <View style={[styles.pickerCheckbox, selected && styles.pickerCheckboxActive]}>
+                    {selected && <Ionicons name="checkmark" size={14} color={COLORS.white} />}
+                  </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.pickerName, noStock && styles.pickerNameDisabled]}>{item.name}</Text>
                     <Text style={styles.pickerSub}>{item.sku} | {item.brand} | {item.volume}</Text>
-                    {user?.vehicleId && (
+                    {!isPreseller && user?.vehicleId && (
                       <Text style={[styles.pickerStock, noStock && styles.pickerStockEmpty]}>
                         {t('orderEdit.inVehicle')}: {available} {t('orderEdit.pcs')}
                       </Text>
@@ -284,6 +308,16 @@ export default function OrderEditScreen({ route, navigation }) {
             }}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
           />
+          {selCount > 0 && (
+            <View style={styles.pickerFooter}>
+              <TouchableOpacity style={styles.pickerConfirmBtn} onPress={addSelectedProducts}>
+                <Ionicons name="cart-outline" size={20} color={COLORS.white} />
+                <Text style={styles.pickerConfirmText}>
+                  {t('orderEdit.addSelected', { count: selCount })}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </Modal>
     );
@@ -514,5 +548,20 @@ const styles = StyleSheet.create({
   pickerRight: { alignItems: 'flex-end', marginLeft: 8 },
   pickerPrice: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
   pickerNoStock: { fontSize: 10, color: COLORS.error, fontWeight: '600', marginTop: 2 },
+  pickerRowSelected: { backgroundColor: `${COLORS.primary}12` },
+  pickerCheckbox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: COLORS.border,
+    alignItems: 'center', justifyContent: 'center', marginRight: 12,
+  },
+  pickerCheckboxActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  pickerFooter: {
+    padding: 16, paddingBottom: 32, borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border, backgroundColor: COLORS.white,
+  },
+  pickerConfirmBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 12,
+  },
+  pickerConfirmText: { fontSize: 16, fontWeight: '600', color: COLORS.white },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: COLORS.border, marginLeft: 16 },
 });

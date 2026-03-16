@@ -8,7 +8,7 @@ import { SCREEN_NAMES } from '../../constants/screens';
 import { getSyncStats, getSyncConflicts } from '../../database';
 
 const SYNC_STATUS_ICONS = {
-  ok: { color: '#34C759', icon: 'checkmark-circle' },
+  ok: { color: COLORS.success, icon: 'checkmark-circle' },
   warning: { color: COLORS.accent, icon: 'warning' },
   critical: { color: COLORS.error, icon: 'alert-circle' },
 };
@@ -91,7 +91,7 @@ export default function SyncMonitoringScreen() {
               <Text style={styles.summaryLabel}>{t('syncMonitoring.devicesCount')}</Text>
             </View>
             <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: '#34C759' }]}>{stats.syncedDevices || 0}</Text>
+              <Text style={[styles.summaryValue, { color: COLORS.success }]}>{stats.syncedDevices || 0}</Text>
               <Text style={styles.summaryLabel}>{t('syncMonitoring.synced')}</Text>
             </View>
             <View style={styles.summaryItem}>

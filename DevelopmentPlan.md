@@ -344,21 +344,14 @@
 
 | Tab | Содержимое |
 | --- | --- |
-| **GENERAL INFO** | Телефон, адрес, GPS-координаты |
-| **SALES AREA** | Sales organization, distribution channel, division, customer group, payment method, payment terms |
-| **CREDIT INFO** | Credit limit, risk category, available credit (значение + progress bar), special debts, open items, confirmed orders, payments |
-| **OPEN ITEMS** | Total debts → Overdue + Regular. Per-document: due date, document number, amount |
-| **MESSAGES** | Customer messages, sales area messages (карточки) |
-| **LISTED ITEMS** | Per order/delivery type — список разрешённых товаров |
-| **EXCLUDED ITEMS** | Аналогично listed — список запрещённых товаров |
+| **GENERAL INFO** | Наименование Юридического лица, ИНН, КПП, Телефон, Констактное лицо, адрес, GPS-координаты, Разрешенное время для визита, особенности доставки | 
+| **SALES AREA** | customer group, payment method, payment terms |
+| **CREDIT INFO** | Credit limit, risk category, available credit (значение + progress bar) |
 
 - **Full text search** по списку клиентов (имя + номер, multi-line)
-- **Multiple sales areas** — pop-up selector если клиент в нескольких
-- **Add customer to visit list** — кнопка добавления в текущий tour
 
 **Новый экран:** `CustomerDetailScreen.js` (tabbed)
 **Новый экран:** `CustomerListScreen.js` (searchable list)
-**Расширение схемы:** `customer_sales_areas`, `customer_messages`, `customer_listed_items`, `customer_excluded_items`
 
 ---
 

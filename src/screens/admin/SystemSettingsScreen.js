@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet, Alert, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, StyleSheet, Alert, RefreshControl, TextInput, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
-import { getDbStats } from '../../database';
+import { getDbStats, resetAndSeedDatabase } from '../../database';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore from '../../store/settingsStore';
 
@@ -15,8 +15,14 @@ export default function SystemSettingsScreen() {
   const logout = useAuthStore((s) => s.logout);
   const language = useSettingsStore((s) => s.language);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
+  const printFormType = useSettingsStore((s) => s.printFormType);
+  const setPrintFormType = useSettingsStore((s) => s.setPrintFormType);
+  const companyInfo = useSettingsStore((s) => s.companyInfo);
+  const setCompanyInfo = useSettingsStore((s) => s.setCompanyInfo);
   const [dbStats, setDbStats] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [editCompany, setEditCompany] = useState({});
 
   // Настройки (mock state)
   const [autoSync, setAutoSync] = useState(true);
@@ -104,7 +110,7 @@ export default function SystemSettingsScreen() {
         <View style={styles.separator} />
         <SettingRow
           icon="shield-checkmark"
-          iconColor="#34C759"
+          iconColor={COLORS.success}
           title={t('systemSettings.passwordPolicy')}
           subtitle={t('systemSettings.passwordPolicySub')}
         />
@@ -131,7 +137,15 @@ export default function SystemSettingsScreen() {
           subtitle={t('systemSettings.resetDatabaseSub')}
           onPress={() => Alert.alert(t('systemSettings.resetDbConfirm'), t('systemSettings.resetDbConfirmMsg'), [
             { text: t('common.cancel'), style: 'cancel' },
-            { text: t('systemSettings.resetButton'), style: 'destructive', onPress: () => Alert.alert(t('common.done'), t('systemSettings.resetDone')) },
+            { text: t('systemSettings.resetButton'), style: 'destructive', onPress: async () => {
+              try {
+                await resetAndSeedDatabase();
+                await loadData();
+                Alert.alert(t('common.done'), t('systemSettings.resetDone'));
+              } catch (e) {
+                Alert.alert('Ошибка', e.message);
+              }
+            }},
           ])}
         />
       </View>
@@ -156,6 +170,33 @@ export default function SystemSettingsScreen() {
         <SettingRow icon="server" iconColor={COLORS.textSecondary} title={t('systemSettings.apiVersion')} subtitle={t('systemSettings.apiVersionSub')} />
       </View>
 
+      {/* Company Info */}
+      <Text style={styles.sectionTitle}>{t('systemSettings.companyInfoSection')}</Text>
+      <View style={styles.section}>
+        <SettingRow
+          icon="business"
+          iconColor={COLORS.primary}
+          title={t('systemSettings.companyInfoTitle')}
+          subtitle={companyInfo.legalName || t('systemSettings.companyInfoNotSet')}
+          onPress={() => {
+            setEditCompany({ ...companyInfo });
+            setShowCompanyModal(true);
+          }}
+        />
+      </View>
+
+      {/* Print Forms */}
+      <Text style={styles.sectionTitle}>{t('systemSettings.printFormsSection')}</Text>
+      <View style={styles.section}>
+        <SettingRow
+          icon="document-text"
+          iconColor={COLORS.info}
+          title={t('systemSettings.printFormType')}
+          subtitle={printFormType === 'upd' ? t('systemSettings.printFormUpd') : t('systemSettings.printFormInvoice')}
+          onPress={() => setPrintFormType(printFormType === 'upd' ? 'invoice' : 'upd')}
+        />
+      </View>
+
       {/* Language */}
       <Text style={styles.sectionTitle}>{t('systemSettings.languageSection')}</Text>
       <View style={styles.section}>
@@ -175,6 +216,52 @@ export default function SystemSettingsScreen() {
       </TouchableOpacity>
 
       <View style={{ height: 40 }} />
+
+      {/* Company Info Modal */}
+      <Modal visible={showCompanyModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('systemSettings.companyInfoTitle')}</Text>
+            {[
+              { key: 'legalName', label: t('systemSettings.companyLegalName'), placeholder: t('systemSettings.companyLegalNamePh') },
+              { key: 'address', label: t('systemSettings.companyAddress'), placeholder: t('systemSettings.companyAddressPh') },
+              { key: 'inn', label: t('systemSettings.companyInn'), placeholder: '1234567890', keyboard: 'numeric' },
+              { key: 'kpp', label: t('systemSettings.companyKpp'), placeholder: '123456789', keyboard: 'numeric' },
+              { key: 'directorName', label: t('systemSettings.companyDirector'), placeholder: t('systemSettings.companyDirectorPh') },
+              { key: 'accountantName', label: t('systemSettings.companyAccountant'), placeholder: t('systemSettings.companyAccountantPh') },
+            ].map(({ key, label, placeholder, keyboard }) => (
+              <View key={key} style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{label}</Text>
+                <TextInput
+                  style={styles.fieldInput}
+                  value={editCompany[key] || ''}
+                  onChangeText={(v) => setEditCompany((prev) => ({ ...prev, [key]: v }))}
+                  placeholder={placeholder}
+                  placeholderTextColor={COLORS.tabBarInactive}
+                  keyboardType={keyboard || 'default'}
+                />
+              </View>
+            ))}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setShowCompanyModal(false)}
+              >
+                <Text style={styles.modalBtnCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSave]}
+                onPress={async () => {
+                  await setCompanyInfo(editCompany);
+                  setShowCompanyModal(false);
+                }}
+              >
+                <Text style={styles.modalBtnSaveText}>{t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -192,4 +279,16 @@ const styles = StyleSheet.create({
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: COLORS.border, marginLeft: 62 },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.white, borderRadius: 14, padding: 16, marginTop: 24, borderWidth: 1, borderColor: COLORS.error + '30' },
   logoutText: { fontSize: 16, fontWeight: '600', color: COLORS.error },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: COLORS.white, borderRadius: 16, padding: 20, maxHeight: '85%' },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 16, textAlign: 'center' },
+  fieldGroup: { marginBottom: 12 },
+  fieldLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, marginBottom: 4 },
+  fieldInput: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 10, fontSize: 14, color: COLORS.text },
+  modalActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  modalBtn: { flex: 1, borderRadius: 12, padding: 14, alignItems: 'center' },
+  modalBtnCancel: { backgroundColor: COLORS.background, borderWidth: 1, borderColor: COLORS.border },
+  modalBtnCancelText: { fontSize: 15, fontWeight: '600', color: COLORS.textSecondary },
+  modalBtnSave: { backgroundColor: COLORS.primary },
+  modalBtnSaveText: { fontSize: 15, fontWeight: '600', color: COLORS.white },
 });

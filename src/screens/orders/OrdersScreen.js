@@ -4,10 +4,12 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getAllOrders, getOrderItems, deleteOrder } from '../../database';
+import { getAllOrders, getOrderItems, deleteOrder, getActiveVisitCustomer } from '../../database';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
+import { ORDER_STATUS } from '../../constants/statuses';
+import useAuthStore from '../../store/authStore';
 
 const STATUS_COLORS = {
   draft: COLORS.textSecondary,
@@ -23,6 +25,7 @@ function formatMoney(v) {
 
 export default function OrdersScreen() {
   const { t } = useTranslation();
+  const user = useAuthStore((state) => state.user);
   const navigation = useNavigation();
   const [orders, setOrders] = useState([]);
   const [expandedOrder, setExpandedOrder] = useState(null);
@@ -62,8 +65,12 @@ export default function OrdersScreen() {
     navigation.navigate(SCREEN_NAMES.ORDER_EDIT, { orderId });
   }
 
-  function handleCreate() {
-    navigation.navigate(SCREEN_NAMES.ORDER_EDIT, {});
+  async function handleCreate() {
+    const visit = user?.id ? await getActiveVisitCustomer(user.id) : null;
+    navigation.navigate(SCREEN_NAMES.ORDER_EDIT, visit
+      ? { customerId: visit.customer_id, customerName: visit.customer_name, pointId: visit.point_id, routeId: visit.route_id }
+      : {}
+    );
   }
 
   function handleDelete(orderId) {
@@ -98,7 +105,7 @@ export default function OrdersScreen() {
     const stLabel = t('ordersScreen.statuses.' + (item.status || 'draft'));
     const isExpanded = expandedOrder === item.id;
     const orderItems = items[item.id] || [];
-    const canEdit = item.status === 'draft' || item.status === 'confirmed';
+    const canEdit = item.status === ORDER_STATUS.DRAFT || item.status === ORDER_STATUS.CONFIRMED;
 
     return (
       <View style={styles.card}>

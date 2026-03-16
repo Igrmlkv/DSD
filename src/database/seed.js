@@ -1,3 +1,5 @@
+import { PROMO_PRICE_MULTIPLIER } from '../constants/config';
+
 // ============================================================
 // Пользователи системы — 4 пользователя, 3 роли
 // ============================================================
@@ -5,6 +7,7 @@ const USERS = [
   { id: 'usr-001', username: 'petrov', password_hash: 'hash_petrov', full_name: 'Петров Алексей Иванович', role: 'expeditor', phone: '+79161234567', vehicle_id: 'veh-001' },
   { id: 'usr-003', username: 'kozlov', password_hash: 'hash_kozlov', full_name: 'Козлов Дмитрий Сергеевич', role: 'expeditor', phone: '+79031112233', vehicle_id: 'veh-002' },
   { id: 'usr-004', username: 'ivanova', password_hash: 'hash_ivanova', full_name: 'Иванова Елена Николаевна', role: 'supervisor', phone: '+79057778899', vehicle_id: null },
+  { id: 'usr-005', username: 'sokolov', password_hash: 'hash_sokolov', full_name: 'Соколов Артём Владимирович', role: 'preseller', phone: '+79261234500', vehicle_id: 'veh-003' },
   { id: 'usr-006', username: 'admin', password_hash: 'hash_admin', full_name: 'Администратор Системы', role: 'admin', phone: '+79990001122', vehicle_id: null },
 ];
 
@@ -93,7 +96,7 @@ function generatePrices() {
       id: `prc-${String(idx++).padStart(3, '0')}`,
       product_id: productId,
       price_type: 'promo',
-      price: Math.round(basePrice * 0.85),
+      price: Math.round(basePrice * PROMO_PRICE_MULTIPLIER),
       valid_from: '2026-03-01',
       valid_to: '2026-03-31',
     });
@@ -106,38 +109,38 @@ function generatePrices() {
 // ============================================================
 const CUSTOMERS = [
   // Центр / ЦАО
-  { id: 'cst-001', name: 'Пятёрочка #1245', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, ул. Тверская, д. 15', city: 'Москва', region: 'Москва', postal_code: '125009', latitude: 55.7648, longitude: 37.6054, contact_person: 'Кузнецова А.В.', phone: '+74951234567', customer_type: 'retail', payment_terms: 'credit', credit_limit: 500000, debt_amount: 125000 },
-  { id: 'cst-002', name: 'Магнит #8834', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, ул. Арбат, д. 24', city: 'Москва', region: 'Москва', postal_code: '119002', latitude: 55.7520, longitude: 37.5927, contact_person: 'Белов И.П.', phone: '+74959876543', customer_type: 'retail', payment_terms: 'credit', credit_limit: 600000, debt_amount: 89000 },
-  { id: 'cst-003', name: 'Дикси #456', legal_name: 'ООО "Дикси Юг"', inn: '5036045205', kpp: '503601001', address: 'г. Москва, Ленинградский пр-т, д. 76', city: 'Москва', region: 'Москва', postal_code: '125315', latitude: 55.8007, longitude: 37.5259, contact_person: 'Морозова Т.Л.', phone: '+74951112233', customer_type: 'retail', payment_terms: 'credit', credit_limit: 300000, debt_amount: 45000 },
-  { id: 'cst-004', name: 'ВкусВилл #78', legal_name: 'ООО "Проект Избёнка"', inn: '5029168824', kpp: '502901001', address: 'г. Москва, ул. Покровка, д. 10', city: 'Москва', region: 'Москва', postal_code: '101000', latitude: 55.7600, longitude: 37.6450, contact_person: 'Фёдоров С.А.', phone: '+74954445566', customer_type: 'retail', payment_terms: 'cash', credit_limit: 200000, debt_amount: 0 },
-  { id: 'cst-005', name: 'Перекрёсток #312', legal_name: 'АО "Торговый Дом Перекрёсток"', inn: '7728029110', kpp: '772801001', address: 'г. Москва, Кутузовский пр-т, д. 45', city: 'Москва', region: 'Москва', postal_code: '121151', latitude: 55.7405, longitude: 37.5350, contact_person: 'Новикова Е.М.', phone: '+74957778899', customer_type: 'retail', payment_terms: 'credit', credit_limit: 800000, debt_amount: 230000 },
+  { id: 'cst-001', name: 'ООО "Агроторг"', ship_to_name: 'Пятёрочка #1245', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, ул. Тверская, д. 15', city: 'Москва', region: 'Москва', postal_code: '125009', latitude: 55.7648, longitude: 37.6054, contact_person: 'Кузнецова А.В.', phone: '+74951234567', visit_time_from: '09:00', visit_time_to: '18:00', delivery_notes_text: 'Въезд со двора, домофон 15К. Разгрузка через служебный вход.', customer_type: 'retail', payment_terms: 'credit', credit_limit: 500000, debt_amount: 125000 },
+  { id: 'cst-002', name: 'АО "Тандер"', ship_to_name: 'Магнит #8834', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, ул. Арбат, д. 24', city: 'Москва', region: 'Москва', postal_code: '119002', latitude: 55.7520, longitude: 37.5927, contact_person: 'Белов И.П.', phone: '+74959876543', visit_time_from: '08:00', visit_time_to: '20:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 600000, debt_amount: 89000 },
+  { id: 'cst-003', name: 'ООО "Дикси Юг"', ship_to_name: 'Дикси #456', legal_name: 'ООО "Дикси Юг"', inn: '5036045205', kpp: '503601001', address: 'г. Москва, Ленинградский пр-т, д. 76', city: 'Москва', region: 'Москва', postal_code: '125315', latitude: 55.8007, longitude: 37.5259, contact_person: 'Морозова Т.Л.', phone: '+74951112233', visit_time_from: '07:00', visit_time_to: '15:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 300000, debt_amount: 45000 },
+  { id: 'cst-004', name: 'ООО "Проект Избёнка"', ship_to_name: 'ВкусВилл #78', legal_name: 'ООО "Проект Избёнка"', inn: '5029168824', kpp: '502901001', address: 'г. Москва, ул. Покровка, д. 10', city: 'Москва', region: 'Москва', postal_code: '101000', latitude: 55.7600, longitude: 37.6450, contact_person: 'Фёдоров С.А.', phone: '+74954445566', visit_time_from: '10:00', visit_time_to: '19:00', customer_type: 'retail', payment_terms: 'cash', credit_limit: 200000, debt_amount: 0 },
+  { id: 'cst-005', name: 'АО "ТД Перекрёсток"', ship_to_name: 'Перекрёсток #312', legal_name: 'АО "Торговый Дом Перекрёсток"', inn: '7728029110', kpp: '772801001', address: 'г. Москва, Кутузовский пр-т, д. 45', city: 'Москва', region: 'Москва', postal_code: '121151', latitude: 55.7405, longitude: 37.5350, contact_person: 'Новикова Е.М.', phone: '+74957778899', visit_time_from: '08:00', visit_time_to: '21:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 800000, debt_amount: 230000 },
 
   // Юг / ЮАО / ЮЗАО
-  { id: 'cst-006', name: 'Пятёрочка #3456', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Варшавское ш., д. 72', city: 'Москва', region: 'Москва', postal_code: '117556', latitude: 55.6545, longitude: 37.6195, contact_person: 'Васильев Н.К.', phone: '+74951230001', customer_type: 'retail', payment_terms: 'credit', credit_limit: 400000, debt_amount: 67000 },
-  { id: 'cst-007', name: 'Лента #22', legal_name: 'ООО "Лента"', inn: '7814148471', kpp: '781401001', address: 'г. Москва, Каширское ш., д. 61', city: 'Москва', region: 'Москва', postal_code: '115230', latitude: 55.6380, longitude: 37.6440, contact_person: 'Захарова О.П.', phone: '+74951230002', customer_type: 'wholesale', payment_terms: 'credit', credit_limit: 1000000, debt_amount: 340000 },
-  { id: 'cst-008', name: 'Магнит #5521', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, ул. Профсоюзная, д. 104', city: 'Москва', region: 'Москва', postal_code: '117485', latitude: 55.6290, longitude: 37.5270, contact_person: 'Григорьев А.Ю.', phone: '+74951230003', customer_type: 'retail', payment_terms: 'credit', credit_limit: 500000, debt_amount: 112000 },
+  { id: 'cst-006', name: 'ООО "Агроторг"', ship_to_name: 'Пятёрочка #3456', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Варшавское ш., д. 72', city: 'Москва', region: 'Москва', postal_code: '117556', latitude: 55.6545, longitude: 37.6195, contact_person: 'Васильев Н.К.', phone: '+74951230001', visit_time_from: '09:00', visit_time_to: '18:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 400000, debt_amount: 67000 },
+  { id: 'cst-007', name: 'ООО "Лента"', ship_to_name: 'Лента #22', legal_name: 'ООО "Лента"', inn: '7814148471', kpp: '781401001', address: 'г. Москва, Каширское ш., д. 61', city: 'Москва', region: 'Москва', postal_code: '115230', latitude: 55.6380, longitude: 37.6440, contact_person: 'Захарова О.П.', phone: '+74951230002', visit_time_from: '06:00', visit_time_to: '22:00', delivery_notes_text: 'Крупногабаритная разгрузка — рампа №3. Пропуск заказывать за 1 час.', customer_type: 'wholesale', payment_terms: 'credit', credit_limit: 1000000, debt_amount: 340000 },
+  { id: 'cst-008', name: 'АО "Тандер"', ship_to_name: 'Магнит #5521', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, ул. Профсоюзная, д. 104', city: 'Москва', region: 'Москва', postal_code: '117485', latitude: 55.6290, longitude: 37.5270, contact_person: 'Григорьев А.Ю.', phone: '+74951230003', visit_time_from: '08:00', visit_time_to: '20:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 500000, debt_amount: 112000 },
 
   // Восток / ВАО / ЮВАО
-  { id: 'cst-009', name: 'Перекрёсток #455', legal_name: 'АО "Торговый Дом Перекрёсток"', inn: '7728029110', kpp: '772801001', address: 'г. Москва, Щёлковское ш., д. 75', city: 'Москва', region: 'Москва', postal_code: '105523', latitude: 55.8050, longitude: 37.8050, contact_person: 'Попов В.Г.', phone: '+74951230004', customer_type: 'retail', payment_terms: 'cash', credit_limit: 250000, debt_amount: 0 },
-  { id: 'cst-010', name: 'Пятёрочка #7721', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Рязанский пр-т, д. 30', city: 'Москва', region: 'Москва', postal_code: '109052', latitude: 55.7220, longitude: 37.7530, contact_person: 'Лебедева М.С.', phone: '+74951230005', customer_type: 'retail', payment_terms: 'credit', credit_limit: 350000, debt_amount: 78000 },
+  { id: 'cst-009', name: 'АО "ТД Перекрёсток"', ship_to_name: 'Перекрёсток #455', legal_name: 'АО "Торговый Дом Перекрёсток"', inn: '7728029110', kpp: '772801001', address: 'г. Москва, Щёлковское ш., д. 75', city: 'Москва', region: 'Москва', postal_code: '105523', latitude: 55.8050, longitude: 37.8050, contact_person: 'Попов В.Г.', phone: '+74951230004', visit_time_from: '09:00', visit_time_to: '17:00', customer_type: 'retail', payment_terms: 'cash', credit_limit: 250000, debt_amount: 0 },
+  { id: 'cst-010', name: 'ООО "Агроторг"', ship_to_name: 'Пятёрочка #7721', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Рязанский пр-т, д. 30', city: 'Москва', region: 'Москва', postal_code: '109052', latitude: 55.7220, longitude: 37.7530, contact_person: 'Лебедева М.С.', phone: '+74951230005', visit_time_from: '09:00', visit_time_to: '18:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 350000, debt_amount: 78000 },
 
   // Север / САО / СВАО
-  { id: 'cst-011', name: 'Дикси #789', legal_name: 'ООО "Дикси Юг"', inn: '5036045205', kpp: '503601001', address: 'г. Москва, Дмитровское ш., д. 89', city: 'Москва', region: 'Москва', postal_code: '127247', latitude: 55.8480, longitude: 37.5580, contact_person: 'Ермаков Д.В.', phone: '+74951230006', customer_type: 'retail', payment_terms: 'credit', credit_limit: 400000, debt_amount: 55000 },
-  { id: 'cst-012', name: 'Магнит #6612', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, пр-т Мира, д. 176', city: 'Москва', region: 'Москва', postal_code: '129344', latitude: 55.8350, longitude: 37.6370, contact_person: 'Соколов П.Н.', phone: '+74951230007', customer_type: 'retail', payment_terms: 'credit', credit_limit: 450000, debt_amount: 91000 },
+  { id: 'cst-011', name: 'ООО "Дикси Юг"', ship_to_name: 'Дикси #789', legal_name: 'ООО "Дикси Юг"', inn: '5036045205', kpp: '503601001', address: 'г. Москва, Дмитровское ш., д. 89', city: 'Москва', region: 'Москва', postal_code: '127247', latitude: 55.8480, longitude: 37.5580, contact_person: 'Ермаков Д.В.', phone: '+74951230006', visit_time_from: '07:00', visit_time_to: '16:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 400000, debt_amount: 55000 },
+  { id: 'cst-012', name: 'АО "Тандер"', ship_to_name: 'Магнит #6612', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, пр-т Мира, д. 176', city: 'Москва', region: 'Москва', postal_code: '129344', latitude: 55.8350, longitude: 37.6370, contact_person: 'Соколов П.Н.', phone: '+74951230007', visit_time_from: '08:00', visit_time_to: '20:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 450000, debt_amount: 91000 },
 
   // Запад / ЗАО / СЗАО
-  { id: 'cst-013', name: 'ВкусВилл #112', legal_name: 'ООО "Проект Избёнка"', inn: '5029168824', kpp: '502901001', address: 'г. Москва, ул. Маршала Жукова, д. 35', city: 'Москва', region: 'Москва', postal_code: '123154', latitude: 55.7760, longitude: 37.4720, contact_person: 'Хасанов Р.Ф.', phone: '+74951230008', customer_type: 'retail', payment_terms: 'cash', credit_limit: 300000, debt_amount: 0 },
-  { id: 'cst-014', name: 'Пятёрочка #4478', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Можайское ш., д. 41', city: 'Москва', region: 'Москва', postal_code: '121471', latitude: 55.7170, longitude: 37.4530, contact_person: 'Мухаметшина Г.И.', phone: '+74951230009', customer_type: 'retail', payment_terms: 'credit', credit_limit: 350000, debt_amount: 44000 },
+  { id: 'cst-013', name: 'ООО "Проект Избёнка"', ship_to_name: 'ВкусВилл #112', legal_name: 'ООО "Проект Избёнка"', inn: '5029168824', kpp: '502901001', address: 'г. Москва, ул. Маршала Жукова, д. 35', city: 'Москва', region: 'Москва', postal_code: '123154', latitude: 55.7760, longitude: 37.4720, contact_person: 'Хасанов Р.Ф.', phone: '+74951230008', visit_time_from: '10:00', visit_time_to: '19:00', customer_type: 'retail', payment_terms: 'cash', credit_limit: 300000, debt_amount: 0 },
+  { id: 'cst-014', name: 'ООО "Агроторг"', ship_to_name: 'Пятёрочка #4478', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Можайское ш., д. 41', city: 'Москва', region: 'Москва', postal_code: '121471', latitude: 55.7170, longitude: 37.4530, contact_person: 'Мухаметшина Г.И.', phone: '+74951230009', visit_time_from: '09:00', visit_time_to: '18:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 350000, debt_amount: 44000 },
 
   // Дополнительные точки по Москве
-  { id: 'cst-015', name: 'Spar #33', legal_name: 'ООО "СПАР Мидл"', inn: '5260254030', kpp: '526001001', address: 'г. Москва, ул. Новокузнецкая, д. 13', city: 'Москва', region: 'Москва', postal_code: '115184', latitude: 55.7380, longitude: 37.6290, contact_person: 'Тихонов И.А.', phone: '+74951230010', customer_type: 'retail', payment_terms: 'credit', credit_limit: 250000, debt_amount: 32000 },
-  { id: 'cst-016', name: 'Магнит #0012', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, ул. Люблинская, д. 169', city: 'Москва', region: 'Москва', postal_code: '109341', latitude: 55.6610, longitude: 37.7440, contact_person: 'Кравченко С.В.', phone: '+74951230011', customer_type: 'retail', payment_terms: 'credit', credit_limit: 700000, debt_amount: 195000 },
-  { id: 'cst-017', name: 'Пятёрочка #9901', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Ленинский пр-т, д. 89', city: 'Москва', region: 'Москва', postal_code: '119313', latitude: 55.6830, longitude: 37.5340, contact_person: 'Бондаренко Л.Н.', phone: '+74951230012', customer_type: 'retail', payment_terms: 'credit', credit_limit: 350000, debt_amount: 57000 },
-  { id: 'cst-018', name: 'Перекрёсток #128', legal_name: 'АО "Торговый Дом Перекрёсток"', inn: '7728029110', kpp: '772801001', address: 'г. Москва, ул. Таганская, д. 3', city: 'Москва', region: 'Москва', postal_code: '109004', latitude: 55.7390, longitude: 37.6535, contact_person: 'Орлов В.А.', phone: '+74951230013', customer_type: 'retail', payment_terms: 'credit', credit_limit: 400000, debt_amount: 83000 },
+  { id: 'cst-015', name: 'ООО "СПАР Мидл"', ship_to_name: 'Spar #33', legal_name: 'ООО "СПАР Мидл"', inn: '5260254030', kpp: '526001001', address: 'г. Москва, ул. Новокузнецкая, д. 13', city: 'Москва', region: 'Москва', postal_code: '115184', latitude: 55.7380, longitude: 37.6290, contact_person: 'Тихонов И.А.', phone: '+74951230010', visit_time_from: '08:00', visit_time_to: '17:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 250000, debt_amount: 32000 },
+  { id: 'cst-016', name: 'АО "Тандер"', ship_to_name: 'Магнит #0012', legal_name: 'АО "Тандер"', inn: '2310031475', kpp: '231001001', address: 'г. Москва, ул. Люблинская, д. 169', city: 'Москва', region: 'Москва', postal_code: '109341', latitude: 55.6610, longitude: 37.7440, contact_person: 'Кравченко С.В.', phone: '+74951230011', visit_time_from: '08:00', visit_time_to: '20:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 700000, debt_amount: 195000 },
+  { id: 'cst-017', name: 'ООО "Агроторг"', ship_to_name: 'Пятёрочка #9901', legal_name: 'ООО "Агроторг"', inn: '7825706086', kpp: '780201001', address: 'г. Москва, Ленинский пр-т, д. 89', city: 'Москва', region: 'Москва', postal_code: '119313', latitude: 55.6830, longitude: 37.5340, contact_person: 'Бондаренко Л.Н.', phone: '+74951230012', visit_time_from: '09:00', visit_time_to: '18:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 350000, debt_amount: 57000 },
+  { id: 'cst-018', name: 'АО "ТД Перекрёсток"', ship_to_name: 'Перекрёсток #128', legal_name: 'АО "Торговый Дом Перекрёсток"', inn: '7728029110', kpp: '772801001', address: 'г. Москва, ул. Таганская, д. 3', city: 'Москва', region: 'Москва', postal_code: '109004', latitude: 55.7390, longitude: 37.6535, contact_person: 'Орлов В.А.', phone: '+74951230013', visit_time_from: '08:00', visit_time_to: '21:00', customer_type: 'retail', payment_terms: 'credit', credit_limit: 400000, debt_amount: 83000 },
 
   // HoReCa
-  { id: 'cst-019', name: 'Кофейня "Шоколадница"', legal_name: 'ООО "Шоколадница"', inn: '7705557843', kpp: '770501001', address: 'г. Москва, ул. Мясницкая, д. 12', city: 'Москва', region: 'Москва', postal_code: '101000', latitude: 55.7620, longitude: 37.6380, contact_person: 'Романова О.С.', phone: '+74952223344', customer_type: 'horeca', payment_terms: 'credit', credit_limit: 150000, debt_amount: 22000 },
-  { id: 'cst-020', name: 'Столовая "Обед Буфет"', legal_name: 'ИП Жуков А.Н.', inn: '770800112233', kpp: null, address: 'г. Москва, ул. Бауманская, д. 7', city: 'Москва', region: 'Москва', postal_code: '105005', latitude: 55.7720, longitude: 37.6800, contact_person: 'Жуков А.Н.', phone: '+79165556677', customer_type: 'horeca', payment_terms: 'cash', credit_limit: 50000, debt_amount: 0 },
+  { id: 'cst-019', name: 'ООО "Шоколадница"', ship_to_name: 'Кофейня "Шоколадница"', legal_name: 'ООО "Шоколадница"', inn: '7705557843', kpp: '770501001', address: 'г. Москва, ул. Мясницкая, д. 12', city: 'Москва', region: 'Москва', postal_code: '101000', latitude: 55.7620, longitude: 37.6380, contact_person: 'Романова О.С.', phone: '+74952223344', visit_time_from: '10:00', visit_time_to: '22:00', delivery_notes_text: 'Только мелкий товар. Не более 5 коробок за раз. Звонить за 30 мин.', customer_type: 'horeca', payment_terms: 'credit', credit_limit: 150000, debt_amount: 22000 },
+  { id: 'cst-020', name: 'ИП Жуков А.Н.', ship_to_name: 'Столовая "Обед Буфет"', legal_name: 'ИП Жуков А.Н.', inn: '770800112233', kpp: null, address: 'г. Москва, ул. Бауманская, д. 7', city: 'Москва', region: 'Москва', postal_code: '105005', latitude: 55.7720, longitude: 37.6800, contact_person: 'Жуков А.Н.', phone: '+79165556677', visit_time_from: '08:00', visit_time_to: '16:00', customer_type: 'horeca', payment_terms: 'cash', credit_limit: 50000, debt_amount: 0 },
 ];
 
 // ============================================================
@@ -146,6 +149,7 @@ const CUSTOMERS = [
 const VEHICLES = [
   { id: 'veh-001', plate_number: 'А123БВ77', model: 'ГАЗель Next', driver_id: 'usr-001', capacity_kg: 1500 },
   { id: 'veh-002', plate_number: 'К456МН77', model: 'ГАЗель Business', driver_id: 'usr-003', capacity_kg: 1200 },
+  { id: 'veh-003', plate_number: 'Е789ОР77', model: 'Lada Largus', driver_id: 'usr-005', capacity_kg: 700 },
 ];
 
 // ============================================================
@@ -168,20 +172,28 @@ function generateVehicleStock() {
   const stock = [];
   let idx = 1;
 
+  // Петров: покрытие заказов ord-001..003, ord-006, ord-007 + ~20% запас
   const vehicle1Products = [
-    { product_id: 'prd-001', quantity: 150 },
-    { product_id: 'prd-002', quantity: 60 },
-    { product_id: 'prd-003', quantity: 36 },
-    { product_id: 'prd-004', quantity: 36 },
-    { product_id: 'prd-008', quantity: 48 },
-    { product_id: 'prd-011', quantity: 60 },
-    { product_id: 'prd-015', quantity: 36 },
-    { product_id: 'prd-018', quantity: 36 },
-    { product_id: 'prd-021', quantity: 48 },
-    { product_id: 'prd-025', quantity: 48 },
-    { product_id: 'prd-028', quantity: 36 },
-    { product_id: 'prd-029', quantity: 60 },
-    { product_id: 'prd-031', quantity: 24 },
+    { product_id: 'prd-001', quantity: 200 },  // CC-500: заказано 168
+    { product_id: 'prd-002', quantity: 72 },   // CC-1000: заказано 48
+    { product_id: 'prd-003', quantity: 36 },   // CC-2000: заказано 24
+    { product_id: 'prd-004', quantity: 36 },   // FA-500: заказано 24
+    { product_id: 'prd-006', quantity: 48 },   // SP-500: заказано 36
+    { product_id: 'prd-008', quantity: 48 },   // PEP-500: заказано 36
+    { product_id: 'prd-011', quantity: 120 },  // BON-500: заказано 96
+    { product_id: 'prd-015', quantity: 60 },   // ESS-500: заказано 48
+    { product_id: 'prd-018', quantity: 60 },   // DJ-1000-APL: заказано 48
+    { product_id: 'prd-021', quantity: 72 },   // RR-1000-APL: заказано 54
+    { product_id: 'prd-025', quantity: 72 },   // LIP-500-LEM: заказано 60
+    { product_id: 'prd-028', quantity: 36 },   // ADR-250: заказано 24
+    { product_id: 'prd-029', quantity: 72 },   // ADR-500: заказано 48
+    { product_id: 'prd-031', quantity: 24 },   // OK-1500: заказано 18
+    // Свободный запас (не в заказах)
+    { product_id: 'prd-005', quantity: 24 },   // FA-1000
+    { product_id: 'prd-010', quantity: 24 },   // 7UP-500
+    { product_id: 'prd-012', quantity: 36 },   // BON-1500
+    { product_id: 'prd-019', quantity: 24 },   // DJ-1000-ORA
+    { product_id: 'prd-027', quantity: 24 },   // FT-500-MNG
   ];
 
   for (const item of vehicle1Products) {
@@ -194,16 +206,21 @@ function generateVehicleStock() {
     });
   }
 
+  // Козлов: покрытие заказов ord-004, ord-005 + ~20% запас
   const vehicle2Products = [
-    { product_id: 'prd-001', quantity: 72 },
-    { product_id: 'prd-006', quantity: 48 },
-    { product_id: 'prd-013', quantity: 72 },
-    { product_id: 'prd-019', quantity: 48 },
-    { product_id: 'prd-026', quantity: 36 },
-    { product_id: 'prd-030', quantity: 48 },
-    { product_id: 'prd-032', quantity: 24 },
-    { product_id: 'prd-011', quantity: 36 },
-    { product_id: 'prd-017', quantity: 24 },
+    { product_id: 'prd-001', quantity: 100 },  // CC-500: заказано 84
+    { product_id: 'prd-006', quantity: 48 },   // SP-500: заказано 36
+    { product_id: 'prd-013', quantity: 72 },   // SV-500: заказано 60
+    { product_id: 'prd-019', quantity: 48 },   // DJ-1000-ORA: заказано 36
+    { product_id: 'prd-026', quantity: 48 },   // LIP-500-PCH: заказано 36
+    { product_id: 'prd-030', quantity: 48 },   // BRN-500: заказано 36
+    { product_id: 'prd-032', quantity: 36 },   // NK-1000: заказано 24
+    // Свободный запас (не в заказах)
+    { product_id: 'prd-008', quantity: 36 },   // PEP-500
+    { product_id: 'prd-011', quantity: 48 },   // BON-500
+    { product_id: 'prd-017', quantity: 24 },   // NAR-500
+    { product_id: 'prd-025', quantity: 24 },   // LIP-500-LEM
+    { product_id: 'prd-028', quantity: 24 },   // ADR-250
   ];
 
   for (const item of vehicle2Products) {
@@ -220,17 +237,28 @@ function generateVehicleStock() {
 }
 
 // ============================================================
-// Маршруты на сегодня — оба в Москве
+// Маршруты на сегодня и завтра — Москва
 // ============================================================
 function generateRoutes() {
   const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
   const routes = [
+    // Сегодня — Петров ×2, Козлов ×1, Соколов ×2
     { id: 'rte-001', date: today, driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
-    { id: 'rte-002', date: today, driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
+    { id: 'rte-002', date: today, driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-003', date: today, driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
+    { id: 'rte-004', date: today, driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
+    { id: 'rte-005', date: today, driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
+    // Завтра — Петров ×1, Козлов ×1, Соколов ×1
+    { id: 'rte-006', date: tomorrow, driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-007', date: tomorrow, driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
+    { id: 'rte-008', date: tomorrow, driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
   ];
 
   const routePoints = [
+    // === СЕГОДНЯ ===
+
     // Маршрут 1 — Петров: Центр + Запад (7 точек)
     { id: 'rp-001', route_id: 'rte-001', customer_id: 'cst-001', sequence_number: 1, planned_arrival: `${today}T09:00:00`, status: 'pending' },
     { id: 'rp-002', route_id: 'rte-001', customer_id: 'cst-002', sequence_number: 2, planned_arrival: `${today}T10:00:00`, status: 'pending' },
@@ -240,13 +268,56 @@ function generateRoutes() {
     { id: 'rp-006', route_id: 'rte-001', customer_id: 'cst-019', sequence_number: 6, planned_arrival: `${today}T15:30:00`, status: 'pending' },
     { id: 'rp-007', route_id: 'rte-001', customer_id: 'cst-020', sequence_number: 7, planned_arrival: `${today}T16:30:00`, status: 'pending' },
 
-    // Маршрут 2 — Козлов: Юг + Восток Москвы (6 точек)
+    // Маршрут 2 — Петров: Юг (5 точек)
     { id: 'rp-008', route_id: 'rte-002', customer_id: 'cst-006', sequence_number: 1, planned_arrival: `${today}T09:00:00`, status: 'pending' },
     { id: 'rp-009', route_id: 'rte-002', customer_id: 'cst-007', sequence_number: 2, planned_arrival: `${today}T10:00:00`, status: 'pending' },
-    { id: 'rp-010', route_id: 'rte-002', customer_id: 'cst-008', sequence_number: 3, planned_arrival: `${today}T11:00:00`, status: 'pending' },
-    { id: 'rp-011', route_id: 'rte-002', customer_id: 'cst-016', sequence_number: 4, planned_arrival: `${today}T12:30:00`, status: 'pending' },
-    { id: 'rp-012', route_id: 'rte-002', customer_id: 'cst-010', sequence_number: 5, planned_arrival: `${today}T14:00:00`, status: 'pending' },
-    { id: 'rp-013', route_id: 'rte-002', customer_id: 'cst-018', sequence_number: 6, planned_arrival: `${today}T15:30:00`, status: 'pending' },
+    { id: 'rp-010', route_id: 'rte-002', customer_id: 'cst-008', sequence_number: 3, planned_arrival: `${today}T11:30:00`, status: 'pending' },
+    { id: 'rp-011', route_id: 'rte-002', customer_id: 'cst-017', sequence_number: 4, planned_arrival: `${today}T13:00:00`, status: 'pending' },
+    { id: 'rp-012', route_id: 'rte-002', customer_id: 'cst-016', sequence_number: 5, planned_arrival: `${today}T14:30:00`, status: 'pending' },
+
+    // Маршрут 3 — Козлов: Восток Москвы (6 точек)
+    { id: 'rp-013', route_id: 'rte-003', customer_id: 'cst-009', sequence_number: 1, planned_arrival: `${today}T09:00:00`, status: 'pending' },
+    { id: 'rp-014', route_id: 'rte-003', customer_id: 'cst-010', sequence_number: 2, planned_arrival: `${today}T10:00:00`, status: 'pending' },
+    { id: 'rp-015', route_id: 'rte-003', customer_id: 'cst-016', sequence_number: 3, planned_arrival: `${today}T11:00:00`, status: 'pending' },
+    { id: 'rp-016', route_id: 'rte-003', customer_id: 'cst-018', sequence_number: 4, planned_arrival: `${today}T12:30:00`, status: 'pending' },
+    { id: 'rp-017', route_id: 'rte-003', customer_id: 'cst-011', sequence_number: 5, planned_arrival: `${today}T14:00:00`, status: 'pending' },
+    { id: 'rp-018', route_id: 'rte-003', customer_id: 'cst-012', sequence_number: 6, planned_arrival: `${today}T15:30:00`, status: 'pending' },
+
+    // Маршрут 4 — Соколов (Preseller): Центр (5 точек)
+    { id: 'rp-019', route_id: 'rte-004', customer_id: 'cst-001', sequence_number: 1, planned_arrival: `${today}T09:30:00`, status: 'pending' },
+    { id: 'rp-020', route_id: 'rte-004', customer_id: 'cst-002', sequence_number: 2, planned_arrival: `${today}T10:30:00`, status: 'pending' },
+    { id: 'rp-021', route_id: 'rte-004', customer_id: 'cst-003', sequence_number: 3, planned_arrival: `${today}T12:00:00`, status: 'pending' },
+    { id: 'rp-022', route_id: 'rte-004', customer_id: 'cst-004', sequence_number: 4, planned_arrival: `${today}T13:30:00`, status: 'pending' },
+    { id: 'rp-023', route_id: 'rte-004', customer_id: 'cst-015', sequence_number: 5, planned_arrival: `${today}T15:00:00`, status: 'pending' },
+
+    // Маршрут 5 — Соколов (Preseller): Север + Запад (4 точки)
+    { id: 'rp-024', route_id: 'rte-005', customer_id: 'cst-011', sequence_number: 1, planned_arrival: `${today}T09:30:00`, status: 'pending' },
+    { id: 'rp-025', route_id: 'rte-005', customer_id: 'cst-013', sequence_number: 2, planned_arrival: `${today}T11:00:00`, status: 'pending' },
+    { id: 'rp-026', route_id: 'rte-005', customer_id: 'cst-014', sequence_number: 3, planned_arrival: `${today}T12:30:00`, status: 'pending' },
+    { id: 'rp-027', route_id: 'rte-005', customer_id: 'cst-005', sequence_number: 4, planned_arrival: `${today}T14:00:00`, status: 'pending' },
+
+    // === ЗАВТРА ===
+
+    // Маршрут 6 — Петров: Север + Восток (6 точек)
+    { id: 'rp-028', route_id: 'rte-006', customer_id: 'cst-011', sequence_number: 1, planned_arrival: `${tomorrow}T09:00:00`, status: 'pending' },
+    { id: 'rp-029', route_id: 'rte-006', customer_id: 'cst-012', sequence_number: 2, planned_arrival: `${tomorrow}T10:00:00`, status: 'pending' },
+    { id: 'rp-030', route_id: 'rte-006', customer_id: 'cst-009', sequence_number: 3, planned_arrival: `${tomorrow}T11:00:00`, status: 'pending' },
+    { id: 'rp-031', route_id: 'rte-006', customer_id: 'cst-010', sequence_number: 4, planned_arrival: `${tomorrow}T12:30:00`, status: 'pending' },
+    { id: 'rp-032', route_id: 'rte-006', customer_id: 'cst-013', sequence_number: 5, planned_arrival: `${tomorrow}T14:00:00`, status: 'pending' },
+    { id: 'rp-033', route_id: 'rte-006', customer_id: 'cst-014', sequence_number: 6, planned_arrival: `${tomorrow}T15:30:00`, status: 'pending' },
+
+    // Маршрут 7 — Козлов: Запад + Центр (5 точек)
+    { id: 'rp-034', route_id: 'rte-007', customer_id: 'cst-005', sequence_number: 1, planned_arrival: `${tomorrow}T09:00:00`, status: 'pending' },
+    { id: 'rp-035', route_id: 'rte-007', customer_id: 'cst-015', sequence_number: 2, planned_arrival: `${tomorrow}T10:00:00`, status: 'pending' },
+    { id: 'rp-036', route_id: 'rte-007', customer_id: 'cst-017', sequence_number: 3, planned_arrival: `${tomorrow}T11:30:00`, status: 'pending' },
+    { id: 'rp-037', route_id: 'rte-007', customer_id: 'cst-004', sequence_number: 4, planned_arrival: `${tomorrow}T13:00:00`, status: 'pending' },
+    { id: 'rp-038', route_id: 'rte-007', customer_id: 'cst-001', sequence_number: 5, planned_arrival: `${tomorrow}T14:30:00`, status: 'pending' },
+
+    // Маршрут 8 — Соколов (Preseller): Юг + HoReCa (4 точки)
+    { id: 'rp-039', route_id: 'rte-008', customer_id: 'cst-006', sequence_number: 1, planned_arrival: `${tomorrow}T09:30:00`, status: 'pending' },
+    { id: 'rp-040', route_id: 'rte-008', customer_id: 'cst-017', sequence_number: 2, planned_arrival: `${tomorrow}T11:00:00`, status: 'pending' },
+    { id: 'rp-041', route_id: 'rte-008', customer_id: 'cst-020', sequence_number: 3, planned_arrival: `${tomorrow}T12:30:00`, status: 'pending' },
+    { id: 'rp-042', route_id: 'rte-008', customer_id: 'cst-019', sequence_number: 4, planned_arrival: `${tomorrow}T14:00:00`, status: 'pending' },
   ];
 
   return { routes, routePoints };
@@ -262,8 +333,11 @@ function generateOrders() {
     { id: 'ord-001', customer_id: 'cst-001', user_id: 'usr-001', route_point_id: 'rp-001', order_date: today, status: 'confirmed', total_amount: 12450, discount_amount: 0 },
     { id: 'ord-002', customer_id: 'cst-002', user_id: 'usr-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 8970, discount_amount: 500 },
     { id: 'ord-003', customer_id: 'cst-005', user_id: 'usr-001', route_point_id: 'rp-005', order_date: today, status: 'confirmed', total_amount: 23100, discount_amount: 1200 },
-    { id: 'ord-004', customer_id: 'cst-006', user_id: 'usr-003', route_point_id: 'rp-008', order_date: today, status: 'confirmed', total_amount: 15600, discount_amount: 0 },
-    { id: 'ord-005', customer_id: 'cst-016', user_id: 'usr-003', route_point_id: 'rp-011', order_date: today, status: 'draft', total_amount: 7890, discount_amount: 0 },
+    { id: 'ord-004', customer_id: 'cst-009', user_id: 'usr-003', route_point_id: 'rp-013', order_date: today, status: 'confirmed', total_amount: 15600, discount_amount: 0 },
+    { id: 'ord-005', customer_id: 'cst-016', user_id: 'usr-003', route_point_id: 'rp-015', order_date: today, status: 'draft', total_amount: 7890, discount_amount: 0 },
+    // Дополнительные заказы Петрова — маршрут 1, точки 2 и 3
+    { id: 'ord-006', customer_id: 'cst-002', user_id: 'usr-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 5740, discount_amount: 0 },
+    { id: 'ord-007', customer_id: 'cst-003', user_id: 'usr-001', route_point_id: 'rp-003', order_date: today, status: 'confirmed', total_amount: 9350, discount_amount: 400 },
   ];
 
   const orderItems = [
@@ -298,6 +372,17 @@ function generateOrders() {
     { id: 'oi-020', order_id: 'ord-005', product_id: 'prd-001', quantity: 36, price: 65, discount_percent: 0, total: 2340 },
     { id: 'oi-021', order_id: 'ord-005', product_id: 'prd-032', quantity: 24, price: 79, discount_percent: 0, total: 1896 },
     { id: 'oi-022', order_id: 'ord-005', product_id: 'prd-026', quantity: 36, price: 79, discount_percent: 0, total: 2844 },
+
+    // Заказ 6 — Магнит Арбат (второй заказ, доп. ассортимент)
+    { id: 'oi-023', order_id: 'ord-006', product_id: 'prd-011', quantity: 48, price: 39, discount_percent: 0, total: 1872 },
+    { id: 'oi-024', order_id: 'ord-006', product_id: 'prd-015', quantity: 24, price: 69, discount_percent: 0, total: 1656 },
+    { id: 'oi-025', order_id: 'ord-006', product_id: 'prd-021', quantity: 18, price: 129, discount_percent: 3, total: 2253.06 },
+
+    // Заказ 7 — Дикси Ленинградский пр-т
+    { id: 'oi-026', order_id: 'ord-007', product_id: 'prd-001', quantity: 60, price: 65, discount_percent: 0, total: 3900 },
+    { id: 'oi-027', order_id: 'ord-007', product_id: 'prd-006', quantity: 36, price: 65, discount_percent: 0, total: 2340 },
+    { id: 'oi-028', order_id: 'ord-007', product_id: 'prd-018', quantity: 24, price: 89, discount_percent: 5, total: 2030.4 },
+    { id: 'oi-029', order_id: 'ord-007', product_id: 'prd-025', quantity: 24, price: 79, discount_percent: 0, total: 1896 },
   ];
 
   return { orders, orderItems };
@@ -344,7 +429,7 @@ function generateReturns() {
   const returns = [
     { id: 'ret-001', customer_id: 'cst-001', driver_id: 'usr-001', route_point_id: 'rp-001', return_date: today, reason: 'damaged', status: 'pending_approval', total_amount: 780 },
     { id: 'ret-002', customer_id: 'cst-005', driver_id: 'usr-001', route_point_id: 'rp-005', return_date: today, reason: 'expired', status: 'pending_approval', total_amount: 1560 },
-    { id: 'ret-003', customer_id: 'cst-006', driver_id: 'usr-003', route_point_id: 'rp-008', return_date: yesterday, reason: 'quality', status: 'approved', total_amount: 390, approved_by: 'usr-004', approved_at: `${yesterday}T14:30:00` },
+    { id: 'ret-003', customer_id: 'cst-009', driver_id: 'usr-003', route_point_id: 'rp-013', return_date: yesterday, reason: 'quality', status: 'approved', total_amount: 390, approved_by: 'usr-004', approved_at: `${yesterday}T14:30:00` },
     { id: 'ret-004', customer_id: 'cst-002', driver_id: 'usr-001', route_point_id: 'rp-002', return_date: yesterday, reason: 'unsold', status: 'rejected', total_amount: 5500, approved_by: 'usr-004', approved_at: `${yesterday}T15:00:00`, rejection_reason: 'Превышен лимит возврата' },
   ];
 
@@ -372,12 +457,12 @@ function generateNotifications() {
     { id: 'ntf-003', user_id: 'usr-001', title: 'Возврат отклонён', message: 'Возврат по Магнит #8834 отклонён супервайзером: Превышен лимит возврата', type: 'error', is_read: 1, related_entity: 'return', related_id: 'ret-004', created_at: now },
 
     // Экспедитор Козлов
-    { id: 'ntf-004', user_id: 'usr-003', title: 'Маршрут назначен', message: 'Вам назначен маршрут на сегодня: Москва юг-восток, 6 точек', type: 'info', is_read: 0, related_entity: 'route', related_id: 'rte-002', created_at: now },
+    { id: 'ntf-004', user_id: 'usr-003', title: 'Маршрут назначен', message: 'Вам назначен маршрут на сегодня: Москва восток, 6 точек', type: 'info', is_read: 0, related_entity: 'route', related_id: 'rte-003', created_at: now },
 
     // Супервайзер Иванова
     { id: 'ntf-005', user_id: 'usr-004', title: 'Возврат на утверждение', message: 'Новый возврат от Петрова А.И. — Пятёрочка #1245, 780 ₽', type: 'warning', is_read: 0, related_entity: 'return', related_id: 'ret-001', created_at: now },
     { id: 'ntf-006', user_id: 'usr-004', title: 'Возврат на утверждение', message: 'Новый возврат от Петрова А.И. — Перекрёсток #312, 1 560 ₽', type: 'warning', is_read: 0, related_entity: 'return', related_id: 'ret-002', created_at: now },
-    { id: 'ntf-007', user_id: 'usr-004', title: 'Задержка на маршруте', message: 'Козлов Д.С. отстаёт от графика на 15 мин', type: 'error', is_read: 0, related_entity: 'route', related_id: 'rte-002', created_at: now },
+    { id: 'ntf-007', user_id: 'usr-004', title: 'Задержка на маршруте', message: 'Козлов Д.С. отстаёт от графика на 15 мин', type: 'error', is_read: 0, related_entity: 'route', related_id: 'rte-003', created_at: now },
 
     // Администратор
     { id: 'ntf-008', user_id: 'usr-006', title: 'Ошибка синхронизации', message: 'Устройство Козлова Д.С. не синхронизировалось более 2 часов', type: 'error', is_read: 0, related_entity: 'device', related_id: 'dev-002', created_at: now },
@@ -444,36 +529,45 @@ function generateLoadingTrips() {
   const today = new Date().toISOString().split('T')[0];
 
   const trips = [
-    { id: 'lt-001', driver_id: 'usr-001', vehicle_id: 'veh-001', route_id: 'rte-001', loading_date: today, status: 'loaded', total_items: 13, loaded_items: 13 },
-    { id: 'lt-002', driver_id: 'usr-003', vehicle_id: 'veh-002', route_id: 'rte-002', loading_date: today, status: 'loaded', total_items: 9, loaded_items: 9 },
+    { id: 'lt-001', driver_id: 'usr-001', vehicle_id: 'veh-001', route_id: 'rte-001', loading_date: today, status: 'loaded', total_items: 19, loaded_items: 19 },
+    { id: 'lt-002', driver_id: 'usr-003', vehicle_id: 'veh-002', route_id: 'rte-003', loading_date: today, status: 'loaded', total_items: 12, loaded_items: 12 },
   ];
 
   const tripItems = [
-    // Загрузка Петрова
-    { id: 'lti-001', loading_trip_id: 'lt-001', product_id: 'prd-001', planned_quantity: 150, actual_quantity: 150, scanned: 1 },
-    { id: 'lti-002', loading_trip_id: 'lt-001', product_id: 'prd-002', planned_quantity: 60, actual_quantity: 60, scanned: 1 },
+    // Загрузка Петрова (19 позиций — соответствует vehicle1Products)
+    { id: 'lti-001', loading_trip_id: 'lt-001', product_id: 'prd-001', planned_quantity: 200, actual_quantity: 200, scanned: 1 },
+    { id: 'lti-002', loading_trip_id: 'lt-001', product_id: 'prd-002', planned_quantity: 72, actual_quantity: 72, scanned: 1 },
     { id: 'lti-003', loading_trip_id: 'lt-001', product_id: 'prd-003', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
     { id: 'lti-004', loading_trip_id: 'lt-001', product_id: 'prd-004', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
-    { id: 'lti-005', loading_trip_id: 'lt-001', product_id: 'prd-008', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
-    { id: 'lti-006', loading_trip_id: 'lt-001', product_id: 'prd-011', planned_quantity: 60, actual_quantity: 60, scanned: 1 },
-    { id: 'lti-007', loading_trip_id: 'lt-001', product_id: 'prd-015', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
-    { id: 'lti-008', loading_trip_id: 'lt-001', product_id: 'prd-018', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
-    { id: 'lti-009', loading_trip_id: 'lt-001', product_id: 'prd-021', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
-    { id: 'lti-010', loading_trip_id: 'lt-001', product_id: 'prd-025', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
-    { id: 'lti-011', loading_trip_id: 'lt-001', product_id: 'prd-028', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
-    { id: 'lti-012', loading_trip_id: 'lt-001', product_id: 'prd-029', planned_quantity: 60, actual_quantity: 60, scanned: 1 },
-    { id: 'lti-013', loading_trip_id: 'lt-001', product_id: 'prd-031', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    { id: 'lti-005', loading_trip_id: 'lt-001', product_id: 'prd-006', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
+    { id: 'lti-006', loading_trip_id: 'lt-001', product_id: 'prd-008', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
+    { id: 'lti-007', loading_trip_id: 'lt-001', product_id: 'prd-011', planned_quantity: 120, actual_quantity: 120, scanned: 1 },
+    { id: 'lti-008', loading_trip_id: 'lt-001', product_id: 'prd-015', planned_quantity: 60, actual_quantity: 60, scanned: 1 },
+    { id: 'lti-009', loading_trip_id: 'lt-001', product_id: 'prd-018', planned_quantity: 60, actual_quantity: 60, scanned: 1 },
+    { id: 'lti-010', loading_trip_id: 'lt-001', product_id: 'prd-021', planned_quantity: 72, actual_quantity: 72, scanned: 1 },
+    { id: 'lti-011', loading_trip_id: 'lt-001', product_id: 'prd-025', planned_quantity: 72, actual_quantity: 72, scanned: 1 },
+    { id: 'lti-012', loading_trip_id: 'lt-001', product_id: 'prd-028', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
+    { id: 'lti-013', loading_trip_id: 'lt-001', product_id: 'prd-029', planned_quantity: 72, actual_quantity: 72, scanned: 1 },
+    { id: 'lti-014', loading_trip_id: 'lt-001', product_id: 'prd-031', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    { id: 'lti-015', loading_trip_id: 'lt-001', product_id: 'prd-005', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    { id: 'lti-016', loading_trip_id: 'lt-001', product_id: 'prd-010', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    { id: 'lti-017', loading_trip_id: 'lt-001', product_id: 'prd-012', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
+    { id: 'lti-018', loading_trip_id: 'lt-001', product_id: 'prd-019', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    { id: 'lti-019', loading_trip_id: 'lt-001', product_id: 'prd-027', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
 
-    // Загрузка Козлова
-    { id: 'lti-014', loading_trip_id: 'lt-002', product_id: 'prd-001', planned_quantity: 72, actual_quantity: 72, scanned: 1 },
-    { id: 'lti-015', loading_trip_id: 'lt-002', product_id: 'prd-006', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
-    { id: 'lti-016', loading_trip_id: 'lt-002', product_id: 'prd-013', planned_quantity: 72, actual_quantity: 72, scanned: 1 },
-    { id: 'lti-017', loading_trip_id: 'lt-002', product_id: 'prd-019', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
-    { id: 'lti-018', loading_trip_id: 'lt-002', product_id: 'prd-026', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
-    { id: 'lti-019', loading_trip_id: 'lt-002', product_id: 'prd-030', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
-    { id: 'lti-020', loading_trip_id: 'lt-002', product_id: 'prd-032', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
-    { id: 'lti-021', loading_trip_id: 'lt-002', product_id: 'prd-011', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
-    { id: 'lti-022', loading_trip_id: 'lt-002', product_id: 'prd-017', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    // Загрузка Козлова (12 позиций — соответствует vehicle2Products)
+    { id: 'lti-020', loading_trip_id: 'lt-002', product_id: 'prd-001', planned_quantity: 100, actual_quantity: 100, scanned: 1 },
+    { id: 'lti-021', loading_trip_id: 'lt-002', product_id: 'prd-006', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
+    { id: 'lti-022', loading_trip_id: 'lt-002', product_id: 'prd-013', planned_quantity: 72, actual_quantity: 72, scanned: 1 },
+    { id: 'lti-023', loading_trip_id: 'lt-002', product_id: 'prd-019', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
+    { id: 'lti-024', loading_trip_id: 'lt-002', product_id: 'prd-026', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
+    { id: 'lti-025', loading_trip_id: 'lt-002', product_id: 'prd-030', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
+    { id: 'lti-026', loading_trip_id: 'lt-002', product_id: 'prd-032', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
+    { id: 'lti-027', loading_trip_id: 'lt-002', product_id: 'prd-008', planned_quantity: 36, actual_quantity: 36, scanned: 1 },
+    { id: 'lti-028', loading_trip_id: 'lt-002', product_id: 'prd-011', planned_quantity: 48, actual_quantity: 48, scanned: 1 },
+    { id: 'lti-029', loading_trip_id: 'lt-002', product_id: 'prd-017', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    { id: 'lti-030', loading_trip_id: 'lt-002', product_id: 'prd-025', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
+    { id: 'lti-031', loading_trip_id: 'lt-002', product_id: 'prd-028', planned_quantity: 24, actual_quantity: 24, scanned: 1 },
   ];
 
   return { trips, tripItems };

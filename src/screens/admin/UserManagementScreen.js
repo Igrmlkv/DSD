@@ -52,7 +52,7 @@ export default function UserManagementScreen() {
             <View style={[styles.roleBadge, { backgroundColor: roleColor + '15' }]}>
               <Text style={[styles.roleText, { color: roleColor }]}>{t('roles.' + item.role) || item.role}</Text>
             </View>
-            <View style={[styles.statusDot, { backgroundColor: isActive ? '#34C759' : COLORS.error }]} />
+            <View style={[styles.statusDot, { backgroundColor: isActive ? COLORS.success : COLORS.error }]} />
           </View>
         </View>
         {item.phone && (

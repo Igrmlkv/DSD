@@ -117,7 +117,9 @@
     "actionStartOfDay": "Начало смены",
     "actionEndOfDay": "Конец смены",
     "actionExpenses": "Расходы",
-    "actionInventory": "Остатки"
+    "actionInventory": "Остатки",
+    "ordersToday": "Заказы сегодня",
+    "expenses": "Расходы"
   },
   "supervisorHome": {
     "onRoute": "На маршруте",
@@ -188,12 +190,17 @@
     "goToActiveVisit": "Перейти к маршруту",
     "scanQr": "Сканировать QR",
     "scanQrSub": "Поиск отгрузки",
-    "scanQrTitle": "Поиск отгрузки по QR",
-    "scanQrHint": "Отсканируйте QR-код на упаковке или введите номер отгрузки вручную",
-    "qrPlaceholder": "Номер отгрузки",
+    "scanQrTitle": "Сканирование QR-кода",
+    "scanQrHint": "Наведите камеру на QR-код заказа или накладной",
+    "qrPlaceholder": "Номер заказа или поставки",
     "findOrder": "Найти",
-    "qrNotFound": "Отгрузка не найдена",
-    "qrNotFoundMsg": "Отгрузка «{{code}}» не найдена в системе"
+    "manualInputTitle": "Ручной ввод номера",
+    "qrNotFound": "Не найдено",
+    "qrNotFoundMsg": "Заказ или поставка «{{code}}» не найдены в системе",
+    "wrongOrder": "Неверный заказ",
+    "wrongOrderMsg": "Заказ «{{code}}» принадлежит другой точке ({{customer}}). Выберите заказ для текущей точки.",
+    "cameraPermission": "Доступ к камере",
+    "cameraPermissionMsg": "Для сканирования QR-кода необходимо разрешить доступ к камере в настройках"
   },
   "shipmentScreen": {
     "insufficientStock": "Недостаточно остатков",

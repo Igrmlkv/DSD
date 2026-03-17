@@ -11,7 +11,8 @@ import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getRoutesByDate, getRoutePoints, getPayments,
-  getUnreadNotificationCount, getVehicleByDriver,
+  getUnreadNotificationCount, getVehicleByDriver, getAllOrders,
+  getTodayExpensesTotal,
 } from '../../database';
 
 export default function ExpeditorHomeScreen() {
@@ -24,6 +25,8 @@ export default function ExpeditorHomeScreen() {
     totalPayments: 0, paymentCount: 0,
     routeStatus: ROUTE_STATUS.PLANNED, vehiclePlate: '',
     unreadNotifications: 0,
+    todayOrders: 0, todayOrdersAmount: 0,
+    todayExpenses: 0,
   });
 
   const loadData = useCallback(async () => {
@@ -51,8 +54,17 @@ export default function ExpeditorHomeScreen() {
       );
       const totalPayments = todayPayments.reduce((sum, p) => sum + p.amount, 0);
 
-      const vehicle = await getVehicleByDriver(user.id);
-      const unread = await getUnreadNotificationCount(user.id);
+      const [vehicle, unread, todayExpenses] = await Promise.all([
+        getVehicleByDriver(user.id),
+        getUnreadNotificationCount(user.id),
+        getTodayExpensesTotal(user.id),
+      ]);
+
+      const allOrders = await getAllOrders();
+      const todayUserOrders = allOrders.filter(
+        (o) => o.order_date?.startsWith(today) && o.user_id === user.id
+      );
+      const todayOrdersAmount = todayUserOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
 
       setStats({
         totalPoints,
@@ -62,6 +74,9 @@ export default function ExpeditorHomeScreen() {
         routeStatus,
         vehiclePlate: vehicle?.plate_number || '',
         unreadNotifications: unread,
+        todayOrders: todayUserOrders.length,
+        todayOrdersAmount,
+        todayExpenses,
       });
     } catch (e) {
       console.error('ExpeditorHome load error:', e);
@@ -126,16 +141,40 @@ export default function ExpeditorHomeScreen() {
       {/* Сводка дня */}
       <Text style={styles.sectionTitle}>{t('expeditorHome.daySummary')}</Text>
       <View style={styles.cardsRow}>
-        <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB)}
+          activeOpacity={0.7}
+        >
           <Ionicons name="location-outline" size={28} color={COLORS.primary} />
           <Text style={styles.cardValue}>{stats.completedPoints} / {stats.totalPoints}</Text>
           <Text style={styles.cardLabel}>{t('expeditorHome.points')}</Text>
-        </View>
+        </TouchableOpacity>
         <View style={styles.card}>
           <Ionicons name="wallet-outline" size={28} color={COLORS.accent} />
           <Text style={styles.cardValue}>{formatMoney(stats.totalPayments)}</Text>
           <Text style={styles.cardLabel}>{t('expeditorHome.payments')} ({stats.paymentCount})</Text>
         </View>
+      </View>
+      <View style={[styles.cardsRow, { marginTop: 12 }]}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB, { screen: SCREEN_NAMES.ORDERS_LIST })}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="document-text-outline" size={28} color={COLORS.primary} />
+          <Text style={styles.cardValue}>{stats.todayOrders}</Text>
+          <Text style={styles.cardLabel}>{t('expeditorHome.ordersToday')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate(SCREEN_NAMES.WAREHOUSE_OPS_TAB, { screen: SCREEN_NAMES.EXPENSES })}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="receipt-outline" size={28} color={COLORS.error} />
+          <Text style={styles.cardValue}>{formatMoney(stats.todayExpenses)}</Text>
+          <Text style={styles.cardLabel}>{t('expeditorHome.expenses')}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Статус маршрута */}

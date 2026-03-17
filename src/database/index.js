@@ -27,6 +27,7 @@ export {
   getOrdersByCustomer,
   getOrdersByRoutePoint,
   getOrderById,
+  searchOrderByCode,
   getOrderItems,
   createOrder,
   updateOrder,

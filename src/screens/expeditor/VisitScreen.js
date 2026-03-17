@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
-  Modal, TextInput, KeyboardAvoidingView, Platform,
+  Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
@@ -13,6 +14,7 @@ import useAuthStore from '../../store/authStore';
 import {
   getCustomerById, getOrdersByRoutePoint, updateRoutePointStatus,
   getDeliveryByRoutePoint, getOrderById, getActiveVisitCustomer,
+  searchOrderByCode,
 } from '../../database';
 import { getInvoiceByDelivery } from '../../services/invoiceService';
 import { recordVisitLocation } from '../../services/locationService';
@@ -28,6 +30,9 @@ export default function VisitScreen({ route }) {
   const [visitStatus, setVisitStatus] = useState(initialStatus || VISIT_STATUS.PENDING);
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrCode, setQrCode] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const scanProcessedRef = useRef(false);
 
   const isCompleted = visitStatus === VISIT_STATUS.COMPLETED || visitStatus === VISIT_STATUS.SKIPPED;
   const visitStarted = visitStatus === VISIT_STATUS.IN_PROGRESS || isCompleted;
@@ -97,13 +102,36 @@ export default function VisitScreen({ route }) {
     ]);
   };
 
-  const handleQrScan = async () => {
-    const code = qrCode.trim();
+  const handleOpenQrScanner = async () => {
+    if (!cameraPermission?.granted) {
+      const result = await requestCameraPermission();
+      if (!result.granted) {
+        Alert.alert(t('visit.cameraPermission'), t('visit.cameraPermissionMsg'));
+        return;
+      }
+    }
+    scanProcessedRef.current = false;
+    setShowManualInput(false);
+    setQrCode('');
+    setShowQrModal(true);
+  };
+
+  const processScannedCode = async (code) => {
     if (!code) return;
     try {
-      const order = await getOrderById(code);
+      const order = await searchOrderByCode(code);
       if (!order) {
         Alert.alert(t('visit.qrNotFound'), t('visit.qrNotFoundMsg', { code }));
+        scanProcessedRef.current = false;
+        setQrCode('');
+        return;
+      }
+      if (order.route_point_id && order.route_point_id !== pointId) {
+        Alert.alert(
+          t('visit.wrongOrder'),
+          t('visit.wrongOrderMsg', { code, customer: order.customer_name }),
+          [{ text: t('common.confirm'), onPress: () => { scanProcessedRef.current = false; } }]
+        );
         setQrCode('');
         return;
       }
@@ -112,13 +140,27 @@ export default function VisitScreen({ route }) {
       navigation.navigate(SCREEN_NAMES.SHIPMENT, {
         pointId: order.route_point_id || pointId,
         customerId: order.customer_id || customerId,
-        customerName,
+        customerName: order.customer_name || customerName,
         routeId,
         readOnly: isCompleted,
       });
     } catch (e) {
       Alert.alert(t('common.error'), e.message);
+      scanProcessedRef.current = false;
     }
+  };
+
+  const handleBarcodeScanned = ({ data }) => {
+    if (scanProcessedRef.current) return;
+    scanProcessedRef.current = true;
+    processScannedCode(data.trim());
+  };
+
+  const handleManualSearch = () => {
+    const code = qrCode.trim();
+    if (!code) return;
+    scanProcessedRef.current = true;
+    processScannedCode(code);
   };
 
   const navParams = { pointId, customerId, customerName, routeId, readOnly: isCompleted };
@@ -133,7 +175,7 @@ export default function VisitScreen({ route }) {
     { key: 'payment', title: t('visit.payment'), subtitle: customer?.debt_amount > 0 ? `${t('visit.debtLabel')}: ${customer.debt_amount.toLocaleString()} ₽` : t('visit.noDebt'), icon: 'wallet-outline', color: COLORS.accent,
       onPress: () => navigation.navigate(SCREEN_NAMES.PAYMENT, navParams) },
     { key: 'qrscan', title: t('visit.scanQr'), subtitle: t('visit.scanQrSub'), icon: 'qr-code-outline', color: COLORS.secondary,
-      onPress: () => setShowQrModal(true) },
+      onPress: handleOpenQrScanner },
     { key: 'invoices', title: t('visit.invoices'), subtitle: t('visit.invoicesSub'), icon: 'document-text-outline', color: '#8E44AD',
       onPress: () => {
         if (invoiceId) {
@@ -248,35 +290,57 @@ export default function VisitScreen({ route }) {
         </>
       )}
       {/* QR Scan Modal */}
-      <Modal visible={showQrModal} transparent animationType="fade">
-        <KeyboardAvoidingView style={styles.qrOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.qrContent}>
-            <View style={styles.qrHeader}>
-              <Ionicons name="qr-code" size={32} color={COLORS.primary} />
-              <Text style={styles.qrTitle}>{t('visit.scanQrTitle')}</Text>
+      <Modal visible={showQrModal} animationType="slide" onRequestClose={() => setShowQrModal(false)}>
+        <View style={styles.scannerContainer}>
+          <View style={styles.scannerHeader}>
+            <TouchableOpacity onPress={() => { setShowQrModal(false); setQrCode(''); }} style={styles.scannerCloseBtn}>
+              <Ionicons name="close" size={28} color={COLORS.white} />
+            </TouchableOpacity>
+            <Text style={styles.scannerTitle}>{t('visit.scanQrTitle')}</Text>
+            <TouchableOpacity onPress={() => setShowManualInput(!showManualInput)} style={styles.scannerCloseBtn}>
+              <Ionicons name={showManualInput ? 'camera' : 'keypad'} size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
+
+          {!showManualInput ? (
+            <View style={styles.cameraWrapper}>
+              <CameraView
+                style={styles.camera}
+                facing="back"
+                barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+                onBarcodeScanned={handleBarcodeScanned}
+              />
+              <View style={styles.scanOverlay}>
+                <View style={styles.scanFrame}>
+                  <View style={[styles.scanCorner, styles.scanCornerTL]} />
+                  <View style={[styles.scanCorner, styles.scanCornerTR]} />
+                  <View style={[styles.scanCorner, styles.scanCornerBL]} />
+                  <View style={[styles.scanCorner, styles.scanCornerBR]} />
+                </View>
+              </View>
+              <Text style={styles.scanHint}>{t('visit.scanQrHint')}</Text>
             </View>
-            <Text style={styles.qrSubtitle}>{t('visit.scanQrHint')}</Text>
-            <TextInput
-              style={styles.qrInput}
-              value={qrCode}
-              onChangeText={setQrCode}
-              placeholder={t('visit.qrPlaceholder')}
-              placeholderTextColor={COLORS.tabBarInactive}
-              autoFocus
-              returnKeyType="search"
-              onSubmitEditing={handleQrScan}
-            />
-            <View style={styles.qrButtons}>
-              <TouchableOpacity style={styles.qrCancelBtn} onPress={() => { setShowQrModal(false); setQrCode(''); }}>
-                <Text style={styles.qrCancelText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.qrSearchBtn} onPress={handleQrScan}>
+          ) : (
+            <KeyboardAvoidingView style={styles.manualInputContainer} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <Ionicons name="qr-code" size={48} color={COLORS.primary} style={{ marginBottom: 16 }} />
+              <Text style={styles.manualInputTitle}>{t('visit.manualInputTitle')}</Text>
+              <TextInput
+                style={styles.qrInput}
+                value={qrCode}
+                onChangeText={(text) => { setQrCode(text); scanProcessedRef.current = false; }}
+                placeholder={t('visit.qrPlaceholder')}
+                placeholderTextColor={COLORS.tabBarInactive}
+                autoFocus
+                returnKeyType="search"
+                onSubmitEditing={handleManualSearch}
+              />
+              <TouchableOpacity style={styles.qrSearchBtn} onPress={handleManualSearch}>
                 <Ionicons name="search" size={18} color={COLORS.white} />
                 <Text style={styles.qrSearchText}>{t('visit.findOrder')}</Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+          )}
+        </View>
       </Modal>
     </ScrollView>
   );
@@ -330,16 +394,28 @@ const styles = StyleSheet.create({
   orderNum: { fontSize: 14, fontWeight: '500', color: COLORS.text },
   orderStatus: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   orderAmount: { fontSize: 16, fontWeight: '700', color: COLORS.text },
-  // QR modal
-  qrOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  qrContent: { backgroundColor: COLORS.white, borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 },
-  qrHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  qrTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
-  qrSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginBottom: 16, lineHeight: 18 },
-  qrInput: { backgroundColor: COLORS.background, borderRadius: 10, padding: 14, fontSize: 16, color: COLORS.text, marginBottom: 16 },
-  qrButtons: { flexDirection: 'row', gap: 12 },
-  qrCancelBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: COLORS.background, alignItems: 'center' },
-  qrCancelText: { fontSize: 15, fontWeight: '600', color: COLORS.textSecondary },
-  qrSearchBtn: { flex: 1, flexDirection: 'row', padding: 14, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  // QR scanner modal
+  scannerContainer: { flex: 1, backgroundColor: '#000' },
+  scannerHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'ios' ? 56 : 16, paddingHorizontal: 16, paddingBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.7)', zIndex: 10,
+  },
+  scannerCloseBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  scannerTitle: { fontSize: 17, fontWeight: '600', color: COLORS.white },
+  cameraWrapper: { flex: 1, position: 'relative' },
+  camera: { flex: 1 },
+  scanOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+  scanFrame: { width: 240, height: 240, position: 'relative' },
+  scanCorner: { position: 'absolute', width: 32, height: 32, borderColor: COLORS.white },
+  scanCornerTL: { top: 0, left: 0, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 8 },
+  scanCornerTR: { top: 0, right: 0, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 8 },
+  scanCornerBL: { bottom: 0, left: 0, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 8 },
+  scanCornerBR: { bottom: 0, right: 0, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 8 },
+  scanHint: { position: 'absolute', bottom: 80, alignSelf: 'center', fontSize: 14, color: COLORS.white, textAlign: 'center', paddingHorizontal: 32 },
+  manualInputContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: COLORS.background },
+  manualInputTitle: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginBottom: 16 },
+  qrInput: { backgroundColor: COLORS.white, borderRadius: 10, padding: 14, fontSize: 16, color: COLORS.text, marginBottom: 16, width: '100%' },
+  qrSearchBtn: { flexDirection: 'row', padding: 14, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', gap: 6, width: '100%' },
   qrSearchText: { fontSize: 15, fontWeight: '600', color: COLORS.white },
 });

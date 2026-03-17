@@ -311,7 +311,7 @@ async function seedDatabase(database) {
     ];
     for (const ar of adjustmentReasons) {
       await database.runAsync(
-        `INSERT INTO adjustment_reasons (id, code, name_ru, name_en, is_active, sort_order) VALUES (?, ?, ?, ?, 1, ?)`,
+        `INSERT OR IGNORE INTO adjustment_reasons (id, code, name_ru, name_en, is_active, sort_order) VALUES (?, ?, ?, ?, 1, ?)`,
         [ar.id, ar.code, ar.name_ru, ar.name_en, ar.sort_order]
       );
     }
@@ -555,6 +555,41 @@ export async function getOrderById(id) {
     JOIN customers c ON c.id = o.customer_id
     WHERE o.id = ?
   `, [id]);
+}
+
+export async function searchOrderByCode(code) {
+  const database = await getDatabase();
+  // Try exact match by order ID first
+  let order = await database.getFirstAsync(`
+    SELECT o.*, c.name as customer_name, c.address as customer_address
+    FROM orders o
+    JOIN customers c ON c.id = o.customer_id
+    WHERE o.id = ?
+  `, [code]);
+  if (order) return order;
+  // Try match by last 6 chars of order ID (short code from QR)
+  order = await database.getFirstAsync(`
+    SELECT o.*, c.name as customer_name, c.address as customer_address
+    FROM orders o
+    JOIN customers c ON c.id = o.customer_id
+    WHERE o.id LIKE ?
+  `, [`%${code}`]);
+  if (order) return order;
+  // Try match by delivery ID
+  const delivery = await database.getFirstAsync(`
+    SELECT d.order_id
+    FROM deliveries d
+    WHERE d.id = ? OR d.id LIKE ?
+  `, [code, `%${code}`]);
+  if (delivery) {
+    return database.getFirstAsync(`
+      SELECT o.*, c.name as customer_name, c.address as customer_address
+      FROM orders o
+      JOIN customers c ON c.id = o.customer_id
+      WHERE o.id = ?
+    `, [delivery.order_id]);
+  }
+  return null;
 }
 
 export async function getOrderItems(orderId) {

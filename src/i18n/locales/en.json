@@ -117,7 +117,9 @@
     "actionStartOfDay": "Start Shift",
     "actionEndOfDay": "End Shift",
     "actionExpenses": "Expenses",
-    "actionInventory": "Inventory"
+    "actionInventory": "Inventory",
+    "ordersToday": "Orders today",
+    "expenses": "Expenses"
   },
   "supervisorHome": {
     "onRoute": "On Route",
@@ -188,12 +190,17 @@
     "goToActiveVisit": "Go to route",
     "scanQr": "Scan QR",
     "scanQrSub": "Find shipment",
-    "scanQrTitle": "Find shipment by QR",
-    "scanQrHint": "Scan the QR code on the package or enter the shipment number manually",
-    "qrPlaceholder": "Shipment number",
+    "scanQrTitle": "Scan QR Code",
+    "scanQrHint": "Point camera at the order or delivery QR code",
+    "qrPlaceholder": "Order or delivery number",
     "findOrder": "Find",
-    "qrNotFound": "Shipment not found",
-    "qrNotFoundMsg": "Shipment «{{code}}» was not found in the system"
+    "manualInputTitle": "Enter number manually",
+    "qrNotFound": "Not found",
+    "qrNotFoundMsg": "Order or delivery «{{code}}» was not found in the system",
+    "wrongOrder": "Wrong order",
+    "wrongOrderMsg": "Order «{{code}}» belongs to another point ({{customer}}). Select an order for the current point.",
+    "cameraPermission": "Camera access",
+    "cameraPermissionMsg": "Camera access is required for QR scanning. Please enable it in settings."
   },
   "shipmentScreen": {
     "insufficientStock": "Insufficient stock",

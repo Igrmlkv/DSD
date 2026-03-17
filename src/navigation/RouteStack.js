@@ -16,6 +16,8 @@ import InvoiceSummaryScreen from '../screens/expeditor/InvoiceSummaryScreen';
 import DocumentViewScreen from '../screens/expeditor/DocumentViewScreen';
 import PrintPreviewScreen from '../screens/expeditor/PrintPreviewScreen';
 import CustomerDetailScreen from '../screens/shared/CustomerDetailScreen';
+import OrdersScreen from '../screens/orders/OrdersScreen';
+import OrderEditScreen from '../screens/orders/OrderEditScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -41,6 +43,8 @@ export default function RouteStack() {
       <Stack.Screen name={SCREEN_NAMES.DOCUMENT_VIEW} component={DocumentViewScreen} options={{ title: i18n.t('nav.documentView') }} />
       <Stack.Screen name={SCREEN_NAMES.PRINT_PREVIEW} component={PrintPreviewScreen} options={{ title: i18n.t('nav.printPreview') }} />
       <Stack.Screen name={SCREEN_NAMES.CUSTOMER_DETAIL} component={CustomerDetailScreen} options={{ title: i18n.t('nav.customerDetail') }} />
+      <Stack.Screen name={SCREEN_NAMES.ORDERS_LIST} component={OrdersScreen} options={{ title: i18n.t('nav.orders') }} />
+      <Stack.Screen name={SCREEN_NAMES.ORDER_EDIT} component={OrderEditScreen} options={{ title: i18n.t('nav.newOrder') }} />
     </Stack.Navigator>
   );
 }

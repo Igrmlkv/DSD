@@ -16,6 +16,7 @@ import {
   getUnloadingData, getTodayPaymentsTotal, getTodayTourCheckin,
   getTodayExpensesTotal,
 } from '../../database';
+import { stopTracking } from '../../services/locationService';
 import MaterialCheckInStep from './MaterialCheckInStep';
 import CashCheckInStep from './CashCheckInStep';
 import OdometerStep from './OdometerStep';
@@ -290,6 +291,8 @@ export default function EndOfDayScreen() {
           }))
         );
       }
+
+      await stopTracking();
 
       Alert.alert(t('endOfDay.routeCompleted'), t('endOfDay.routeCompletedMsg'), [
         { text: 'OK', onPress: () => {

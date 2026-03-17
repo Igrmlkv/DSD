@@ -15,6 +15,7 @@ import {
   getDeliveryByRoutePoint, getOrderById, getActiveVisitCustomer,
 } from '../../database';
 import { getInvoiceByDelivery } from '../../services/invoiceService';
+import { recordVisitLocation } from '../../services/locationService';
 
 export default function VisitScreen({ route }) {
   const { t } = useTranslation();
@@ -73,6 +74,7 @@ export default function VisitScreen({ route }) {
       }
       await updateRoutePointStatus(pointId, VISIT_STATUS.IN_PROGRESS);
       setVisitStatus(VISIT_STATUS.IN_PROGRESS);
+      recordVisitLocation(user?.id, routeId, pointId, 'visit_start').catch(() => {});
     } catch (e) {
       console.error('Start visit error:', e);
       await updateRoutePointStatus(pointId, VISIT_STATUS.IN_PROGRESS);
@@ -87,6 +89,7 @@ export default function VisitScreen({ route }) {
         text: t('visit.yesComplete'), onPress: async () => {
           if (pointId) {
             await updateRoutePointStatus(pointId, VISIT_STATUS.COMPLETED);
+            recordVisitLocation(user?.id, routeId, pointId, 'visit_end').catch(() => {});
             navigation.goBack();
           }
         },

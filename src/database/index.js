@@ -134,6 +134,10 @@ export {
   createExpense,
   updateExpense,
   deleteExpense,
+  createExpenseAttachment,
+  getExpenseAttachments,
+  deleteExpenseAttachment,
+  deleteAllExpenseAttachments,
 
   // Visit Reports
   createVisitReport,
@@ -160,4 +164,12 @@ export {
 
   // Empties
   getEmptiesStock,
+
+  // GPS Tracking
+  insertGpsTrack,
+  getGpsTracksByRoute,
+  getLatestDriverPosition,
+  getAllDriverPositions,
+  updateRoutePointCoords,
+  getGpsTrackStats,
 } from './database';

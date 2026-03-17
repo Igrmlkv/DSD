@@ -440,6 +440,16 @@ const CREATE_TABLES = [
     FOREIGN KEY (expense_type_id) REFERENCES expense_types(id)
   )`,
 
+  `CREATE TABLE IF NOT EXISTS expense_attachments (
+    id TEXT PRIMARY KEY,
+    expense_id TEXT NOT NULL,
+    file_type TEXT NOT NULL CHECK(file_type IN ('image','pdf')),
+    local_uri TEXT NOT NULL,
+    file_name TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (expense_id) REFERENCES expenses(id) ON DELETE CASCADE
+  )`,
+
   // --- Invoices / Receipts / Delivery Notes ---
 
   `CREATE TABLE IF NOT EXISTS invoices (
@@ -557,6 +567,7 @@ const CREATE_TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_delivery_notes_delivery ON delivery_notes(delivery_id)`,
   `CREATE INDEX IF NOT EXISTS idx_expenses_driver ON expenses(driver_id)`,
   `CREATE INDEX IF NOT EXISTS idx_expenses_checkin ON expenses(tour_checkin_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_expense_attachments_expense ON expense_attachments(expense_id)`,
   `CREATE INDEX IF NOT EXISTS idx_orders_route_point ON orders(route_point_id)`,
   `CREATE INDEX IF NOT EXISTS idx_payments_route_point ON payments(route_point_id)`,
   `CREATE INDEX IF NOT EXISTS idx_deliveries_route_point ON deliveries(route_point_id)`,
@@ -666,6 +677,28 @@ const CREATE_TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_adjustment_items_adj ON inventory_adjustment_items(adjustment_id)`,
   `CREATE INDEX IF NOT EXISTS idx_on_hand_customer ON on_hand_inventory(customer_id)`,
   `CREATE INDEX IF NOT EXISTS idx_on_hand_items_oh ON on_hand_inventory_items(on_hand_id)`,
+
+  // --- GPS-трекинг ---
+
+  `CREATE TABLE IF NOT EXISTS gps_tracks (
+    id TEXT PRIMARY KEY,
+    driver_id TEXT NOT NULL,
+    route_id TEXT,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL,
+    accuracy REAL,
+    speed REAL,
+    heading REAL,
+    event_type TEXT DEFAULT 'track' CHECK(event_type IN ('track','visit_start','visit_end','route_start','route_end')),
+    route_point_id TEXT,
+    recorded_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES users(id),
+    FOREIGN KEY (route_id) REFERENCES routes(id)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_gps_tracks_driver ON gps_tracks(driver_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_gps_tracks_route ON gps_tracks(route_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_gps_tracks_recorded ON gps_tracks(recorded_at)`,
 ];
 
 export { SCHEMA_VERSION, CREATE_TABLES };

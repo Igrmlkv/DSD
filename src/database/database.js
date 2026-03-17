@@ -46,6 +46,10 @@ export async function initDatabase() {
     "ALTER TABLE customers ADD COLUMN vat_rate REAL DEFAULT 22",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_warehouse_product ON stock(warehouse, product_id)",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_tour_checkins_daily ON tour_checkins(driver_id, type, date(checkin_date))",
+    "ALTER TABLE route_points ADD COLUMN actual_arrival_lat REAL",
+    "ALTER TABLE route_points ADD COLUMN actual_arrival_lon REAL",
+    "ALTER TABLE route_points ADD COLUMN actual_departure_lat REAL",
+    "ALTER TABLE route_points ADD COLUMN actual_departure_lon REAL",
   ];
   for (const sql of migrations) {
     try { await database.execAsync(sql); } catch { /* column already exists */ }
@@ -1723,7 +1727,8 @@ export async function getTodayExpenses(driverId) {
   const database = await getDatabase();
   const today = new Date().toISOString().split('T')[0];
   return database.getAllAsync(
-    `SELECT e.*, et.name as type_name, et.icon as type_icon
+    `SELECT e.*, et.name as type_name, et.icon as type_icon,
+            (SELECT COUNT(*) FROM expense_attachments WHERE expense_id = e.id) as attachment_count
      FROM expenses e
      LEFT JOIN expense_types et ON et.id = e.expense_type_id
      WHERE e.driver_id = ? AND date(e.created_at) = ?
@@ -1767,6 +1772,46 @@ export async function updateExpense(id, { amount, notes }) {
 export async function deleteExpense(id) {
   const database = await getDatabase();
   await database.runAsync(`DELETE FROM expenses WHERE id = ?`, [id]);
+}
+
+// ==================== Expense Attachments ====================
+
+export async function createExpenseAttachment({ expenseId, fileType, localUri, fileName }) {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO expense_attachments (id, expense_id, file_type, local_uri, file_name, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [id, expenseId, fileType, localUri, fileName || null, now]
+  );
+  return id;
+}
+
+export async function getExpenseAttachments(expenseId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM expense_attachments WHERE expense_id = ? ORDER BY created_at ASC`,
+    [expenseId]
+  );
+}
+
+export async function deleteExpenseAttachment(id) {
+  const database = await getDatabase();
+  const row = await database.getFirstAsync(
+    `SELECT local_uri FROM expense_attachments WHERE id = ?`, [id]
+  );
+  await database.runAsync(`DELETE FROM expense_attachments WHERE id = ?`, [id]);
+  return row?.local_uri || null;
+}
+
+export async function deleteAllExpenseAttachments(expenseId) {
+  const database = await getDatabase();
+  const rows = await database.getAllAsync(
+    `SELECT local_uri FROM expense_attachments WHERE expense_id = ?`, [expenseId]
+  );
+  await database.runAsync(`DELETE FROM expense_attachments WHERE expense_id = ?`, [expenseId]);
+  return rows.map((r) => r.local_uri);
 }
 
 // ==================== Visit Reports ====================
@@ -2041,5 +2086,75 @@ export async function getEmptiesStock(vehicleId) {
      WHERE pr.driver_id IN (SELECT driver_id FROM vehicles WHERE id = ?)
      ORDER BY pr.return_date DESC`,
     [vehicleId]
+  );
+}
+
+// =====================================================
+// GPS TRACKING
+// =====================================================
+
+export async function insertGpsTrack({ driverId, routeId, latitude, longitude, accuracy, speed, heading, eventType, routePointId }) {
+  const database = await getDatabase();
+  const id = generateId();
+  await database.runAsync(
+    `INSERT INTO gps_tracks (id, driver_id, route_id, latitude, longitude, accuracy, speed, heading, event_type, route_point_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, driverId, routeId || null, latitude, longitude, accuracy || null, speed || null, heading || null, eventType || 'track', routePointId || null]
+  );
+  return id;
+}
+
+export async function getGpsTracksByRoute(routeId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM gps_tracks WHERE route_id = ? ORDER BY recorded_at ASC`,
+    [routeId]
+  );
+}
+
+export async function getLatestDriverPosition(driverId) {
+  const database = await getDatabase();
+  return database.getFirstAsync(
+    `SELECT * FROM gps_tracks WHERE driver_id = ? ORDER BY recorded_at DESC LIMIT 1`,
+    [driverId]
+  );
+}
+
+export async function getAllDriverPositions() {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  return database.getAllAsync(
+    `SELECT g.*, u.full_name as driver_name
+     FROM gps_tracks g
+     JOIN users u ON u.id = g.driver_id
+     WHERE g.recorded_at >= ? AND g.recorded_at = (
+       SELECT MAX(g2.recorded_at) FROM gps_tracks g2 WHERE g2.driver_id = g.driver_id AND g2.recorded_at >= ?
+     )
+     ORDER BY g.recorded_at DESC`,
+    [today, today]
+  );
+}
+
+export async function updateRoutePointCoords(pointId, fields) {
+  const database = await getDatabase();
+  const sets = [];
+  const values = [];
+  if (fields.actual_arrival_lat != null) { sets.push('actual_arrival_lat = ?'); values.push(fields.actual_arrival_lat); }
+  if (fields.actual_arrival_lon != null) { sets.push('actual_arrival_lon = ?'); values.push(fields.actual_arrival_lon); }
+  if (fields.actual_departure_lat != null) { sets.push('actual_departure_lat = ?'); values.push(fields.actual_departure_lat); }
+  if (fields.actual_departure_lon != null) { sets.push('actual_departure_lon = ?'); values.push(fields.actual_departure_lon); }
+  if (sets.length === 0) return;
+  values.push(pointId);
+  await database.runAsync(`UPDATE route_points SET ${sets.join(', ')} WHERE id = ?`, values);
+}
+
+export async function getGpsTrackStats(routeId) {
+  const database = await getDatabase();
+  return database.getFirstAsync(
+    `SELECT COUNT(*) as total_points,
+            MIN(recorded_at) as first_recorded,
+            MAX(recorded_at) as last_recorded
+     FROM gps_tracks WHERE route_id = ?`,
+    [routeId]
   );
 }

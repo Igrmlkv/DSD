@@ -9,12 +9,15 @@ import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
+import useLocationStore from '../../store/locationStore';
 import { getRoutesByDate, getRoutePoints, updateRouteStatus } from '../../database';
+import { startTracking, stopTracking } from '../../services/locationService';
 
 export default function RouteListScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigation = useNavigation();
+  const isGpsTracking = useLocationStore((s) => s.isTracking);
 
   const STATUS_MAP = {
     pending: { label: t('status.pending'), color: COLORS.tabBarInactive, icon: 'time-outline' },
@@ -58,6 +61,7 @@ export default function RouteListScreen() {
   const handleStartRoute = async () => {
     if (route) {
       await updateRouteStatus(route.id, ROUTE_STATUS.IN_PROGRESS);
+      await startTracking(user.id, route.id);
       await loadData();
     }
   };
@@ -69,6 +73,7 @@ export default function RouteListScreen() {
         text: t('routeList.complete'), onPress: async () => {
           if (route) {
             await updateRouteStatus(route.id, ROUTE_STATUS.COMPLETED);
+            await stopTracking();
             await loadData();
           }
         },
@@ -170,6 +175,11 @@ export default function RouteListScreen() {
             </Text>
           </View>
           <View style={styles.headerActions}>
+            {isGpsTracking && (
+              <View style={styles.gpsIndicator}>
+                <Ionicons name="location" size={16} color={COLORS.success} />
+              </View>
+            )}
             <TouchableOpacity
               style={styles.mapBtn}
               onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_MAP, { routeId: route.id })}
@@ -238,7 +248,12 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: COLORS.text },
   headerSub: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
-  headerActions: { flexDirection: 'row', gap: 8 },
+  headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  gpsIndicator: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.success + '20',
+    justifyContent: 'center', alignItems: 'center',
+  },
   mapBtn: {
     width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary + '12',
     justifyContent: 'center', alignItems: 'center',

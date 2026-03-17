@@ -13,7 +13,12 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.DSDMini"
+      "bundleIdentifier": "com.anonymous.DSDMini",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Для отслеживания маршрута доставки",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Для фонового отслеживания маршрута доставки",
+        "UIBackgroundModes": ["location"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +27,14 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.anonymous.DSDMini"
+      "package": "com.anonymous.DSDMini",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,7 +46,14 @@
       "expo-secure-store",
       "expo-sqlite",
       "./src/plugins/withYandexMaps",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Приложению нужен доступ к геолокации для отслеживания маршрута доставки."
+        }
+      ],
+      "expo-task-manager"
     ]
   }
 }

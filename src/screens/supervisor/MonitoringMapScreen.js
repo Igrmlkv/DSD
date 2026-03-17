@@ -7,7 +7,8 @@ import AppMapView from '../../components/AppMapView';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { VISIT_STATUS, ROUTE_STATUS } from '../../constants/statuses';
-import { getExpeditorProgress, getRoutePoints } from '../../database';
+import { getExpeditorProgress, getRoutePoints, getAllDriverPositions, getGpsTracksByRoute } from '../../database';
+import useSettingsStore from '../../store/settingsStore';
 
 const ROUTE_COLORS = ['#2196F3', '#FF5722', '#4CAF50', '#9C27B0', '#FF9800'];
 
@@ -26,6 +27,9 @@ export default function MonitoringMapScreen() {
   const [routePointsMap, setRoutePointsMap] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [selectedExpeditor, setSelectedExpeditor] = useState(null);
+  const [driverPositions, setDriverPositions] = useState([]);
+  const [selectedGpsTrack, setSelectedGpsTrack] = useState([]);
+  const gpsTrackingEnabled = useSettingsStore((s) => s.gpsTrackingEnabled);
 
   const loadData = useCallback(async () => {
     try {
@@ -39,8 +43,12 @@ export default function MonitoringMapScreen() {
         }
       }
       setRoutePointsMap(ptsMap);
+      if (gpsTrackingEnabled) {
+        const positions = await getAllDriverPositions();
+        setDriverPositions(positions);
+      }
     } catch (e) { console.error('Monitoring load:', e); }
-  }, []);
+  }, [gpsTrackingEnabled]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -103,6 +111,34 @@ export default function MonitoringMapScreen() {
     }
   });
 
+  // Add GPS driver position markers
+  if (gpsTrackingEnabled) {
+    driverPositions.forEach((dp) => {
+      markers.push({
+        id: `driver-gps-${dp.driver_id}`,
+        lat: dp.latitude,
+        lon: dp.longitude,
+        zIndex: 50,
+        children: (
+          <View style={styles.driverGpsMarker}>
+            <View style={styles.driverGpsInner}>
+              <Ionicons name="navigate" size={14} color="#fff" />
+            </View>
+          </View>
+        ),
+      });
+    });
+
+    if (selectedGpsTrack.length >= 2) {
+      polylines.push({
+        key: 'selected-gps-track',
+        points: selectedGpsTrack.map((p) => ({ lat: p.latitude, lon: p.longitude })),
+        color: '#2196F380',
+        width: 4,
+      });
+    }
+  }
+
   const renderExpeditor = ({ item, index }) => {
     const progress = item.total_points > 0 ? (item.completed_points / item.total_points) * 100 : 0;
     const isActive = item.route_status === ROUTE_STATUS.IN_PROGRESS;
@@ -112,8 +148,17 @@ export default function MonitoringMapScreen() {
     return (
       <TouchableOpacity
         style={[styles.card, isSelected && { borderColor: routeColor, borderWidth: 2 }]}
-        onPress={() => {
-          setSelectedExpeditor(isSelected ? null : item.route_id);
+        onPress={async () => {
+          const newSelected = isSelected ? null : item.route_id;
+          setSelectedExpeditor(newSelected);
+          if (newSelected && gpsTrackingEnabled) {
+            try {
+              const track = await getGpsTracksByRoute(newSelected);
+              setSelectedGpsTrack(track);
+            } catch { setSelectedGpsTrack([]); }
+          } else {
+            setSelectedGpsTrack([]);
+          }
           const pts = routePointsMap[item.route_id];
           if (mapRef.current && pts && pts.length > 0) {
             const lats = pts.map((p) => p.latitude);
@@ -235,5 +280,15 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4, borderRightWidth: 4, borderTopWidth: 6,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
     marginTop: -1,
+  },
+  driverGpsMarker: {
+    alignItems: 'center',
+  },
+  driverGpsInner: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#2196F3', justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: '#fff',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3, shadowRadius: 3, elevation: 4,
   },
 });

@@ -13,6 +13,7 @@ import {
   getCustomerById, getOrdersByRoutePoint, updateRoutePointStatus,
   getVisitReportByPoint,
 } from '../../database';
+import { recordVisitLocation } from '../../services/locationService';
 
 export default function PresellerVisitScreen({ route }) {
   const { t } = useTranslation();
@@ -49,6 +50,7 @@ export default function PresellerVisitScreen({ route }) {
     if (pointId) {
       await updateRoutePointStatus(pointId, VISIT_STATUS.IN_PROGRESS);
       setVisitStatus(VISIT_STATUS.IN_PROGRESS);
+      recordVisitLocation(user?.id, routeId, pointId, 'visit_start').catch(() => {});
     }
   };
 
@@ -83,6 +85,7 @@ export default function PresellerVisitScreen({ route }) {
         text: t('visit.yesComplete'), onPress: async () => {
           if (pointId) {
             await updateRoutePointStatus(pointId, VISIT_STATUS.COMPLETED);
+            recordVisitLocation(user?.id, routeId, pointId, 'visit_end').catch(() => {});
             navigation.goBack();
           }
         },

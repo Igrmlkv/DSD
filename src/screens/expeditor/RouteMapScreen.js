@@ -7,7 +7,9 @@ import AppMapView from '../../components/AppMapView';
 import { COLORS } from '../../constants/colors';
 import { DEFAULT_MAP_CENTER } from '../../constants/config';
 import { VISIT_STATUS } from '../../constants/statuses';
-import { getRoutePoints } from '../../database';
+import { getRoutePoints, getGpsTracksByRoute } from '../../database';
+import useLocationStore from '../../store/locationStore';
+import useSettingsStore from '../../store/settingsStore';
 
 const STATUS_COLORS = {
   pending: COLORS.tabBarInactive,
@@ -21,13 +23,19 @@ export default function RouteMapScreen({ route }) {
   const { t } = useTranslation();
   const { routeId } = route.params || {};
   const [points, setPoints] = useState([]);
+  const [gpsTrack, setGpsTrack] = useState([]);
   const mapRef = useRef(null);
+  const currentPosition = useLocationStore((s) => s.currentPosition);
+  const gpsTrackingEnabled = useSettingsStore((s) => s.gpsTrackingEnabled);
 
   useFocusEffect(useCallback(() => {
     if (routeId) {
       getRoutePoints(routeId).then(setPoints).catch(console.error);
+      if (gpsTrackingEnabled) {
+        getGpsTracksByRoute(routeId).then(setGpsTrack).catch(console.error);
+      }
     }
-  }, [routeId]));
+  }, [routeId, gpsTrackingEnabled]));
 
   const validPoints = points.filter((p) => p.latitude && p.longitude);
 
@@ -78,12 +86,37 @@ export default function RouteMapScreen({ route }) {
     };
   });
 
+  // Add current position marker
+  if (gpsTrackingEnabled && currentPosition) {
+    markers.push({
+      id: 'driver-position',
+      lat: currentPosition.latitude,
+      lon: currentPosition.longitude,
+      zIndex: 100,
+      children: (
+        <View style={styles.driverMarker}>
+          <View style={styles.driverMarkerInner} />
+        </View>
+      ),
+    });
+  }
+
   const polylines = validPoints.length >= 2 ? [{
     key: 'route',
     points: validPoints.map((p) => ({ lat: p.latitude, lon: p.longitude })),
     color: COLORS.primary,
     width: 3,
   }] : [];
+
+  // GPS track polyline
+  if (gpsTrackingEnabled && gpsTrack.length >= 2) {
+    polylines.push({
+      key: 'gps-track',
+      points: gpsTrack.map((p) => ({ lat: p.latitude, lon: p.longitude })),
+      color: '#2196F380',
+      width: 4,
+    });
+  }
 
   const firstPoint = validPoints[0];
 
@@ -195,5 +228,13 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 7,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
     marginTop: -1,
+  },
+  driverMarker: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: '#2196F340', justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: '#2196F3',
+  },
+  driverMarkerInner: {
+    width: 10, height: 10, borderRadius: 5, backgroundColor: '#2196F3',
   },
 });

@@ -8,6 +8,8 @@ import { SCREEN_NAMES } from '../../constants/screens';
 import { getDbStats, resetAndSeedDatabase } from '../../database';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore from '../../store/settingsStore';
+import { stopTracking } from '../../services/locationService';
+import useLocationStore from '../../store/locationStore';
 
 export default function SystemSettingsScreen() {
   const { t } = useTranslation();
@@ -19,6 +21,12 @@ export default function SystemSettingsScreen() {
   const setPrintFormType = useSettingsStore((s) => s.setPrintFormType);
   const companyInfo = useSettingsStore((s) => s.companyInfo);
   const setCompanyInfo = useSettingsStore((s) => s.setCompanyInfo);
+  const gpsTrackingEnabled = useSettingsStore((s) => s.gpsTrackingEnabled);
+  const setGpsTrackingEnabled = useSettingsStore((s) => s.setGpsTrackingEnabled);
+  const gpsTrackingInterval = useSettingsStore((s) => s.gpsTrackingInterval);
+  const setGpsTrackingInterval = useSettingsStore((s) => s.setGpsTrackingInterval);
+  const gpsTrackingDistance = useSettingsStore((s) => s.gpsTrackingDistance);
+  const setGpsTrackingDistance = useSettingsStore((s) => s.setGpsTrackingDistance);
   const [dbStats, setDbStats] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -114,6 +122,57 @@ export default function SystemSettingsScreen() {
           title={t('systemSettings.passwordPolicy')}
           subtitle={t('systemSettings.passwordPolicySub')}
         />
+      </View>
+
+      {/* GPS-трекинг */}
+      <Text style={styles.sectionTitle}>GPS-трекинг</Text>
+      <View style={styles.section}>
+        <SettingRow
+          icon="location"
+          iconColor={COLORS.success}
+          title="GPS-трекинг"
+          subtitle="Отслеживание маршрута водителей"
+          right={
+            <Switch
+              value={gpsTrackingEnabled}
+              onValueChange={async (val) => {
+                await setGpsTrackingEnabled(val);
+                if (!val && useLocationStore.getState().isTracking) {
+                  await stopTracking();
+                }
+              }}
+              trackColor={{ true: COLORS.primary }}
+            />
+          }
+        />
+        {gpsTrackingEnabled && (
+          <>
+            <View style={styles.separator} />
+            <SettingRow
+              icon="timer-outline"
+              iconColor={COLORS.info}
+              title="Интервал записи"
+              subtitle={`${gpsTrackingInterval} сек`}
+              onPress={() => {
+                const cycle = [15, 30, 60, 120];
+                const idx = cycle.indexOf(gpsTrackingInterval);
+                setGpsTrackingInterval(cycle[(idx + 1) % cycle.length]);
+              }}
+            />
+            <View style={styles.separator} />
+            <SettingRow
+              icon="resize-outline"
+              iconColor={COLORS.accent}
+              title="Мин. дистанция"
+              subtitle={`${gpsTrackingDistance} м`}
+              onPress={() => {
+                const cycle = [25, 50, 100, 200];
+                const idx = cycle.indexOf(gpsTrackingDistance);
+                setGpsTrackingDistance(cycle[(idx + 1) % cycle.length]);
+              }}
+            />
+          </>
+        )}
       </View>
 
       {/* Данные */}

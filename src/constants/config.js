@@ -30,5 +30,12 @@ export const MAP_ZOOM = {
   BASE: 12,
 };
 
+// GPS
+export const GPS_CONFIG = {
+  BACKGROUND_TASK_NAME: 'GPS_BACKGROUND_TRACKING',
+  DEFAULT_INTERVAL_SEC: 30,
+  DEFAULT_DISTANCE_M: 50,
+};
+
 // Моки
 export const LOGIN_MOCK_DELAY_MS = 300;

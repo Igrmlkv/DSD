@@ -9,6 +9,9 @@ const useSettingsStore = create((set, get) => ({
   mapProvider: MAP_PROVIDER.YANDEX, // 'yandex' | 'osm'
   language: 'ru', // 'ru' | 'en'
   printFormType: PRINT_FORM_TYPE.UPD, // 'upd' | 'invoice'
+  gpsTrackingEnabled: false,     // feature flag — GPS-трекинг
+  gpsTrackingInterval: 30,       // секунды
+  gpsTrackingDistance: 50,        // метры
   companyInfo: {
     legalName: 'ООО "МСП Напитки"',
     address: '127040, Российская Федерация, г. Москва, ул. Скаковая, д. 32, стр. 2',
@@ -38,8 +41,8 @@ const useSettingsStore = create((set, get) => ({
 
   _persist: async () => {
     try {
-      const { mapProvider, language, printFormType, companyInfo } = get();
-      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify({ mapProvider, language, printFormType, companyInfo }));
+      const { mapProvider, language, printFormType, companyInfo, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance } = get();
+      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify({ mapProvider, language, printFormType, companyInfo, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance }));
     } catch (e) {
       console.error('Settings save error:', e);
     }
@@ -63,6 +66,21 @@ const useSettingsStore = create((set, get) => ({
 
   setCompanyInfo: async (info) => {
     set({ companyInfo: { ...get().companyInfo, ...info } });
+    await get()._persist();
+  },
+
+  setGpsTrackingEnabled: async (enabled) => {
+    set({ gpsTrackingEnabled: enabled });
+    await get()._persist();
+  },
+
+  setGpsTrackingInterval: async (sec) => {
+    set({ gpsTrackingInterval: sec });
+    await get()._persist();
+  },
+
+  setGpsTrackingDistance: async (m) => {
+    set({ gpsTrackingDistance: m });
     await get()._persist();
   },
 }));

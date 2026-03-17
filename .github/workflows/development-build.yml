@@ -1,0 +1,135 @@
+name: Development Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "Platform to build"
+        required: true
+        default: "android"
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+
+env:
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Lint & validation
+  # ─────────────────────────────────────────────
+  check:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Verify Expo config
+        run: npx expo config --type public
+
+  # ─────────────────────────────────────────────
+  # Android development build
+  # ─────────────────────────────────────────────
+  build-android:
+    name: Build Android (dev)
+    needs: check
+    if: >
+      github.event_name != 'workflow_dispatch' ||
+      github.event.inputs.platform == 'android' ||
+      github.event.inputs.platform == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Android APK
+        run: eas build --platform android --profile development --non-interactive
+
+      - name: Get build URL
+        if: success()
+        run: |
+          echo "## Android Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "Download the APK from [Expo dashboard](https://expo.dev/accounts)" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────
+  # iOS development build
+  # ─────────────────────────────────────────────
+  build-ios:
+    name: Build iOS (dev)
+    needs: check
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build iOS Simulator
+        run: eas build --platform ios --profile development --non-interactive
+
+      - name: Get build URL
+        if: success()
+        run: |
+          echo "## iOS Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "Download from [Expo dashboard](https://expo.dev/accounts)" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────
+  # Preview build (on tags)
+  # ─────────────────────────────────────────────
+  build-preview:
+    name: Build Preview APK
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build Preview
+        run: eas build --platform android --profile preview --non-interactive

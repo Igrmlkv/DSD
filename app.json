@@ -17,7 +17,11 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Для отслеживания маршрута доставки",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Для фонового отслеживания маршрута доставки",
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location",
+          "location"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -33,14 +37,19 @@
         "ACCESS_COARSE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
         "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION"
+        "FOREGROUND_SERVICE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "yandexMapApiKey": "b86f674c-5cc1-470b-aadf-9ae9091faee9"
+      "yandexMapApiKey": "b86f674c-5cc1-470b-aadf-9ae9091faee9",
+      "eas": {
+        "projectId": "415bfed9-72d3-45ef-a28a-72cdcec166a7"
+      }
     },
     "plugins": [
       "expo-secure-store",

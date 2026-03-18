@@ -2,7 +2,7 @@
 export const DEFAULT_VAT_PERCENT = 22;
 export const PROMO_PRICE_MULTIPLIER = 0.85;
 export const DEFAULT_CURRENCY = 'RUB';
-export const DEFAULT_UNIT = 'PCE';
+export const DEFAULT_UNIT = 'шт';
 
 // Документы
 export const DOC_PREFIX = {

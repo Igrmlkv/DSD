@@ -51,7 +51,7 @@ export function invoiceTemplate(invoice) {
       <td>${i + 1}</td>
       <td>${item.product_name}</td>
       <td>${item.sku || ''}</td>
-      <td>${item.quantity} ${item.unit || 'PCE'}</td>
+      <td>${item.quantity} ${item.unit || 'шт'}</td>
       <td style="text-align:right">${formatCurrency(item.unit_price)}</td>
       <td style="text-align:right">${item.discount_percent > 0 ? item.discount_percent + '%' : '-'}</td>
       <td style="text-align:right">${formatCurrency(item.tax_amount)}</td>
@@ -97,7 +97,7 @@ export function invoiceTemplate(invoice) {
   </body></html>`;
 }
 
-const OKEI_MAP = { 'PCE': '796', 'KGM': '166', 'LTR': '112', 'PK': '778', 'шт': '796', 'кг': '166', 'л': '112', 'уп': '778' };
+const OKEI_MAP = { 'шт': '796', 'KGM': '166', 'LTR': '112', 'PK': '778', 'шт': '796', 'кг': '166', 'л': '112', 'уп': '778' };
 
 function formatDateShort(dateStr) {
   if (!dateStr) return '';
@@ -152,7 +152,7 @@ export function updTemplate(invoice, companyInfo = {}) {
   const sellerInnKpp = [ci.inn, ci.kpp].filter(Boolean).join('/') || '--- (не настроено)';
 
   const itemRows = items.map((item, i) => {
-    const unit = item.unit || 'PCE';
+    const unit = item.unit || 'шт';
     const okei = OKEI_MAP[unit] || '—';
     return `<tr>
       <td class="center">${i + 1}</td>
@@ -387,8 +387,8 @@ export function deliveryNoteTemplate(note, items) {
       <td>${i + 1}</td>
       <td>${item.product_name}</td>
       <td>${item.sku || ''}</td>
-      <td>${item.ordered_quantity} ${item.unit || 'PCE'}</td>
-      <td>${item.delivered_quantity} ${item.unit || 'PCE'}</td>
+      <td>${item.ordered_quantity} ${item.unit || 'шт'}</td>
+      <td>${item.delivered_quantity} ${item.unit || 'шт'}</td>
       <td>${item.ordered_quantity !== item.delivered_quantity ? '⚠' : '✓'}</td>
     </tr>
   `).join('');
@@ -427,7 +427,7 @@ export function orderConfirmationTemplate(order, items, customer) {
     <tr>
       <td>${i + 1}</td>
       <td>${item.product_name}</td>
-      <td>${item.quantity} ${item.unit || 'PCE'}</td>
+      <td>${item.quantity} ${item.unit || 'шт'}</td>
       <td style="text-align:right">${formatCurrency(item.price)}</td>
       <td style="text-align:right">${item.discount_percent > 0 ? item.discount_percent + '%' : '-'}</td>
       <td style="text-align:right">${formatCurrency(item.total)}</td>

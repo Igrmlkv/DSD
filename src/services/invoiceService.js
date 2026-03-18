@@ -55,7 +55,7 @@ export async function createInvoiceFromDelivery(deliveryId) {
       await database.runAsync(
         `INSERT INTO invoice_items (id, invoice_id, product_id, quantity, unit_price, discount_percent, discount_amount, tax_percent, tax_amount, subtotal, total, unit, currency)
          VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)`,
-        [iiId, id, item.product_id, item.delivered_quantity, item.price, vatPercent, itemTax, itemSubtotal, itemSubtotal + itemTax, item.unit || 'PCE', item.currency || 'RUB']
+        [iiId, id, item.product_id, item.delivered_quantity, item.price, vatPercent, itemTax, itemSubtotal, itemSubtotal + itemTax, item.unit || 'шт', item.currency || 'RUB']
       );
     }
 

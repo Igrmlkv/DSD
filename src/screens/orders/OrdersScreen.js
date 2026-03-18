@@ -106,7 +106,7 @@ export default function OrdersScreen({ route: screenRoute }) {
           <Text style={styles.itemName} numberOfLines={1}>{oi.product_name}</Text>
           <Text style={styles.itemSku}>{oi.sku} / {oi.volume}</Text>
         </View>
-        <Text style={styles.itemQty}>{oi.quantity} {oi.unit || 'PCE'}</Text>
+        <Text style={styles.itemQty}>{oi.quantity} {oi.unit || 'шт'}</Text>
         <Text style={styles.itemPrice}>{formatMoney(oi.total)}</Text>
       </View>
     );

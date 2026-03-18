@@ -58,7 +58,7 @@ const CREATE_TABLES = [
     brand TEXT,
     volume TEXT,
     volume_unit TEXT DEFAULT 'LTR',
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     barcode TEXT,
     weight REAL,
     weight_unit TEXT DEFAULT 'KGM',
@@ -77,7 +77,7 @@ const CREATE_TABLES = [
     product_id TEXT NOT NULL,
     empty_product_id TEXT NOT NULL,
     quantity REAL DEFAULT 1,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     is_active INTEGER DEFAULT 1,
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (empty_product_id) REFERENCES products(id)
@@ -116,7 +116,7 @@ const CREATE_TABLES = [
     warehouse TEXT DEFAULT 'main',
     quantity REAL NOT NULL DEFAULT 0,
     reserved REAL DEFAULT 0,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     updated_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (product_id) REFERENCES products(id),
     UNIQUE(warehouse, product_id)
@@ -189,7 +189,7 @@ const CREATE_TABLES = [
     discount_percent REAL DEFAULT 0,
     vat_percent REAL,
     total REAL NOT NULL,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (order_id) REFERENCES orders(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
@@ -228,7 +228,7 @@ const CREATE_TABLES = [
     price REAL NOT NULL,
     total REAL NOT NULL,
     reason_code TEXT,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (delivery_id) REFERENCES deliveries(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
@@ -264,7 +264,7 @@ const CREATE_TABLES = [
     total REAL NOT NULL,
     condition TEXT DEFAULT 'normal' CHECK(condition IN ('normal','damaged','expired')),
     reason TEXT,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (return_id) REFERENCES returns(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
@@ -318,7 +318,7 @@ const CREATE_TABLES = [
     planned_quantity REAL NOT NULL,
     actual_quantity REAL DEFAULT 0,
     scanned INTEGER DEFAULT 0,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     FOREIGN KEY (loading_trip_id) REFERENCES loading_trips(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -397,7 +397,7 @@ const CREATE_TABLES = [
     expected_quantity REAL DEFAULT 0,
     actual_quantity REAL DEFAULT 0,
     condition TEXT DEFAULT 'good' CHECK(condition IN ('good','damaged','missing')),
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     FOREIGN KEY (packaging_return_id) REFERENCES packaging_returns(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -545,7 +545,7 @@ const CREATE_TABLES = [
     tax_amount REAL DEFAULT 0,
     subtotal REAL NOT NULL,
     total REAL NOT NULL,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (invoice_id) REFERENCES invoices(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
@@ -702,7 +702,7 @@ const CREATE_TABLES = [
     adjusted_qty REAL NOT NULL DEFAULT 0,
     difference REAL NOT NULL DEFAULT 0,
     notes TEXT,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     FOREIGN KEY (adjustment_id) REFERENCES inventory_adjustments(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (reason_id) REFERENCES adjustment_reasons(id)
@@ -729,7 +729,7 @@ const CREATE_TABLES = [
     product_id TEXT NOT NULL,
     quantity REAL NOT NULL DEFAULT 0,
     notes TEXT,
-    unit TEXT DEFAULT 'PCE',
+    unit TEXT DEFAULT 'шт',
     FOREIGN KEY (on_hand_id) REFERENCES on_hand_inventory(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,

@@ -79,25 +79,25 @@ const EMPTIES = [
 // ============================================================
 const PRODUCT_EMPTIES = [
   // Coca-Cola 0.5л → 1 бутылка стеклянная, входит в пластиковый ящик по 20 шт
-  { id: 'pe-001', product_id: 'prd-001', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
-  { id: 'pe-002', product_id: 'prd-001', empty_product_id: 'emp-001', quantity: 0.05, unit: 'PCE', is_active: 1 },
+  { id: 'pe-001', product_id: 'prd-001', empty_product_id: 'emp-003', quantity: 1, unit: 'шт', is_active: 1 },
+  { id: 'pe-002', product_id: 'prd-001', empty_product_id: 'emp-001', quantity: 0.05, unit: 'шт', is_active: 1 },
   // Coca-Cola 1л → 1 бутылка
-  { id: 'pe-003', product_id: 'prd-002', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
+  { id: 'pe-003', product_id: 'prd-002', empty_product_id: 'emp-003', quantity: 1, unit: 'шт', is_active: 1 },
   // Fanta 0.5л → 1 бутылка, 1/20 ящика
-  { id: 'pe-004', product_id: 'prd-004', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
-  { id: 'pe-005', product_id: 'prd-004', empty_product_id: 'emp-001', quantity: 0.05, unit: 'PCE', is_active: 1 },
+  { id: 'pe-004', product_id: 'prd-004', empty_product_id: 'emp-003', quantity: 1, unit: 'шт', is_active: 1 },
+  { id: 'pe-005', product_id: 'prd-004', empty_product_id: 'emp-001', quantity: 0.05, unit: 'шт', is_active: 1 },
   // Sprite 0.5л → 1 бутылка, 1/20 ящика
-  { id: 'pe-006', product_id: 'prd-006', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
-  { id: 'pe-007', product_id: 'prd-006', empty_product_id: 'emp-001', quantity: 0.05, unit: 'PCE', is_active: 1 },
+  { id: 'pe-006', product_id: 'prd-006', empty_product_id: 'emp-003', quantity: 1, unit: 'шт', is_active: 1 },
+  { id: 'pe-007', product_id: 'prd-006', empty_product_id: 'emp-001', quantity: 0.05, unit: 'шт', is_active: 1 },
   // Паллета: ящики перевозятся на паллетах (40 ящиков = 1 паллета)
-  { id: 'pe-008', product_id: 'emp-001', empty_product_id: 'emp-002', quantity: 0.025, unit: 'PCE', is_active: 1 },
+  { id: 'pe-008', product_id: 'emp-001', empty_product_id: 'emp-002', quantity: 0.025, unit: 'шт', is_active: 1 },
 ];
 
 // ============================================================
 // Единицы измерения (units)
 // ============================================================
 const UNITS = [
-  { code: 'PCE', name: 'Штука' },
+  { code: 'шт', name: 'Штука (PCE)' },
   { code: 'KGM', name: 'Килограмм' },
   { code: 'LTR', name: 'Литр' },
   { code: 'PK', name: 'Упаковка' },

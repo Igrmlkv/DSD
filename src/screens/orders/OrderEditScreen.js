@@ -374,7 +374,7 @@ export default function OrderEditScreen({ route, navigation }) {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.lineName} numberOfLines={1}>{line.name}</Text>
                   <Text style={styles.lineMeta}>
-                    {line.sku} | {line.volume} | {formatMoney(line.price)}/{line.unit || 'PCE'}
+                    {line.sku} | {line.volume} | {formatMoney(line.price)}/{line.unit || 'шт'}
                     {line.maxStock != null && !readOnly ? `  •  ${t('orderEdit.inVehicle')}: ${line.maxStock}` : ''}
                   </Text>
                 </View>
@@ -386,7 +386,7 @@ export default function OrderEditScreen({ route, navigation }) {
               </View>
               <View style={styles.lineBottom}>
                 {readOnly ? (
-                  <Text style={styles.qtyReadOnly}>{line.quantity} {line.unit || 'PCE'}</Text>
+                  <Text style={styles.qtyReadOnly}>{line.quantity} {line.unit || 'шт'}</Text>
                 ) : (
                   <View style={styles.qtyRow}>
                     <TouchableOpacity

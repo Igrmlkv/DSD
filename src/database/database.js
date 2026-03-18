@@ -67,39 +67,39 @@ export async function initDatabase() {
     "ALTER TABLE products ADD COLUMN volume_unit TEXT DEFAULT 'LTR'",
     "ALTER TABLE products ADD COLUMN weight_unit TEXT DEFAULT 'KGM'",
     "ALTER TABLE products ADD COLUMN vat_percent REAL DEFAULT 22",
-    "ALTER TABLE product_empties ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE product_empties ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE product_empties ADD COLUMN is_active INTEGER DEFAULT 1",
-    "ALTER TABLE stock ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE stock ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE routes ADD COLUMN name TEXT",
     "ALTER TABLE orders ADD COLUMN route_id TEXT",
     "ALTER TABLE orders ADD COLUMN vat_amount REAL DEFAULT 0",
     "ALTER TABLE orders ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE order_items ADD COLUMN vat_percent REAL",
-    "ALTER TABLE order_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE order_items ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE order_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE deliveries ADD COLUMN route_id TEXT",
     "ALTER TABLE deliveries ADD COLUMN currency TEXT DEFAULT 'RUB'",
-    "ALTER TABLE delivery_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE delivery_items ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE delivery_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE returns ADD COLUMN currency TEXT DEFAULT 'RUB'",
-    "ALTER TABLE return_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE return_items ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE return_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE payments ADD COLUMN delivery_id TEXT",
     "ALTER TABLE payments ADD COLUMN change_amount REAL DEFAULT 0",
     "ALTER TABLE payments ADD COLUMN currency TEXT DEFAULT 'RUB'",
-    "ALTER TABLE loading_trip_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE loading_trip_items ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE cash_collections ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE tour_checkins ADD COLUMN currency TEXT DEFAULT 'RUB'",
-    "ALTER TABLE packaging_return_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE packaging_return_items ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE invoices ADD COLUMN form_type TEXT",
-    "ALTER TABLE invoice_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE invoice_items ADD COLUMN unit TEXT DEFAULT 'шт'",
     "ALTER TABLE invoice_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE delivery_notes ADD COLUMN total_amount REAL DEFAULT 0",
     "ALTER TABLE delivery_notes ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE receipts ADD COLUMN currency TEXT DEFAULT 'RUB'",
     "ALTER TABLE visit_report_photos ADD COLUMN photo_type TEXT",
-    "ALTER TABLE inventory_adjustment_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
-    "ALTER TABLE on_hand_inventory_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE inventory_adjustment_items ADD COLUMN unit TEXT DEFAULT 'шт'",
+    "ALTER TABLE on_hand_inventory_items ADD COLUMN unit TEXT DEFAULT 'шт'",
     "CREATE INDEX IF NOT EXISTS idx_customers_price_list ON customers(price_list_id)",
     "CREATE INDEX IF NOT EXISTS idx_orders_route ON orders(route_id)",
     "CREATE INDEX IF NOT EXISTS idx_deliveries_route ON deliveries(route_id)",
@@ -168,7 +168,7 @@ async function seedDatabase(database) {
     // Products
     for (const p of PRODUCTS) {
       await database.runAsync(
-        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, volume_unit, unit, barcode, weight, weight_unit, vat_percent) VALUES (?, ?, ?, ?, ?, ?, ?, 'LTR', 'PCE', ?, ?, 'KGM', ?)`,
+        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, volume_unit, unit, barcode, weight, weight_unit, vat_percent) VALUES (?, ?, ?, ?, ?, ?, ?, 'LTR', 'шт', ?, ?, 'KGM', ?)`,
         [p.id, p.sku, p.name, p.category, p.subcategory, p.brand, p.volume, p.barcode, p.weight, DEFAULT_VAT_PERCENT]
       );
     }
@@ -176,7 +176,7 @@ async function seedDatabase(database) {
     // Empties (возвратная тара как материалы из ERP)
     for (const e of EMPTIES) {
       await database.runAsync(
-        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, volume_unit, unit, barcode, weight, weight_unit, vat_percent, material_type) VALUES (?, ?, ?, ?, ?, ?, ?, 'LTR', 'PCE', ?, ?, 'KGM', ?, ?)`,
+        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, volume_unit, unit, barcode, weight, weight_unit, vat_percent, material_type) VALUES (?, ?, ?, ?, ?, ?, ?, 'LTR', 'шт', ?, ?, 'KGM', ?, ?)`,
         [e.id, e.sku, e.name, e.category, e.subcategory, e.brand, e.volume, e.barcode, e.weight, DEFAULT_VAT_PERCENT, e.material_type]
       );
     }
@@ -185,7 +185,7 @@ async function seedDatabase(database) {
     for (const pe of PRODUCT_EMPTIES) {
       await database.runAsync(
         `INSERT INTO product_empties (id, product_id, empty_product_id, quantity, unit, is_active) VALUES (?, ?, ?, ?, ?, ?)`,
-        [pe.id, pe.product_id, pe.empty_product_id, pe.quantity, pe.unit || 'PCE', pe.is_active ?? 1]
+        [pe.id, pe.product_id, pe.empty_product_id, pe.quantity, pe.unit || 'шт', pe.is_active ?? 1]
       );
     }
 
@@ -266,7 +266,7 @@ async function seedDatabase(database) {
     for (const oi of orderItems) {
       await database.runAsync(
         `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, vat_percent, total, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price, oi.discount_percent, oi.vat_percent ?? DEFAULT_VAT_PERCENT, oi.total, oi.unit || 'PCE', oi.currency || 'RUB']
+        [oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price, oi.discount_percent, oi.vat_percent ?? DEFAULT_VAT_PERCENT, oi.total, oi.unit || 'шт', oi.currency || 'RUB']
       );
     }
 
@@ -281,7 +281,7 @@ async function seedDatabase(database) {
     for (const di of deliveryItems) {
       await database.runAsync(
         `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [di.id, di.delivery_id, di.product_id, di.ordered_quantity, di.delivered_quantity, di.price, di.total, di.reason_code || null, di.unit || 'PCE', di.currency || 'RUB']
+        [di.id, di.delivery_id, di.product_id, di.ordered_quantity, di.delivered_quantity, di.price, di.total, di.reason_code || null, di.unit || 'шт', di.currency || 'RUB']
       );
     }
     for (const p of payments) {
@@ -302,7 +302,7 @@ async function seedDatabase(database) {
     for (const ri of returnItems) {
       await database.runAsync(
         `INSERT INTO return_items (id, return_id, product_id, quantity, price, total, condition, reason, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [ri.id, ri.return_id, ri.product_id, ri.quantity, ri.price, ri.total, ri.condition, ri.reason, ri.unit || 'PCE', ri.currency || 'RUB']
+        [ri.id, ri.return_id, ri.product_id, ri.quantity, ri.price, ri.total, ri.condition, ri.reason, ri.unit || 'шт', ri.currency || 'RUB']
       );
     }
 
@@ -344,7 +344,7 @@ async function seedDatabase(database) {
     for (const ti of tripItems) {
       await database.runAsync(
         `INSERT INTO loading_trip_items (id, loading_trip_id, product_id, planned_quantity, actual_quantity, scanned, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [ti.id, ti.loading_trip_id, ti.product_id, ti.planned_quantity, ti.actual_quantity, ti.scanned, ti.unit || 'PCE']
+        [ti.id, ti.loading_trip_id, ti.product_id, ti.planned_quantity, ti.actual_quantity, ti.scanned, ti.unit || 'шт']
       );
     }
 
@@ -368,7 +368,7 @@ async function seedDatabase(database) {
     for (const pri of packagingReturnItems) {
       await database.runAsync(
         `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [pri.id, pri.packaging_return_id, pri.product_id, pri.expected_quantity, pri.actual_quantity, pri.condition, pri.unit || 'PCE']
+        [pri.id, pri.packaging_return_id, pri.product_id, pri.expected_quantity, pri.actual_quantity, pri.condition, pri.unit || 'шт']
       );
     }
 
@@ -402,7 +402,7 @@ async function seedDatabase(database) {
     const errorLogEntries = generateErrorLog();
     for (const e of errorLogEntries) {
       await database.runAsync(
-        `INSERT INTO error_log (id, severity, source, message, context, stack_trace, user_id, screen, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT OR IGNORE INTO error_log (id, severity, source, message, context, stack_trace, user_id, screen, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [e.id, e.severity, e.source, e.message, e.context || null, e.stack_trace || null, e.user_id || null, e.screen || null, e.created_at]
       );
     }
@@ -425,7 +425,7 @@ export async function resetAndSeedDatabase() {
     'inventory_adjustment_items', 'inventory_adjustments', 'adjustment_reasons',
     'visit_report_photos', 'visit_reports',
     'receipts', 'delivery_notes', 'invoice_items', 'invoices',
-    'expenses', 'expense_types',
+    'expense_attachments', 'expenses', 'expense_types',
     'sync_meta', 'sync_log',
     'audit_log', 'devices', 'notifications',
     'packaging_return_items', 'packaging_returns',
@@ -438,7 +438,7 @@ export async function resetAndSeedDatabase() {
     'order_items', 'orders',
     'route_points', 'routes',
     'stock', 'vehicles',
-    'gps_tracks',
+    'gps_tracks', 'error_log',
     'units', 'product_empties', 'price_lists', 'products',
     'customers', 'users',
   ];
@@ -827,7 +827,7 @@ export async function saveOrderItems(orderId, items) {
       const itemId = generateId();
       await database.runAsync(
         `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, vat_percent, total, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.vat_percent ?? null, item.total, item.unit || 'PCE', item.currency || 'RUB']
+        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.vat_percent ?? null, item.total, item.unit || 'шт', item.currency || 'RUB']
       );
     }
     await database.execAsync('COMMIT');
@@ -863,7 +863,7 @@ export async function saveOrderWithItems(orderData, items, isEdit = false) {
       const itemId = generateId();
       await database.runAsync(
         `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, vat_percent, total, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.vat_percent ?? null, item.total, item.unit || 'PCE', item.currency || 'RUB']
+        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.vat_percent ?? null, item.total, item.unit || 'шт', item.currency || 'RUB']
       );
     }
 
@@ -946,7 +946,7 @@ export async function createDeliveryWithItems(delivery, items) {
       const diId = generateId();
       await database.runAsync(
         `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [diId, id, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null, item.unit || 'PCE', item.currency || 'RUB']
+        [diId, id, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null, item.unit || 'шт', item.currency || 'RUB']
       );
     }
     await database.execAsync('COMMIT');
@@ -990,7 +990,7 @@ export async function processShipmentDelivery({ pointId, customerId, driverId, t
       const itemId = generateId();
       await database.runAsync(
         `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, deliveryId, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null, item.unit || 'PCE', item.currency || 'RUB']
+        [itemId, deliveryId, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null, item.unit || 'шт', item.currency || 'RUB']
       );
     }
 
@@ -1448,7 +1448,7 @@ export async function savePackagingReturnItems(packagingReturnId, items) {
       const itemId = generateId();
       await database.runAsync(
         `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, packagingReturnId, item.product_id, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good', item.unit || 'PCE']
+        [itemId, packagingReturnId, item.product_id, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good', item.unit || 'шт']
       );
     }
     await database.execAsync('COMMIT');
@@ -2181,7 +2181,7 @@ export async function createInventoryAdjustment({ vehicleId, warehouse, userId, 
       await database.runAsync(
         `INSERT INTO inventory_adjustment_items (id, adjustment_id, product_id, reason_id, previous_qty, adjusted_qty, difference, notes, unit)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, id, item.product_id, item.reason_id, item.previous_qty, item.adjusted_qty, difference, item.notes || null, item.unit || 'PCE']
+        [itemId, id, item.product_id, item.reason_id, item.previous_qty, item.adjusted_qty, difference, item.notes || null, item.unit || 'шт']
       );
 
       // Apply the stock change
@@ -2257,7 +2257,7 @@ export async function createOnHandInventory({ customerId, routePointId, userId, 
       await database.runAsync(
         `INSERT INTO on_hand_inventory_items (id, on_hand_id, product_id, quantity, notes, unit)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [itemId, id, item.product_id, item.quantity, item.notes || null, item.unit || 'PCE']
+        [itemId, id, item.product_id, item.quantity, item.notes || null, item.unit || 'шт']
       );
     }
 

@@ -287,7 +287,7 @@ export default function InventoryCheckScreen() {
   const renderEmptiesTab = () => (
     <SectionList
       sections={emptiesSections}
-      keyExtractor={(item, idx) => `${item.packaging_type}-${idx}`}
+      keyExtractor={(item, idx) => `${item.product_id}-${idx}`}
       contentContainerStyle={styles.list}
       renderSectionHeader={({ section }) => (
         <View style={styles.sectionHeader}>
@@ -298,7 +298,7 @@ export default function InventoryCheckScreen() {
       renderItem={({ item }) => (
         <View style={styles.emptiesRow}>
           <View style={styles.emptiesInfo}>
-            <Text style={styles.emptiesType}>{item.packaging_type}</Text>
+            <Text style={styles.emptiesType}>{item.product_name}</Text>
             <View style={styles.emptiesQtyRow}>
               <Text style={styles.emptiesQtyLabel}>{t('emptiesTab.expected')}: <Text style={styles.emptiesQtyVal}>{item.expected_quantity}</Text></Text>
               <Text style={styles.emptiesQtyLabel}>{t('emptiesTab.actual')}: <Text style={styles.emptiesQtyVal}>{item.actual_quantity}</Text></Text>

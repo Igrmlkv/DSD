@@ -77,7 +77,8 @@
     "expenses": "Расходы",
     "orderConfirmation": "Подтверждение заказа",
     "customerDetail": "Клиент",
-    "visitReport": "Отчёт о визите"
+    "visitReport": "Отчёт о визите",
+    "errorLog": "Журнал ошибок"
   },
   "auth": {
     "title": "Авторизация",
@@ -141,7 +142,8 @@
     "systemStatus": "Статус системы",
     "syncConflicts": "{{count}} конфликт(ов) синхронизации",
     "recentActions": "Последние действия",
-    "seeAll": "Все"
+    "seeAll": "Все",
+    "errors": "Ошибки"
   },
   "routeList": {
     "todayRoute": "Маршрут на сегодня",
@@ -571,6 +573,35 @@
     "today": "Сегодня",
     "noRecords": "Нет записей"
   },
+  "errorLog": {
+    "filters": {
+      "all": "Все",
+      "critical": "Крит.",
+      "error": "Ошибки",
+      "warning": "Предупр.",
+      "info": "Инфо"
+    },
+    "searchPlaceholder": "Поиск по сообщению, источнику...",
+    "noErrors": "Нет ошибок",
+    "stats": {
+      "total": "Всего",
+      "today": "Сегодня",
+      "errors": "Ошибки"
+    },
+    "clearTitle": "Очистка журнала",
+    "clearMsg": "Удалить записи старше 30 дней?",
+    "clearButton": "Очистить",
+    "cleared": "Удалено {{count}} записей",
+    "detail": {
+      "source": "Источник",
+      "message": "Сообщение",
+      "context": "Контекст",
+      "stackTrace": "Стек вызовов",
+      "screen": "Экран",
+      "user": "Пользователь",
+      "timestamp": "Время"
+    }
+  },
   "systemSettings": {
     "syncSection": "Синхронизация",
     "autoSync": "Автосинхронизация",
@@ -592,6 +623,8 @@
     "logsSection": "Журналы",
     "auditLog": "Журнал аудита",
     "auditLogSub": "Все действия в системе",
+    "errorLog": "Журнал ошибок",
+    "errorLogSub": "Ошибки и предупреждения системы",
     "aboutSection": "О системе",
     "appVersion": "Версия приложения",
     "appVersionSub": "DSD Mini v1.0.0 (SDK 55)",

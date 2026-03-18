@@ -29,6 +29,16 @@ export async function getDatabase() {
 export async function initDatabase() {
   const database = await getDatabase();
 
+  // Drop old packaging_return_items if it has obsolete schema (packaging_type instead of product_id)
+  try {
+    const cols = await database.getAllAsync("PRAGMA table_info(packaging_return_items)");
+    if (cols.length > 0 && (cols.some((c) => c.name === 'packaging_type') || !cols.some((c) => c.name === 'product_id'))) {
+      await database.execAsync('PRAGMA foreign_keys = OFF');
+      await database.execAsync('DROP TABLE packaging_return_items');
+      await database.execAsync('PRAGMA foreign_keys = ON');
+    }
+  } catch { /* table does not exist yet — will be created below */ }
+
   for (const sql of CREATE_TABLES) {
     await database.execAsync(sql);
   }
@@ -50,6 +60,7 @@ export async function initDatabase() {
     "ALTER TABLE route_points ADD COLUMN actual_arrival_lon REAL",
     "ALTER TABLE route_points ADD COLUMN actual_departure_lat REAL",
     "ALTER TABLE route_points ADD COLUMN actual_departure_lon REAL",
+    "ALTER TABLE products ADD COLUMN material_type TEXT DEFAULT 'product'",
   ];
   for (const sql of migrations) {
     try { await database.execAsync(sql); } catch { /* column already exists */ }
@@ -79,6 +90,8 @@ async function seedDatabase(database) {
   const {
     USERS,
     PRODUCTS,
+    EMPTIES,
+    PRODUCT_EMPTIES,
     CUSTOMERS,
     VEHICLES,
     generatePrices,
@@ -94,6 +107,7 @@ async function seedDatabase(database) {
     generateLoadingTrips,
     generateCashCollections,
     generatePackagingReturns,
+    generateErrorLog,
   } = require('./seed');
 
   await database.execAsync('BEGIN TRANSACTION');
@@ -112,6 +126,22 @@ async function seedDatabase(database) {
       await database.runAsync(
         `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, barcode, weight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [p.id, p.sku, p.name, p.category, p.subcategory, p.brand, p.volume, p.barcode, p.weight]
+      );
+    }
+
+    // Empties (возвратная тара как материалы из ERP)
+    for (const e of EMPTIES) {
+      await database.runAsync(
+        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, barcode, weight, material_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [e.id, e.sku, e.name, e.category, e.subcategory, e.brand, e.volume, e.barcode, e.weight, e.material_type]
+      );
+    }
+
+    // Product-Empties links (tied empties)
+    for (const pe of PRODUCT_EMPTIES) {
+      await database.runAsync(
+        `INSERT INTO product_empties (id, product_id, empty_product_id, quantity) VALUES (?, ?, ?, ?)`,
+        [pe.id, pe.product_id, pe.empty_product_id, pe.quantity]
       );
     }
 
@@ -285,8 +315,8 @@ async function seedDatabase(database) {
     }
     for (const pri of packagingReturnItems) {
       await database.runAsync(
-        `INSERT INTO packaging_return_items (id, packaging_return_id, packaging_type, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
-        [pri.id, pri.packaging_return_id, pri.packaging_type, pri.expected_quantity, pri.actual_quantity, pri.condition]
+        `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
+        [pri.id, pri.packaging_return_id, pri.product_id, pri.expected_quantity, pri.actual_quantity, pri.condition]
       );
     }
 
@@ -316,6 +346,15 @@ async function seedDatabase(database) {
       );
     }
 
+    // Error Log (seed)
+    const errorLogEntries = generateErrorLog();
+    for (const e of errorLogEntries) {
+      await database.runAsync(
+        `INSERT INTO error_log (id, severity, source, message, context, stack_trace, user_id, screen, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [e.id, e.severity, e.source, e.message, e.context || null, e.stack_trace || null, e.user_id || null, e.screen || null, e.created_at]
+      );
+    }
+
     await database.execAsync('COMMIT');
   } catch (error) {
     await database.execAsync('ROLLBACK');
@@ -326,7 +365,7 @@ async function seedDatabase(database) {
 export async function resetAndSeedDatabase() {
   const database = await getDatabase();
 
-  // Disable FK checks temporarily for clean delete
+  // Disable FK checks temporarily for clean drop
   await database.execAsync('PRAGMA foreign_keys = OFF');
 
   const tables = [
@@ -347,26 +386,23 @@ export async function resetAndSeedDatabase() {
     'order_items', 'orders',
     'route_points', 'routes',
     'stock', 'vehicles',
-    'price_lists', 'products',
+    'gps_tracks',
+    'product_empties', 'price_lists', 'products',
     'customers', 'users',
   ];
 
-  await database.execAsync('BEGIN TRANSACTION');
-  try {
-    for (const table of tables) {
-      await database.execAsync(`DELETE FROM ${table}`);
-    }
-    await database.execAsync('COMMIT');
-  } catch (error) {
-    await database.execAsync('ROLLBACK');
-    throw error;
+  // Drop all tables and recreate with latest schema
+  for (const table of tables) {
+    await database.execAsync(`DROP TABLE IF EXISTS ${table}`);
   }
-
   await database.execAsync('PRAGMA foreign_keys = ON');
+
+  for (const sql of CREATE_TABLES) {
+    await database.execAsync(sql);
+  }
 
   // Re-seed
   await seedDatabase(database);
-  // Re-ensure idempotent data
   try { await ensureExpenseTypes(); } catch { /* ignore */ }
   try { await ensureAdjustmentReasons(); } catch { /* ignore */ }
 
@@ -545,6 +581,21 @@ export async function getOrdersByRoutePoint(routePointId) {
     WHERE o.route_point_id = ?
     ORDER BY o.id
   `, [routePointId]);
+}
+
+export async function getOrdersByRoutes(routeIds) {
+  if (!routeIds || routeIds.length === 0) return [];
+  const database = await getDatabase();
+  const placeholders = routeIds.map(() => '?').join(',');
+  return database.getAllAsync(`
+    SELECT o.*, c.name as customer_name, c.address as customer_address, u.full_name as user_name
+    FROM orders o
+    JOIN customers c ON c.id = o.customer_id
+    JOIN users u ON u.id = o.user_id
+    JOIN route_points rp ON rp.id = o.route_point_id
+    WHERE rp.route_id IN (${placeholders})
+    ORDER BY o.order_date DESC, o.id
+  `, routeIds);
 }
 
 export async function getOrderById(id) {
@@ -1304,7 +1355,10 @@ export async function getPackagingReturns(driverId = null) {
 export async function getPackagingReturnItems(packagingReturnId) {
   const database = await getDatabase();
   return database.getAllAsync(`
-    SELECT * FROM packaging_return_items WHERE packaging_return_id = ?
+    SELECT pri.*, p.name as product_name, p.sku as product_sku
+    FROM packaging_return_items pri
+    JOIN products p ON p.id = pri.product_id
+    WHERE pri.packaging_return_id = ?
   `, [packagingReturnId]);
 }
 
@@ -1328,8 +1382,8 @@ export async function savePackagingReturnItems(packagingReturnId, items) {
     for (const item of items) {
       const itemId = generateId();
       await database.runAsync(
-        `INSERT INTO packaging_return_items (id, packaging_return_id, packaging_type, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
-        [itemId, packagingReturnId, item.packaging_type, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good']
+        `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
+        [itemId, packagingReturnId, item.product_id, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good']
       );
     }
     await database.execAsync('COMMIT');
@@ -1451,6 +1505,104 @@ export async function addAuditEntry(entry) {
     [id, entry.user_id, entry.action, entry.entity_type || null, entry.entity_id || null, entry.details || null, now]
   );
   return id;
+}
+
+// =====================================================
+// ERROR LOG (Structured Logging)
+// =====================================================
+
+export async function getErrorLogs(filters = {}) {
+  const database = await getDatabase();
+  let where = '1=1';
+  const params = [];
+
+  if (filters.severity) {
+    where += ' AND e.severity = ?';
+    params.push(filters.severity);
+  }
+  if (filters.source) {
+    where += ' AND e.source = ?';
+    params.push(filters.source);
+  }
+  if (filters.dateFrom) {
+    where += ' AND e.created_at >= ?';
+    params.push(filters.dateFrom);
+  }
+  if (filters.dateTo) {
+    where += ' AND e.created_at <= ?';
+    params.push(filters.dateTo);
+  }
+  if (filters.search) {
+    where += ' AND (e.message LIKE ? OR e.source LIKE ? OR e.context LIKE ?)';
+    const term = `%${filters.search}%`;
+    params.push(term, term, term);
+  }
+
+  const limit = filters.limit || 50;
+  const offset = filters.offset || 0;
+  params.push(limit, offset);
+
+  return database.getAllAsync(`
+    SELECT e.*, u.full_name as user_name
+    FROM error_log e
+    LEFT JOIN users u ON u.id = e.user_id
+    WHERE ${where}
+    ORDER BY e.created_at DESC
+    LIMIT ? OFFSET ?
+  `, params);
+}
+
+export async function addErrorLog(entry) {
+  const database = await getDatabase();
+  const id = generateId();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO error_log (id, severity, source, message, context, stack_trace, user_id, screen, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      entry.severity || 'error',
+      entry.source,
+      entry.message,
+      entry.context ? (typeof entry.context === 'string' ? entry.context : JSON.stringify(entry.context)) : null,
+      entry.stack_trace || null,
+      entry.user_id || null,
+      entry.screen || null,
+      now,
+    ]
+  );
+  return id;
+}
+
+export async function getErrorLogStats() {
+  const database = await getDatabase();
+  const today = new Date().toISOString().slice(0, 10);
+  const [total, todayCount, bySeverity] = await Promise.all([
+    database.getFirstAsync('SELECT COUNT(*) as count FROM error_log'),
+    database.getFirstAsync('SELECT COUNT(*) as count FROM error_log WHERE date(created_at) = ?', [today]),
+    database.getAllAsync('SELECT severity, COUNT(*) as count FROM error_log GROUP BY severity ORDER BY count DESC'),
+  ]);
+  return {
+    total: total?.count || 0,
+    today: todayCount?.count || 0,
+    bySeverity: bySeverity || [],
+  };
+}
+
+export async function getErrorLogSources() {
+  const database = await getDatabase();
+  return database.getAllAsync('SELECT DISTINCT source FROM error_log ORDER BY source');
+}
+
+export async function clearErrorLogs(olderThanDays = 30) {
+  const database = await getDatabase();
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - olderThanDays);
+  const result = await database.runAsync(
+    'DELETE FROM error_log WHERE created_at < ?',
+    [cutoff.toISOString()]
+  );
+  return result.changes;
 }
 
 // =====================================================
@@ -1592,7 +1744,7 @@ export async function getDbStats() {
     'routes', 'route_points', 'orders', 'order_items', 'deliveries', 'delivery_items',
     'returns', 'return_items', 'payments',
     'loading_trips', 'loading_trip_items', 'cash_collections',
-    'packaging_returns', 'packaging_return_items',
+    'packaging_returns', 'packaging_return_items', 'product_empties',
     'notifications', 'devices', 'audit_log', 'tour_checkins',
   ];
   for (const table of tables) {
@@ -2114,13 +2266,34 @@ export async function getEmptiesStock(vehicleId) {
   const database = await getDatabase();
   return database.getAllAsync(
     `SELECT pr.id, pr.customer_id, c.name as customer_name, pr.return_date, pr.status,
-            pri.packaging_type, pri.expected_quantity, pri.actual_quantity, pri.condition
+            p.name as product_name,
+            COALESCE(p.sku, '') as product_sku, pri.product_id,
+            pri.expected_quantity, pri.actual_quantity, pri.condition
      FROM packaging_returns pr
      JOIN packaging_return_items pri ON pri.packaging_return_id = pr.id
+     LEFT JOIN products p ON p.id = pri.product_id
      LEFT JOIN customers c ON pr.customer_id = c.id
      WHERE pr.driver_id IN (SELECT driver_id FROM vehicles WHERE id = ?)
      ORDER BY pr.return_date DESC`,
     [vehicleId]
+  );
+}
+
+export async function getEmptyProducts() {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM products WHERE material_type = 'empty' AND is_active = 1 ORDER BY name`
+  );
+}
+
+export async function getProductEmpties(productId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT pe.*, p.name as empty_name, p.sku as empty_sku
+     FROM product_empties pe
+     JOIN products p ON p.id = pe.empty_product_id
+     WHERE pe.product_id = ?`,
+    [productId]
   );
 }
 

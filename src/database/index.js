@@ -26,6 +26,7 @@ export {
   getAllOrders,
   getOrdersByCustomer,
   getOrdersByRoutePoint,
+  getOrdersByRoutes,
   getOrderById,
   searchOrderByCode,
   getOrderItems,
@@ -99,6 +100,13 @@ export {
   getAuditLog,
   addAuditEntry,
 
+  // Error Log (Structured Logging)
+  getErrorLogs,
+  addErrorLog,
+  getErrorLogStats,
+  getErrorLogSources,
+  clearErrorLogs,
+
   // Users (Admin)
   getAllUsers,
   getUserById,
@@ -165,6 +173,8 @@ export {
 
   // Empties
   getEmptiesStock,
+  getEmptyProducts,
+  getProductEmpties,
 
   // GPS Tracking
   insertGpsTrack,

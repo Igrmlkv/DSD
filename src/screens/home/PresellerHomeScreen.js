@@ -10,7 +10,7 @@ import { SCREEN_NAMES } from '../../constants/screens';
 import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
-  getRoutesByDate, getRoutePoints, getAllOrders,
+  getRoutesByDate, getRoutePoints, getOrdersByRoutes,
   getUnreadNotificationCount,
 } from '../../database';
 
@@ -41,15 +41,15 @@ export default function PresellerHomeScreen() {
         }
       }
 
-      const orders = await getAllOrders(user.id);
-      const todayOrders = orders.filter((o) => o.order_date?.startsWith(today));
-      const ordersAmount = todayOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
+      const routeIds = routes.map((r) => r.id);
+      const routeOrders = await getOrdersByRoutes(routeIds);
+      const ordersAmount = routeOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
 
       const unread = await getUnreadNotificationCount(user.id);
 
       setStats({
         totalPoints, completedPoints,
-        totalOrders: todayOrders.length, ordersAmount,
+        totalOrders: routeOrders.length, ordersAmount,
         routeStatus,
         unreadNotifications: unread,
       });

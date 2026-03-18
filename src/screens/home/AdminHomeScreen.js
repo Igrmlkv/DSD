@@ -11,6 +11,7 @@ import useAuthStore from '../../store/authStore';
 import {
   getDevices, getSyncStats, getSyncConflicts,
   getAuditLog, getUnreadNotificationCount,
+  getErrorLogStats,
 } from '../../database';
 
 export default function AdminHomeScreen() {
@@ -23,20 +24,23 @@ export default function AdminHomeScreen() {
   const [conflicts, setConflicts] = useState(0);
   const [recentAudit, setRecentAudit] = useState([]);
   const [unread, setUnread] = useState(0);
+  const [errorStats, setErrorStats] = useState({ total: 0, today: 0 });
 
   const loadData = useCallback(async () => {
     try {
-      const [devices, syncConflicts, audit, n] = await Promise.all([
+      const [devices, syncConflicts, audit, n, errStats] = await Promise.all([
         getDevices(),
         getSyncConflicts(),
         getAuditLog({ limit: 5 }),
         getUnreadNotificationCount(user.id),
+        getErrorLogStats(),
       ]);
       setDeviceCount(devices.length);
       setActiveDevices(devices.filter((d) => d.status === 'active').length);
       setConflicts(syncConflicts.length);
       setRecentAudit(audit);
       setUnread(n);
+      setErrorStats(errStats);
     } catch (e) {
       console.error('AdminHome load error:', e);
     }
@@ -59,6 +63,8 @@ export default function AdminHomeScreen() {
       onPress: () => navigation.navigate(SCREEN_NAMES.USERS_TAB) },
     { icon: 'settings-outline', value: '', label: t('adminHome.settings'), color: COLORS.info,
       onPress: () => navigation.navigate(SCREEN_NAMES.SETTINGS_TAB) },
+    { icon: 'bug-outline', value: errorStats.today > 0 ? errorStats.today : '', label: t('adminHome.errors'), color: errorStats.today > 0 ? COLORS.error : COLORS.textSecondary,
+      onPress: () => navigation.navigate(SCREEN_NAMES.SYNC_TAB, { screen: SCREEN_NAMES.ERROR_LOG }) },
   ];
 
   const actionIcon = (action) => {

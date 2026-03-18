@@ -24,6 +24,7 @@ const TAB_CONFIG = {
     focused: 'map',
     unfocused: 'map-outline',
     isStack: true,
+    initialScreen: SCREEN_NAMES.ROUTE_LIST,
   },
   [SCREEN_NAMES.WAREHOUSE_OPS_TAB]: {
     component: WarehouseOpsStack,
@@ -31,6 +32,7 @@ const TAB_CONFIG = {
     focused: 'cube',
     unfocused: 'cube-outline',
     isStack: true,
+    initialScreen: SCREEN_NAMES.INVENTORY_CHECK,
   },
   [SCREEN_NAMES.PROFILE_TAB]: {
     component: ProfileStack,
@@ -38,6 +40,7 @@ const TAB_CONFIG = {
     focused: 'person-circle',
     unfocused: 'person-circle-outline',
     isStack: true,
+    initialScreen: SCREEN_NAMES.PROFILE,
   },
 };
 
@@ -68,6 +71,13 @@ export default function ExpeditorTabs() {
             title: cfg.title,
             ...(cfg.isStack && { headerShown: false }),
           }}
+          listeners={({ navigation }) => ({
+            tabPress: (e) => {
+              if (cfg.isStack) {
+                navigation.navigate(name, { screen: cfg.initialScreen });
+              }
+            },
+          })}
         />
       ))}
     </Tab.Navigator>

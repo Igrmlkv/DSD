@@ -6,6 +6,7 @@ import i18n from '../i18n';
 import SyncMonitoringScreen from '../screens/admin/SyncMonitoringScreen';
 import ConflictResolutionScreen from '../screens/admin/ConflictResolutionScreen';
 import AuditLogScreen from '../screens/admin/AuditLogScreen';
+import ErrorLogScreen from '../screens/admin/ErrorLogScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,11 @@ export default function SyncStack() {
         name={SCREEN_NAMES.AUDIT_LOG}
         component={AuditLogScreen}
         options={{ title: i18n.t('nav.audit') }}
+      />
+      <Stack.Screen
+        name={SCREEN_NAMES.ERROR_LOG}
+        component={ErrorLogScreen}
+        options={{ title: i18n.t('nav.errorLog') }}
       />
     </Stack.Navigator>
   );

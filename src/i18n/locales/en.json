@@ -77,7 +77,8 @@
     "expenses": "Expenses",
     "orderConfirmation": "Order Confirmation",
     "customerDetail": "Customer",
-    "visitReport": "Visit Report"
+    "visitReport": "Visit Report",
+    "errorLog": "Error Log"
   },
   "auth": {
     "title": "Authorization",
@@ -141,7 +142,8 @@
     "systemStatus": "System status",
     "syncConflicts": "{{count}} sync conflict(s)",
     "recentActions": "Recent actions",
-    "seeAll": "All"
+    "seeAll": "All",
+    "errors": "Errors"
   },
   "routeList": {
     "todayRoute": "Today's Route",
@@ -571,6 +573,35 @@
     "today": "Today",
     "noRecords": "No records"
   },
+  "errorLog": {
+    "filters": {
+      "all": "All",
+      "critical": "Critical",
+      "error": "Errors",
+      "warning": "Warnings",
+      "info": "Info"
+    },
+    "searchPlaceholder": "Search by message, source...",
+    "noErrors": "No errors",
+    "stats": {
+      "total": "Total",
+      "today": "Today",
+      "errors": "Errors"
+    },
+    "clearTitle": "Clear Log",
+    "clearMsg": "Delete entries older than 30 days?",
+    "clearButton": "Clear",
+    "cleared": "{{count}} entries deleted",
+    "detail": {
+      "source": "Source",
+      "message": "Message",
+      "context": "Context",
+      "stackTrace": "Stack Trace",
+      "screen": "Screen",
+      "user": "User",
+      "timestamp": "Timestamp"
+    }
+  },
   "systemSettings": {
     "syncSection": "Synchronization",
     "autoSync": "Auto Sync",
@@ -592,6 +623,8 @@
     "logsSection": "Logs",
     "auditLog": "Audit Log",
     "auditLogSub": "All system actions",
+    "errorLog": "Error Log",
+    "errorLogSub": "System errors and warnings",
     "aboutSection": "About",
     "appVersion": "App Version",
     "appVersionSub": "DSD Mini v1.0.0 (SDK 55)",

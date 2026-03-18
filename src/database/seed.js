@@ -66,6 +66,34 @@ const PRODUCTS = [
 ];
 
 // ============================================================
+// Возвратная тара (материалы типа empty из ERP)
+// ============================================================
+const EMPTIES = [
+  { id: 'emp-001', sku: 'EMP-PB-01', name: 'Ящик пластиковый (20 бут.)', category: 'Возвратная тара', subcategory: 'Ящики', brand: '', volume: '20 мест', barcode: '9900000000011', weight: 1.2, material_type: 'empty' },
+  { id: 'emp-002', sku: 'EMP-PAL-01', name: 'Паллета EUR 1200x800', category: 'Возвратная тара', subcategory: 'Паллеты', brand: '', volume: '1200x800', barcode: '9900000000028', weight: 25.0, material_type: 'empty' },
+  { id: 'emp-003', sku: 'EMP-BTL-05', name: 'Бутылка стеклянная 0.5л', category: 'Возвратная тара', subcategory: 'Бутылки', brand: '', volume: '0.5л', barcode: '9900000000035', weight: 0.35, material_type: 'empty' },
+];
+
+// ============================================================
+// Привязка тары к товарам (tied empties)
+// ============================================================
+const PRODUCT_EMPTIES = [
+  // Coca-Cola 0.5л → 1 бутылка стеклянная, входит в пластиковый ящик по 20 шт
+  { id: 'pe-001', product_id: 'prd-001', empty_product_id: 'emp-003', quantity: 1 },
+  { id: 'pe-002', product_id: 'prd-001', empty_product_id: 'emp-001', quantity: 0.05 },
+  // Coca-Cola 1л → 1 бутылка
+  { id: 'pe-003', product_id: 'prd-002', empty_product_id: 'emp-003', quantity: 1 },
+  // Fanta 0.5л → 1 бутылка, 1/20 ящика
+  { id: 'pe-004', product_id: 'prd-004', empty_product_id: 'emp-003', quantity: 1 },
+  { id: 'pe-005', product_id: 'prd-004', empty_product_id: 'emp-001', quantity: 0.05 },
+  // Sprite 0.5л → 1 бутылка, 1/20 ящика
+  { id: 'pe-006', product_id: 'prd-006', empty_product_id: 'emp-003', quantity: 1 },
+  { id: 'pe-007', product_id: 'prd-006', empty_product_id: 'emp-001', quantity: 0.05 },
+  // Паллета: ящики перевозятся на паллетах (40 ящиков = 1 паллета)
+  { id: 'pe-008', product_id: 'emp-001', empty_product_id: 'emp-002', quantity: 0.025 },
+];
+
+// ============================================================
 // Прайс-лист (базовые и розничные цены)
 // ============================================================
 function generatePrices() {
@@ -595,17 +623,39 @@ function generatePackagingReturns() {
   ];
 
   const packagingReturnItems = [
-    { id: 'pkri-001', packaging_return_id: 'pkr-001', packaging_type: 'Ящик пластиковый', expected_quantity: 5, actual_quantity: 4, condition: 'good' },
-    { id: 'pkri-002', packaging_return_id: 'pkr-001', packaging_type: 'Поддон деревянный', expected_quantity: 2, actual_quantity: 2, condition: 'good' },
-    { id: 'pkri-003', packaging_return_id: 'pkr-001', packaging_type: 'Ящик пластиковый', expected_quantity: 0, actual_quantity: 1, condition: 'damaged' },
+    { id: 'pkri-001', packaging_return_id: 'pkr-001', product_id: 'emp-001', expected_quantity: 5, actual_quantity: 4, condition: 'good' },
+    { id: 'pkri-002', packaging_return_id: 'pkr-001', product_id: 'emp-002', expected_quantity: 2, actual_quantity: 2, condition: 'good' },
+    { id: 'pkri-003', packaging_return_id: 'pkr-001', product_id: 'emp-003', expected_quantity: 10, actual_quantity: 8, condition: 'damaged' },
   ];
 
   return { packagingReturns, packagingReturnItems };
 }
 
+function generateErrorLog() {
+  const today = new Date().toISOString().slice(0, 10);
+  const h = (hh, mm) => `${today}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00.000Z`;
+
+  const entries = [
+    { id: 'elog-001', severity: 'error', source: 'database', message: 'UNIQUE constraint failed: stock.warehouse, stock.product_id', context: '{"warehouse":"veh-001","product_id":"prd-001"}', stack_trace: null, user_id: 'usr-001', screen: 'ShipmentScreen', created_at: h(8, 14) },
+    { id: 'elog-002', severity: 'warning', source: 'sync', message: 'Sync upload timeout after 30s — request aborted', context: '{"entity":"orders","attempt":2}', stack_trace: null, user_id: null, screen: null, created_at: h(8, 30) },
+    { id: 'elog-003', severity: 'critical', source: 'database', message: 'Database migration failed: column "material_type" already exists', context: null, stack_trace: 'Error: column already exists\n    at initDatabase (database.js:65)\n    at App.js:12', user_id: null, screen: null, created_at: h(7, 2) },
+    { id: 'elog-004', severity: 'error', source: 'pricing', message: 'Price not found for product prd-015 in price_lists', context: '{"product_id":"prd-015","customer_id":"cst-005"}', stack_trace: null, user_id: 'usr-004', screen: 'OrderEditScreen', created_at: h(9, 45) },
+    { id: 'elog-005', severity: 'info', source: 'auth', message: 'User session restored from secure storage', context: '{"user":"petrov"}', stack_trace: null, user_id: 'usr-001', screen: 'LoginScreen', created_at: h(7, 55) },
+    { id: 'elog-006', severity: 'warning', source: 'location', message: 'GPS accuracy low: 150m (threshold 50m)', context: '{"lat":55.7558,"lon":37.6173,"accuracy":150}', stack_trace: null, user_id: 'usr-001', screen: 'RouteListScreen', created_at: h(10, 12) },
+    { id: 'elog-007', severity: 'error', source: 'document', message: 'PDF generation failed: expo-print returned null', context: '{"invoice_id":"inv-001"}', stack_trace: 'Error: Print result is null\n    at documentService.js:42\n    at InvoiceSummaryScreen.js:88', user_id: 'usr-001', screen: 'InvoiceSummaryScreen', created_at: h(11, 20) },
+    { id: 'elog-008', severity: 'debug', source: 'navigation', message: 'Screen transition: ExpeditorHome -> RouteList', context: null, stack_trace: null, user_id: 'usr-001', screen: 'RouteListScreen', created_at: h(8, 5) },
+    { id: 'elog-009', severity: 'error', source: 'sync', message: 'Failed to parse server response: Unexpected token < in JSON', context: '{"url":"/api/sync/upload","status":502}', stack_trace: 'SyntaxError: Unexpected token <\n    at JSON.parse\n    at syncService.js:123', user_id: null, screen: null, created_at: h(12, 0) },
+    { id: 'elog-010', severity: 'warning', source: 'inventory', message: 'Negative stock detected after adjustment: prd-003 qty=-2', context: '{"product_id":"prd-003","warehouse":"veh-001","qty":-2}', stack_trace: null, user_id: 'usr-001', screen: 'AdjustInventoryScreen', created_at: h(13, 30) },
+  ];
+
+  return entries;
+}
+
 export {
   USERS,
   PRODUCTS,
+  EMPTIES,
+  PRODUCT_EMPTIES,
   CUSTOMERS,
   VEHICLES,
   generatePrices,
@@ -621,4 +671,5 @@ export {
   generateLoadingTrips,
   generateCashCollections,
   generatePackagingReturns,
+  generateErrorLog,
 };

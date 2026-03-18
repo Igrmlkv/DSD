@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 const CREATE_TABLES = [
   // --- Справочники ---
@@ -59,9 +59,21 @@ const CREATE_TABLES = [
     barcode TEXT,
     weight REAL,
     image_url TEXT,
+    material_type TEXT DEFAULT 'product' CHECK(material_type IN ('product','empty')),
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  // --- Привязка возвратной тары к товарам (tied empties) ---
+
+  `CREATE TABLE IF NOT EXISTS product_empties (
+    id TEXT PRIMARY KEY,
+    product_id TEXT NOT NULL,
+    empty_product_id TEXT NOT NULL,
+    quantity REAL DEFAULT 1,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (empty_product_id) REFERENCES products(id)
   )`,
 
   `CREATE TABLE IF NOT EXISTS price_lists (
@@ -342,11 +354,12 @@ const CREATE_TABLES = [
   `CREATE TABLE IF NOT EXISTS packaging_return_items (
     id TEXT PRIMARY KEY,
     packaging_return_id TEXT NOT NULL,
-    packaging_type TEXT NOT NULL,
+    product_id TEXT NOT NULL,
     expected_quantity REAL DEFAULT 0,
     actual_quantity REAL DEFAULT 0,
     condition TEXT DEFAULT 'good' CHECK(condition IN ('good','damaged','missing')),
-    FOREIGN KEY (packaging_return_id) REFERENCES packaging_returns(id)
+    FOREIGN KEY (packaging_return_id) REFERENCES packaging_returns(id),
+    FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
 
   // --- Уведомления ---
@@ -699,6 +712,26 @@ const CREATE_TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_gps_tracks_driver ON gps_tracks(driver_id)`,
   `CREATE INDEX IF NOT EXISTS idx_gps_tracks_route ON gps_tracks(route_id)`,
   `CREATE INDEX IF NOT EXISTS idx_gps_tracks_recorded ON gps_tracks(recorded_at)`,
+
+  // --- Structured Error Log ---
+
+  `CREATE TABLE IF NOT EXISTS error_log (
+    id TEXT PRIMARY KEY,
+    severity TEXT NOT NULL DEFAULT 'error' CHECK(severity IN ('debug','info','warning','error','critical')),
+    source TEXT NOT NULL,
+    message TEXT NOT NULL,
+    context TEXT,
+    stack_trace TEXT,
+    user_id TEXT,
+    screen TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_error_log_severity ON error_log(severity)`,
+  `CREATE INDEX IF NOT EXISTS idx_error_log_source ON error_log(source)`,
+  `CREATE INDEX IF NOT EXISTS idx_error_log_date ON error_log(created_at)`,
+  `CREATE INDEX IF NOT EXISTS idx_error_log_user ON error_log(user_id)`,
 ];
 
 export { SCHEMA_VERSION, CREATE_TABLES };

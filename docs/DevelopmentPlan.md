@@ -65,7 +65,7 @@
 
 **Реализация:**
 - ❌ HTTP-клиент (axios / fetch) с offline queue
-- ❌ REST API contract (или адаптер для будущего SAP-backend)
+- ❌ REST API contract (или адаптер для будущего ERP-backend)
 - ❌ Sync engine: полная загрузка + дельта + conflict resolution
 - ❌ Retry logic с exponential backoff
 - 🟡 `SyncMonitoringScreen` — UI есть, реальной логики нет
@@ -338,7 +338,7 @@
 
 ### WP-3.6: Empties Management (Управление возвратной тарой) 🟡 Частично
 
-**Текущее состояние (актуально):** `PackagingReturnsScreen.js` — экран существует, **4 hardcoded типа тары** (plastic box, wooden pallet, cardboard box, bottles). Работает per-customer на визите. Сохранение в БД. **Не интегрирован с материалами, типы не configurable.**
+**Текущее состояние (актуально):** `PackagingReturnsScreen.js` — экран существует, **4 hardcoded типа тары** (plastic box, wooden pallet, bottles). Работает per-customer на визите. Сохранение в БД. **Не интегрирован с материалами, типы не configurable.**
 
 **Требования SAP DSD (стр. 79-81, стр. 73-76):**
 

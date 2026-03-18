@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getAllOrders, getOrderItems, deleteOrder, getActiveVisitCustomer } from '../../database';
+import { getAllOrders, getOrderItems, deleteOrder, getActiveVisitCustomer, getRoutesByDate, getOrdersByRoutes } from '../../database';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
@@ -23,7 +23,7 @@ function formatMoney(v) {
   return Number(v).toLocaleString('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 });
 }
 
-export default function OrdersScreen() {
+export default function OrdersScreen({ route: screenRoute }) {
   const { t } = useTranslation();
   const user = useAuthStore((state) => state.user);
   const navigation = useNavigation();
@@ -31,16 +31,25 @@ export default function OrdersScreen() {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [items, setItems] = useState({});
   const [loading, setLoading] = useState(true);
+  const todayOnly = screenRoute?.params?.todayRoute;
 
   useFocusEffect(
     useCallback(() => {
       loadOrders();
-    }, [])
+    }, [todayOnly])
   );
 
   async function loadOrders() {
     try {
-      const data = await getAllOrders();
+      let data;
+      if (todayOnly) {
+        const today = new Date().toISOString().split('T')[0];
+        const routes = await getRoutesByDate(today, user.id);
+        const routeIds = routes.map((r) => r.id);
+        data = await getOrdersByRoutes(routeIds);
+      } else {
+        data = await getAllOrders();
+      }
       setOrders(data);
     } catch (e) {
       console.error(e);

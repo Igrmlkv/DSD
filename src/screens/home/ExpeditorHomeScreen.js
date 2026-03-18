@@ -11,7 +11,7 @@ import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getRoutesByDate, getRoutePoints, getPayments,
-  getUnreadNotificationCount, getVehicleByDriver, getAllOrders,
+  getUnreadNotificationCount, getVehicleByDriver, getOrdersByRoutes,
   getTodayExpensesTotal,
 } from '../../database';
 
@@ -60,11 +60,9 @@ export default function ExpeditorHomeScreen() {
         getTodayExpensesTotal(user.id),
       ]);
 
-      const allOrders = await getAllOrders();
-      const todayUserOrders = allOrders.filter(
-        (o) => o.order_date?.startsWith(today) && o.user_id === user.id
-      );
-      const todayOrdersAmount = todayUserOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
+      const routeIds = routes.map((r) => r.id);
+      const routeOrders = await getOrdersByRoutes(routeIds);
+      const todayOrdersAmount = routeOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
 
       setStats({
         totalPoints,
@@ -74,7 +72,7 @@ export default function ExpeditorHomeScreen() {
         routeStatus,
         vehiclePlate: vehicle?.plate_number || '',
         unreadNotifications: unread,
-        todayOrders: todayUserOrders.length,
+        todayOrders: routeOrders.length,
         todayOrdersAmount,
         todayExpenses,
       });
@@ -143,7 +141,7 @@ export default function ExpeditorHomeScreen() {
       <View style={styles.cardsRow}>
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB)}
+          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB, { screen: SCREEN_NAMES.ROUTE_LIST })}
           activeOpacity={0.7}
         >
           <Ionicons name="location-outline" size={28} color={COLORS.primary} />
@@ -159,7 +157,7 @@ export default function ExpeditorHomeScreen() {
       <View style={[styles.cardsRow, { marginTop: 12 }]}>
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB, { screen: SCREEN_NAMES.ORDERS_LIST })}
+          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB, { screen: SCREEN_NAMES.ORDERS_LIST, params: { todayRoute: true } })}
           activeOpacity={0.7}
         >
           <Ionicons name="document-text-outline" size={28} color={COLORS.primary} />

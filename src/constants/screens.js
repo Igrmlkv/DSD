@@ -53,6 +53,7 @@ export const SCREEN_NAMES = {
   SYNC_MONITORING: 'SyncMonitoring',
   CONFLICT_RESOLUTION: 'ConflictResolution',
   AUDIT_LOG: 'AuditLog',
+  ERROR_LOG: 'ErrorLog',
   SYSTEM_SETTINGS: 'SystemSettings',
 
   // Inventory extended

@@ -217,7 +217,15 @@ export default function SystemSettingsScreen() {
           iconColor={COLORS.info}
           title={t('systemSettings.auditLog')}
           subtitle={t('systemSettings.auditLogSub')}
-          onPress={() => navigation.navigate(SCREEN_NAMES.AUDIT_LOG)}
+          onPress={() => navigation.navigate(SCREEN_NAMES.SYNC_TAB, { screen: SCREEN_NAMES.AUDIT_LOG })}
+        />
+        <View style={styles.separator} />
+        <SettingRow
+          icon="bug"
+          iconColor={COLORS.error}
+          title={t('systemSettings.errorLog')}
+          subtitle={t('systemSettings.errorLogSub')}
+          onPress={() => navigation.navigate(SCREEN_NAMES.SYNC_TAB, { screen: SCREEN_NAMES.ERROR_LOG })}
         />
       </View>
 

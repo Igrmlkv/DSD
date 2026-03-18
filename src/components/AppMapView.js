@@ -1,18 +1,26 @@
 import React, { forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, UIManager } from 'react-native';
 import useSettingsStore from '../store/settingsStore';
 import { COLORS } from '../constants/colors';
 
-// Lazy imports to avoid loading both map SDKs
+// Check if native modules are actually registered before requiring them.
+// requireNativeComponent() inside react-native-yamap runs at module evaluation
+// and crashes if the native view isn't linked. We must guard with UIManager check.
 let YaMap, YaMarker, YaPolyline;
 let RNMapView, RNMarker, RNPolyline, PROVIDER_DEFAULT, UrlTile;
 
-try {
-  const yamap = require('react-native-yamap');
-  YaMap = yamap.default;
-  YaMarker = yamap.Marker;
-  YaPolyline = yamap.Polyline;
-} catch (e) { /* react-native-yamap not available */ }
+const yamapNativeAvailable = UIManager.getViewManagerConfig
+  ? !!UIManager.getViewManagerConfig('YamapView')
+  : !!UIManager['YamapView'];
+
+if (yamapNativeAvailable) {
+  try {
+    const yamap = require('react-native-yamap');
+    YaMap = yamap.default;
+    YaMarker = yamap.Marker;
+    YaPolyline = yamap.Polyline;
+  } catch (e) { /* react-native-yamap not available */ }
+}
 
 try {
   const rnmaps = require('react-native-maps');

@@ -2,16 +2,26 @@ import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, Text, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import { I18nextProvider, useTranslation } from 'react-i18next';
-import YaMap from 'react-native-yamap';
 import i18n, { initI18n } from './src/i18n';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initDatabase } from './src/database';
 import useSettingsStore from './src/store/settingsStore';
 
-try {
-  YaMap.init('b86f674c-5cc1-470b-aadf-9ae9091faee9');
-} catch (e) {
-  console.warn('YaMap init skipped:', e.message);
+import { UIManager, Platform } from 'react-native';
+
+const yamapNativeAvailable = UIManager.getViewManagerConfig
+  ? !!UIManager.getViewManagerConfig('YamapView')
+  : !!UIManager['YamapView'];
+
+if (yamapNativeAvailable) {
+  try {
+    const YaMap = require('react-native-yamap').default;
+    YaMap.init('b86f674c-5cc1-470b-aadf-9ae9091faee9');
+  } catch (e) {
+    console.warn('YaMap init skipped:', e.message);
+  }
+} else {
+  console.warn('YaMap native module not available, skipping init');
 }
 
 function AppContent() {

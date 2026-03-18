@@ -13,7 +13,7 @@ import useAuthStore from '../../store/authStore';
 import {
   updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
   getOrCreateTodayEndCheckin, getVehicleCheckItems,
-  getUnloadingData, getTodayPaymentsTotal, getTodayTourCheckin,
+  getUnloadingData, getTodayCashPaymentsTotal, getTodayTourCheckin,
   getTodayExpensesTotal,
 } from '../../database';
 import { stopTracking } from '../../services/locationService';
@@ -66,11 +66,6 @@ export default function EndOfDayScreen() {
           setUnloadingData(uData);
         }
 
-        // Load expected cash total (payments minus expenses)
-        const cashTotal = await getTodayPaymentsTotal(user?.id);
-        const expensesTotal = await getTodayExpensesTotal(user?.id);
-        setExpectedCashAmount(cashTotal - expensesTotal);
-
         // Check if start-of-day was completed
         const startCheckin = await getTodayTourCheckin(user?.id, 'start');
         if (!startCheckin || startCheckin.status !== CHECKIN_STATUS.COMPLETED) {
@@ -81,6 +76,13 @@ export default function EndOfDayScreen() {
         if (startCheckin.odometer_reading) {
           setStartOdometer(startCheckin.odometer_reading);
         }
+
+        // Expected cash = SOD cash + cash payments received - expenses
+        const sodCash = startCheckin.cash_amount || 0;
+        const cashPayments = await getTodayCashPaymentsTotal(user?.id);
+        const expensesTotal = await getTodayExpensesTotal(user?.id);
+        const cashTotal = sodCash + cashPayments - expensesTotal;
+        setExpectedCashAmount(cashTotal);
 
         const checkin = await getOrCreateTodayEndCheckin(user?.id, v?.id);
         if (checkin) {

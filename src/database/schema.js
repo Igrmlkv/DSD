@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 const CREATE_TABLES = [
   // --- Справочники ---
@@ -41,6 +41,8 @@ const CREATE_TABLES = [
     payment_terms TEXT DEFAULT 'cash',
     credit_limit REAL DEFAULT 0,
     debt_amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
+    price_list_id TEXT,
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
@@ -55,9 +57,12 @@ const CREATE_TABLES = [
     subcategory TEXT,
     brand TEXT,
     volume TEXT,
-    unit TEXT DEFAULT 'шт',
+    volume_unit TEXT DEFAULT 'LTR',
+    unit TEXT DEFAULT 'PCE',
     barcode TEXT,
     weight REAL,
+    weight_unit TEXT DEFAULT 'KGM',
+    vat_percent REAL DEFAULT 22,
     image_url TEXT,
     material_type TEXT DEFAULT 'product' CHECK(material_type IN ('product','empty')),
     is_active INTEGER DEFAULT 1,
@@ -72,6 +77,8 @@ const CREATE_TABLES = [
     product_id TEXT NOT NULL,
     empty_product_id TEXT NOT NULL,
     quantity REAL DEFAULT 1,
+    unit TEXT DEFAULT 'PCE',
+    is_active INTEGER DEFAULT 1,
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (empty_product_id) REFERENCES products(id)
   )`,
@@ -85,6 +92,11 @@ const CREATE_TABLES = [
     valid_from TEXT,
     valid_to TEXT,
     FOREIGN KEY (product_id) REFERENCES products(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS units (
+    code TEXT PRIMARY KEY,
+    name TEXT NOT NULL
   )`,
 
   `CREATE TABLE IF NOT EXISTS vehicles (
@@ -104,6 +116,7 @@ const CREATE_TABLES = [
     warehouse TEXT DEFAULT 'main',
     quantity REAL NOT NULL DEFAULT 0,
     reserved REAL DEFAULT 0,
+    unit TEXT DEFAULT 'PCE',
     updated_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (product_id) REFERENCES products(id),
     UNIQUE(warehouse, product_id)
@@ -114,6 +127,7 @@ const CREATE_TABLES = [
   `CREATE TABLE IF NOT EXISTS routes (
     id TEXT PRIMARY KEY,
     date TEXT NOT NULL,
+    name TEXT,
     driver_id TEXT NOT NULL,
     status TEXT DEFAULT 'planned' CHECK(status IN ('planned','in_progress','completed','cancelled')),
     vehicle_number TEXT,
@@ -134,6 +148,10 @@ const CREATE_TABLES = [
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending','arrived','in_progress','completed','skipped')),
     latitude REAL,
     longitude REAL,
+    actual_arrival_lat REAL,
+    actual_arrival_lon REAL,
+    actual_departure_lat REAL,
+    actual_departure_lon REAL,
     notes TEXT,
     FOREIGN KEY (route_id) REFERENCES routes(id),
     FOREIGN KEY (customer_id) REFERENCES customers(id)
@@ -146,11 +164,14 @@ const CREATE_TABLES = [
     external_id TEXT,
     customer_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
+    route_id TEXT,
     route_point_id TEXT,
     order_date TEXT DEFAULT (datetime('now')),
     status TEXT DEFAULT 'draft' CHECK(status IN ('draft','confirmed','shipped','delivered','cancelled')),
     total_amount REAL DEFAULT 0,
     discount_amount REAL DEFAULT 0,
+    vat_amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
     notes TEXT,
     synced INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
@@ -166,7 +187,10 @@ const CREATE_TABLES = [
     quantity REAL NOT NULL,
     price REAL NOT NULL,
     discount_percent REAL DEFAULT 0,
+    vat_percent REAL,
     total REAL NOT NULL,
+    unit TEXT DEFAULT 'PCE',
+    currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (order_id) REFERENCES orders(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -174,12 +198,14 @@ const CREATE_TABLES = [
   `CREATE TABLE IF NOT EXISTS deliveries (
     id TEXT PRIMARY KEY,
     order_id TEXT,
+    route_id TEXT,
     route_point_id TEXT,
     customer_id TEXT NOT NULL,
     driver_id TEXT NOT NULL,
     delivery_date TEXT DEFAULT (datetime('now')),
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_transit','delivered','partial','rejected')),
     total_amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
     signature_name TEXT,
     signature_data TEXT,
     signature_driver_data TEXT,
@@ -202,6 +228,8 @@ const CREATE_TABLES = [
     price REAL NOT NULL,
     total REAL NOT NULL,
     reason_code TEXT,
+    unit TEXT DEFAULT 'PCE',
+    currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (delivery_id) REFERENCES deliveries(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -215,6 +243,7 @@ const CREATE_TABLES = [
     reason TEXT CHECK(reason IN ('quality','expired','unsold','damaged','other')),
     status TEXT DEFAULT 'draft' CHECK(status IN ('draft','pending_approval','approved','rejected','processed')),
     total_amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
     notes TEXT,
     approved_by TEXT,
     approved_at TEXT,
@@ -235,6 +264,8 @@ const CREATE_TABLES = [
     total REAL NOT NULL,
     condition TEXT DEFAULT 'normal' CHECK(condition IN ('normal','damaged','expired')),
     reason TEXT,
+    unit TEXT DEFAULT 'PCE',
+    currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (return_id) REFERENCES returns(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -246,9 +277,12 @@ const CREATE_TABLES = [
     customer_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
     order_id TEXT,
+    delivery_id TEXT,
     route_point_id TEXT,
     payment_date TEXT DEFAULT (datetime('now')),
     amount REAL NOT NULL,
+    change_amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
     payment_type TEXT CHECK(payment_type IN ('cash','card','qr','transfer')),
     status TEXT DEFAULT 'completed',
     receipt_number TEXT,
@@ -284,6 +318,7 @@ const CREATE_TABLES = [
     planned_quantity REAL NOT NULL,
     actual_quantity REAL DEFAULT 0,
     scanned INTEGER DEFAULT 0,
+    unit TEXT DEFAULT 'PCE',
     FOREIGN KEY (loading_trip_id) REFERENCES loading_trips(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -298,6 +333,7 @@ const CREATE_TABLES = [
     expected_amount REAL DEFAULT 0,
     actual_amount REAL DEFAULT 0,
     discrepancy REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending','collected','verified','discrepancy')),
     notes TEXT,
     created_at TEXT DEFAULT (datetime('now')),
@@ -314,9 +350,12 @@ const CREATE_TABLES = [
     type TEXT NOT NULL CHECK(type IN ('start','end')),
     checkin_date TEXT DEFAULT (datetime('now')),
     status TEXT DEFAULT 'in_progress' CHECK(status IN ('in_progress','completed')),
+    current_step INTEGER DEFAULT 0,
+    material_check_data TEXT,
     vehicle_check TEXT,
     odometer_reading REAL,
     cash_amount REAL,
+    currency TEXT DEFAULT 'RUB',
     signature_data TEXT,
     supervisor_name TEXT,
     notes TEXT,
@@ -358,6 +397,7 @@ const CREATE_TABLES = [
     expected_quantity REAL DEFAULT 0,
     actual_quantity REAL DEFAULT 0,
     condition TEXT DEFAULT 'good' CHECK(condition IN ('good','damaged','missing')),
+    unit TEXT DEFAULT 'PCE',
     FOREIGN KEY (packaging_return_id) REFERENCES packaging_returns(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -480,6 +520,7 @@ const CREATE_TABLES = [
     tax_amount REAL DEFAULT 0,
     total_amount REAL DEFAULT 0,
     currency TEXT DEFAULT 'RUB',
+    form_type TEXT,
     signature_customer TEXT,
     signature_driver TEXT,
     notes TEXT,
@@ -504,6 +545,8 @@ const CREATE_TABLES = [
     tax_amount REAL DEFAULT 0,
     subtotal REAL NOT NULL,
     total REAL NOT NULL,
+    unit TEXT DEFAULT 'PCE',
+    currency TEXT DEFAULT 'RUB',
     FOREIGN KEY (invoice_id) REFERENCES invoices(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,
@@ -517,6 +560,8 @@ const CREATE_TABLES = [
     customer_id TEXT NOT NULL,
     driver_id TEXT NOT NULL,
     status TEXT DEFAULT 'draft' CHECK(status IN ('draft','confirmed')),
+    total_amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
     total_items INTEGER DEFAULT 0,
     notes TEXT,
     created_at TEXT DEFAULT (datetime('now')),
@@ -538,6 +583,7 @@ const CREATE_TABLES = [
     amount_due REAL DEFAULT 0,
     amount_paid REAL DEFAULT 0,
     change_amount REAL DEFAULT 0,
+    currency TEXT DEFAULT 'RUB',
     status TEXT DEFAULT 'completed',
     signature_customer TEXT,
     notes TEXT,
@@ -611,6 +657,7 @@ const CREATE_TABLES = [
     id TEXT PRIMARY KEY,
     visit_report_id TEXT NOT NULL,
     uri TEXT NOT NULL,
+    photo_type TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (visit_report_id) REFERENCES visit_reports(id) ON DELETE CASCADE
   )`,
@@ -655,6 +702,7 @@ const CREATE_TABLES = [
     adjusted_qty REAL NOT NULL DEFAULT 0,
     difference REAL NOT NULL DEFAULT 0,
     notes TEXT,
+    unit TEXT DEFAULT 'PCE',
     FOREIGN KEY (adjustment_id) REFERENCES inventory_adjustments(id),
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (reason_id) REFERENCES adjustment_reasons(id)
@@ -681,6 +729,7 @@ const CREATE_TABLES = [
     product_id TEXT NOT NULL,
     quantity REAL NOT NULL DEFAULT 0,
     notes TEXT,
+    unit TEXT DEFAULT 'PCE',
     FOREIGN KEY (on_hand_id) REFERENCES on_hand_inventory(id),
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`,

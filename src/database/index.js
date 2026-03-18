@@ -24,6 +24,7 @@ export {
 
   // Orders
   getAllOrders,
+  getTodayOrdersByUser,
   getOrdersByCustomer,
   getOrdersByRoutePoint,
   getOrdersByRoutes,
@@ -134,6 +135,7 @@ export {
   getOrCreateTodayCheckin,
   getOrCreateTodayEndCheckin,
   getTodayPaymentsTotal,
+  getTodayCashPaymentsTotal,
 
   // Expenses
   getExpenseTypes,

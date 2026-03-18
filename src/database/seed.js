@@ -79,18 +79,30 @@ const EMPTIES = [
 // ============================================================
 const PRODUCT_EMPTIES = [
   // Coca-Cola 0.5л → 1 бутылка стеклянная, входит в пластиковый ящик по 20 шт
-  { id: 'pe-001', product_id: 'prd-001', empty_product_id: 'emp-003', quantity: 1 },
-  { id: 'pe-002', product_id: 'prd-001', empty_product_id: 'emp-001', quantity: 0.05 },
+  { id: 'pe-001', product_id: 'prd-001', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
+  { id: 'pe-002', product_id: 'prd-001', empty_product_id: 'emp-001', quantity: 0.05, unit: 'PCE', is_active: 1 },
   // Coca-Cola 1л → 1 бутылка
-  { id: 'pe-003', product_id: 'prd-002', empty_product_id: 'emp-003', quantity: 1 },
+  { id: 'pe-003', product_id: 'prd-002', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
   // Fanta 0.5л → 1 бутылка, 1/20 ящика
-  { id: 'pe-004', product_id: 'prd-004', empty_product_id: 'emp-003', quantity: 1 },
-  { id: 'pe-005', product_id: 'prd-004', empty_product_id: 'emp-001', quantity: 0.05 },
+  { id: 'pe-004', product_id: 'prd-004', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
+  { id: 'pe-005', product_id: 'prd-004', empty_product_id: 'emp-001', quantity: 0.05, unit: 'PCE', is_active: 1 },
   // Sprite 0.5л → 1 бутылка, 1/20 ящика
-  { id: 'pe-006', product_id: 'prd-006', empty_product_id: 'emp-003', quantity: 1 },
-  { id: 'pe-007', product_id: 'prd-006', empty_product_id: 'emp-001', quantity: 0.05 },
+  { id: 'pe-006', product_id: 'prd-006', empty_product_id: 'emp-003', quantity: 1, unit: 'PCE', is_active: 1 },
+  { id: 'pe-007', product_id: 'prd-006', empty_product_id: 'emp-001', quantity: 0.05, unit: 'PCE', is_active: 1 },
   // Паллета: ящики перевозятся на паллетах (40 ящиков = 1 паллета)
-  { id: 'pe-008', product_id: 'emp-001', empty_product_id: 'emp-002', quantity: 0.025 },
+  { id: 'pe-008', product_id: 'emp-001', empty_product_id: 'emp-002', quantity: 0.025, unit: 'PCE', is_active: 1 },
+];
+
+// ============================================================
+// Единицы измерения (units)
+// ============================================================
+const UNITS = [
+  { code: 'PCE', name: 'Штука' },
+  { code: 'KGM', name: 'Килограмм' },
+  { code: 'LTR', name: 'Литр' },
+  { code: 'PK', name: 'Упаковка' },
+  { code: 'CS', name: 'Ящик' },
+  { code: 'PAL', name: 'Паллета' },
 ];
 
 // ============================================================
@@ -273,15 +285,15 @@ function generateRoutes() {
 
   const routes = [
     // Сегодня — Петров ×2, Козлов ×1, Соколов ×2
-    { id: 'rte-001', date: today, driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
-    { id: 'rte-002', date: today, driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
-    { id: 'rte-003', date: today, driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
-    { id: 'rte-004', date: today, driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
-    { id: 'rte-005', date: today, driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
+    { id: 'rte-001', date: today, name: 'Центр + Запад', driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-002', date: today, name: 'Юг', driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-003', date: today, name: 'Восток', driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
+    { id: 'rte-004', date: today, name: 'Центр (Preseller)', driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
+    { id: 'rte-005', date: today, name: 'Север + Запад (Preseller)', driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
     // Завтра — Петров ×1, Козлов ×1, Соколов ×1
-    { id: 'rte-006', date: tomorrow, driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
-    { id: 'rte-007', date: tomorrow, driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
-    { id: 'rte-008', date: tomorrow, driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
+    { id: 'rte-006', date: tomorrow, name: 'Север + Восток', driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-007', date: tomorrow, name: 'Запад + Центр', driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
+    { id: 'rte-008', date: tomorrow, name: 'Юг + HoReCa (Preseller)', driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
   ];
 
   const routePoints = [
@@ -358,14 +370,14 @@ function generateOrders() {
   const today = new Date().toISOString().split('T')[0];
 
   const orders = [
-    { id: 'ord-001', customer_id: 'cst-001', user_id: 'usr-001', route_point_id: 'rp-001', order_date: today, status: 'confirmed', total_amount: 12450, discount_amount: 0 },
-    { id: 'ord-002', customer_id: 'cst-002', user_id: 'usr-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 8970, discount_amount: 500 },
-    { id: 'ord-003', customer_id: 'cst-005', user_id: 'usr-001', route_point_id: 'rp-005', order_date: today, status: 'confirmed', total_amount: 23100, discount_amount: 1200 },
-    { id: 'ord-004', customer_id: 'cst-009', user_id: 'usr-003', route_point_id: 'rp-013', order_date: today, status: 'confirmed', total_amount: 15600, discount_amount: 0 },
-    { id: 'ord-005', customer_id: 'cst-016', user_id: 'usr-003', route_point_id: 'rp-015', order_date: today, status: 'draft', total_amount: 7890, discount_amount: 0 },
+    { id: 'ord-001', customer_id: 'cst-001', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-001', order_date: today, status: 'confirmed', total_amount: 12450, discount_amount: 0, vat_amount: 2739, currency: 'RUB' },
+    { id: 'ord-002', customer_id: 'cst-002', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 8970, discount_amount: 500, vat_amount: 1973.4, currency: 'RUB' },
+    { id: 'ord-003', customer_id: 'cst-005', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-005', order_date: today, status: 'confirmed', total_amount: 23100, discount_amount: 1200, vat_amount: 5082, currency: 'RUB' },
+    { id: 'ord-004', customer_id: 'cst-009', user_id: 'usr-003', route_id: 'rte-003', route_point_id: 'rp-013', order_date: today, status: 'confirmed', total_amount: 15600, discount_amount: 0, vat_amount: 3432, currency: 'RUB' },
+    { id: 'ord-005', customer_id: 'cst-016', user_id: 'usr-003', route_id: 'rte-003', route_point_id: 'rp-015', order_date: today, status: 'draft', total_amount: 7890, discount_amount: 0, vat_amount: 1735.8, currency: 'RUB' },
     // Дополнительные заказы Петрова — маршрут 1, точки 2 и 3
-    { id: 'ord-006', customer_id: 'cst-002', user_id: 'usr-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 5740, discount_amount: 0 },
-    { id: 'ord-007', customer_id: 'cst-003', user_id: 'usr-001', route_point_id: 'rp-003', order_date: today, status: 'confirmed', total_amount: 9350, discount_amount: 400 },
+    { id: 'ord-006', customer_id: 'cst-002', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 5740, discount_amount: 0, vat_amount: 1262.8, currency: 'RUB' },
+    { id: 'ord-007', customer_id: 'cst-003', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-003', order_date: today, status: 'confirmed', total_amount: 9350, discount_amount: 400, vat_amount: 2057, currency: 'RUB' },
   ];
 
   const orderItems = [
@@ -423,8 +435,8 @@ function generateDeliveriesAndPayments() {
   const today = new Date().toISOString().split('T')[0];
 
   const deliveries = [
-    { id: 'dlv-001', order_id: 'ord-001', route_point_id: 'rp-001', customer_id: 'cst-001', driver_id: 'usr-001', delivery_date: today, status: 'delivered', total_amount: 12450, signature_name: 'Кузнецова А.В.', signature_confirmed: 1 },
-    { id: 'dlv-002', order_id: 'ord-002', route_point_id: 'rp-002', customer_id: 'cst-002', driver_id: 'usr-001', delivery_date: today, status: 'delivered', total_amount: 8470, signature_name: 'Белов И.П.', signature_confirmed: 1 },
+    { id: 'dlv-001', order_id: 'ord-001', route_id: 'rte-001', route_point_id: 'rp-001', customer_id: 'cst-001', driver_id: 'usr-001', delivery_date: today, status: 'delivered', total_amount: 12450, currency: 'RUB', signature_name: 'Кузнецова А.В.', signature_confirmed: 1 },
+    { id: 'dlv-002', order_id: 'ord-002', route_id: 'rte-001', route_point_id: 'rp-002', customer_id: 'cst-002', driver_id: 'usr-001', delivery_date: today, status: 'delivered', total_amount: 8470, currency: 'RUB', signature_name: 'Белов И.П.', signature_confirmed: 1 },
   ];
 
   const deliveryItems = [
@@ -440,8 +452,8 @@ function generateDeliveriesAndPayments() {
   ];
 
   const payments = [
-    { id: 'pay-001', customer_id: 'cst-001', user_id: 'usr-001', order_id: 'ord-001', route_point_id: 'rp-001', payment_date: today, amount: 12450, payment_type: 'cash', status: 'completed', receipt_number: 'ПКО-001' },
-    { id: 'pay-002', customer_id: 'cst-002', user_id: 'usr-001', order_id: 'ord-002', route_point_id: 'rp-002', payment_date: today, amount: 5000, payment_type: 'card', status: 'completed', receipt_number: 'ПКО-002' },
+    { id: 'pay-001', customer_id: 'cst-001', user_id: 'usr-001', order_id: 'ord-001', delivery_id: 'dlv-001', route_point_id: 'rp-001', payment_date: today, amount: 12450, change_amount: 0, currency: 'RUB', payment_type: 'cash', status: 'completed', receipt_number: 'ПКО-001' },
+    { id: 'pay-002', customer_id: 'cst-002', user_id: 'usr-001', order_id: 'ord-002', delivery_id: 'dlv-002', route_point_id: 'rp-002', payment_date: today, amount: 5000, change_amount: 0, currency: 'RUB', payment_type: 'card', status: 'completed', receipt_number: 'ПКО-002' },
   ];
 
   return { deliveries, deliveryItems, payments };
@@ -656,6 +668,7 @@ export {
   PRODUCTS,
   EMPTIES,
   PRODUCT_EMPTIES,
+  UNITS,
   CUSTOMERS,
   VEHICLES,
   generatePrices,

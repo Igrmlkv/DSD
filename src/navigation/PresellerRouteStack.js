@@ -5,6 +5,7 @@ import { COLORS } from '../constants/colors';
 import i18n from '../i18n';
 import RouteListScreen from '../screens/expeditor/RouteListScreen';
 import RouteMapScreen from '../screens/expeditor/RouteMapScreen';
+import OrdersScreen from '../screens/orders/OrdersScreen';
 import PresellerVisitScreen from '../screens/preseller/PresellerVisitScreen';
 import OrderEditScreen from '../screens/orders/OrderEditScreen';
 import OrderConfirmationScreen from '../screens/preseller/OrderConfirmationScreen';
@@ -31,6 +32,7 @@ export default function PresellerRouteStack() {
     <Stack.Navigator screenOptions={defaultScreenOptions}>
       <Stack.Screen name={SCREEN_NAMES.ROUTE_LIST} component={RouteListScreen} options={{ title: i18n.t('nav.route') }} />
       <Stack.Screen name={SCREEN_NAMES.ROUTE_MAP} component={RouteMapScreen} options={{ title: i18n.t('nav.map') }} />
+      <Stack.Screen name={SCREEN_NAMES.ORDERS_LIST} component={OrdersScreen} options={{ title: i18n.t('nav.orders') }} />
       <Stack.Screen name={SCREEN_NAMES.PRESELLER_VISIT} component={PresellerVisitScreen} options={{ title: i18n.t('nav.visit') }} />
       <Stack.Screen
         name={SCREEN_NAMES.ORDER_EDIT}

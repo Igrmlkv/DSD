@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { getAllOrders, getOrderItems, deleteOrder, getActiveVisitCustomer, getRoutesByDate, getOrdersByRoutes } from '../../database';
+import { getAllOrders, getOrderItems, deleteOrder, getActiveVisitCustomer, getRoutesByDate, getOrdersByRoutes, getTodayOrdersByUser } from '../../database';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
@@ -32,17 +32,20 @@ export default function OrdersScreen({ route: screenRoute }) {
   const [items, setItems] = useState({});
   const [loading, setLoading] = useState(true);
   const todayOnly = screenRoute?.params?.todayRoute;
+  const myToday = screenRoute?.params?.myToday;
 
   useFocusEffect(
     useCallback(() => {
       loadOrders();
-    }, [todayOnly])
+    }, [todayOnly, myToday])
   );
 
   async function loadOrders() {
     try {
       let data;
-      if (todayOnly) {
+      if (myToday) {
+        data = await getTodayOrdersByUser(user.id);
+      } else if (todayOnly) {
         const today = new Date().toISOString().split('T')[0];
         const routes = await getRoutesByDate(today, user.id);
         const routeIds = routes.map((r) => r.id);
@@ -103,7 +106,7 @@ export default function OrdersScreen({ route: screenRoute }) {
           <Text style={styles.itemName} numberOfLines={1}>{oi.product_name}</Text>
           <Text style={styles.itemSku}>{oi.sku} / {oi.volume}</Text>
         </View>
-        <Text style={styles.itemQty}>{oi.quantity} шт</Text>
+        <Text style={styles.itemQty}>{oi.quantity} {oi.unit || 'PCE'}</Text>
         <Text style={styles.itemPrice}>{formatMoney(oi.total)}</Text>
       </View>
     );

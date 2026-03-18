@@ -41,10 +41,10 @@ export async function createInvoiceFromDelivery(deliveryId) {
   await database.execAsync('BEGIN TRANSACTION');
   try {
     await database.runAsync(
-      `INSERT INTO invoices (id, delivery_id, order_id, customer_id, driver_id, route_point_id, invoice_number, invoice_date, status, subtotal, discount_amount, tax_amount, total_amount, signature_customer, signature_driver, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '${INVOICE_STATUS.DRAFT}', ?, 0, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO invoices (id, delivery_id, order_id, customer_id, driver_id, route_point_id, invoice_number, invoice_date, status, subtotal, discount_amount, tax_amount, total_amount, currency, signature_customer, signature_driver, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '${INVOICE_STATUS.DRAFT}', ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
       [id, deliveryId, delivery.order_id, delivery.customer_id, delivery.driver_id, delivery.route_point_id,
-       invoiceNumber, now, subtotal, taxAmount, totalAmount,
+       invoiceNumber, now, subtotal, taxAmount, totalAmount, delivery.currency || 'RUB',
        delivery.signature_data, delivery.signature_driver_data, now, now]
     );
 
@@ -53,9 +53,9 @@ export async function createInvoiceFromDelivery(deliveryId) {
       const itemSubtotal = item.delivered_quantity * item.price;
       const itemTax = Math.round(itemSubtotal * taxRate * 100) / 100;
       await database.runAsync(
-        `INSERT INTO invoice_items (id, invoice_id, product_id, quantity, unit_price, discount_percent, discount_amount, tax_percent, tax_amount, subtotal, total)
-         VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?)`,
-        [iiId, id, item.product_id, item.delivered_quantity, item.price, vatPercent, itemTax, itemSubtotal, itemSubtotal + itemTax]
+        `INSERT INTO invoice_items (id, invoice_id, product_id, quantity, unit_price, discount_percent, discount_amount, tax_percent, tax_amount, subtotal, total, unit, currency)
+         VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)`,
+        [iiId, id, item.product_id, item.delivered_quantity, item.price, vatPercent, itemTax, itemSubtotal, itemSubtotal + itemTax, item.unit || 'PCE', item.currency || 'RUB']
       );
     }
 
@@ -131,9 +131,9 @@ export async function createReceipt({ paymentId, invoiceId, customerId, driverId
   const now = new Date().toISOString();
 
   await database.runAsync(
-    `INSERT INTO receipts (id, payment_id, invoice_id, customer_id, driver_id, receipt_number, receipt_date, payment_method, amount_due, amount_paid, change_amount, status, signature_customer, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`,
-    [id, paymentId, invoiceId, customerId, driverId, receiptNumber, now, paymentMethod, amountDue, amountPaid, changeAmount, signatureCustomer, notes, now]
+    `INSERT INTO receipts (id, payment_id, invoice_id, customer_id, driver_id, receipt_number, receipt_date, payment_method, amount_due, amount_paid, change_amount, currency, status, signature_customer, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`,
+    [id, paymentId, invoiceId, customerId, driverId, receiptNumber, now, paymentMethod, amountDue, amountPaid, changeAmount, 'RUB', signatureCustomer, notes, now]
   );
 
   return { id, receiptNumber };
@@ -167,10 +167,11 @@ export async function createDeliveryNote(deliveryId, invoiceId) {
   const noteNumber = await generateNumber(DOC_PREFIX.DELIVERY_NOTE);
   const now = new Date().toISOString();
 
+  const totalAmount = items.reduce((s, i) => s + (i.total || 0), 0);
   await database.runAsync(
-    `INSERT INTO delivery_notes (id, delivery_id, invoice_id, note_number, note_date, customer_id, driver_id, status, total_items, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, '${DELIVERY_NOTE_STATUS.CONFIRMED}', ?, ?)`,
-    [id, deliveryId, invoiceId, noteNumber, now, delivery.customer_id, delivery.driver_id, items.length, now]
+    `INSERT INTO delivery_notes (id, delivery_id, invoice_id, note_number, note_date, customer_id, driver_id, status, total_amount, currency, total_items, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, '${DELIVERY_NOTE_STATUS.CONFIRMED}', ?, ?, ?, ?)`,
+    [id, deliveryId, invoiceId, noteNumber, now, delivery.customer_id, delivery.driver_id, totalAmount, delivery.currency || 'RUB', items.length, now]
   );
 
   return { id, noteNumber };

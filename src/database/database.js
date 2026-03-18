@@ -61,6 +61,49 @@ export async function initDatabase() {
     "ALTER TABLE route_points ADD COLUMN actual_departure_lat REAL",
     "ALTER TABLE route_points ADD COLUMN actual_departure_lon REAL",
     "ALTER TABLE products ADD COLUMN material_type TEXT DEFAULT 'product'",
+    // v5 migrations
+    "ALTER TABLE customers ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE customers ADD COLUMN price_list_id TEXT",
+    "ALTER TABLE products ADD COLUMN volume_unit TEXT DEFAULT 'LTR'",
+    "ALTER TABLE products ADD COLUMN weight_unit TEXT DEFAULT 'KGM'",
+    "ALTER TABLE products ADD COLUMN vat_percent REAL DEFAULT 22",
+    "ALTER TABLE product_empties ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE product_empties ADD COLUMN is_active INTEGER DEFAULT 1",
+    "ALTER TABLE stock ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE routes ADD COLUMN name TEXT",
+    "ALTER TABLE orders ADD COLUMN route_id TEXT",
+    "ALTER TABLE orders ADD COLUMN vat_amount REAL DEFAULT 0",
+    "ALTER TABLE orders ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE order_items ADD COLUMN vat_percent REAL",
+    "ALTER TABLE order_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE order_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE deliveries ADD COLUMN route_id TEXT",
+    "ALTER TABLE deliveries ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE delivery_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE delivery_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE returns ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE return_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE return_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE payments ADD COLUMN delivery_id TEXT",
+    "ALTER TABLE payments ADD COLUMN change_amount REAL DEFAULT 0",
+    "ALTER TABLE payments ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE loading_trip_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE cash_collections ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE tour_checkins ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE packaging_return_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE invoices ADD COLUMN form_type TEXT",
+    "ALTER TABLE invoice_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE invoice_items ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE delivery_notes ADD COLUMN total_amount REAL DEFAULT 0",
+    "ALTER TABLE delivery_notes ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE receipts ADD COLUMN currency TEXT DEFAULT 'RUB'",
+    "ALTER TABLE visit_report_photos ADD COLUMN photo_type TEXT",
+    "ALTER TABLE inventory_adjustment_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "ALTER TABLE on_hand_inventory_items ADD COLUMN unit TEXT DEFAULT 'PCE'",
+    "CREATE INDEX IF NOT EXISTS idx_customers_price_list ON customers(price_list_id)",
+    "CREATE INDEX IF NOT EXISTS idx_orders_route ON orders(route_id)",
+    "CREATE INDEX IF NOT EXISTS idx_deliveries_route ON deliveries(route_id)",
+    "CREATE INDEX IF NOT EXISTS idx_payments_delivery ON payments(delivery_id)",
   ];
   for (const sql of migrations) {
     try { await database.execAsync(sql); } catch { /* column already exists */ }
@@ -92,6 +135,7 @@ async function seedDatabase(database) {
     PRODUCTS,
     EMPTIES,
     PRODUCT_EMPTIES,
+    UNITS,
     CUSTOMERS,
     VEHICLES,
     generatePrices,
@@ -124,32 +168,40 @@ async function seedDatabase(database) {
     // Products
     for (const p of PRODUCTS) {
       await database.runAsync(
-        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, barcode, weight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [p.id, p.sku, p.name, p.category, p.subcategory, p.brand, p.volume, p.barcode, p.weight]
+        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, volume_unit, unit, barcode, weight, weight_unit, vat_percent) VALUES (?, ?, ?, ?, ?, ?, ?, 'LTR', 'PCE', ?, ?, 'KGM', ?)`,
+        [p.id, p.sku, p.name, p.category, p.subcategory, p.brand, p.volume, p.barcode, p.weight, DEFAULT_VAT_PERCENT]
       );
     }
 
     // Empties (возвратная тара как материалы из ERP)
     for (const e of EMPTIES) {
       await database.runAsync(
-        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, barcode, weight, material_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [e.id, e.sku, e.name, e.category, e.subcategory, e.brand, e.volume, e.barcode, e.weight, e.material_type]
+        `INSERT INTO products (id, sku, name, category, subcategory, brand, volume, volume_unit, unit, barcode, weight, weight_unit, vat_percent, material_type) VALUES (?, ?, ?, ?, ?, ?, ?, 'LTR', 'PCE', ?, ?, 'KGM', ?, ?)`,
+        [e.id, e.sku, e.name, e.category, e.subcategory, e.brand, e.volume, e.barcode, e.weight, DEFAULT_VAT_PERCENT, e.material_type]
       );
     }
 
     // Product-Empties links (tied empties)
     for (const pe of PRODUCT_EMPTIES) {
       await database.runAsync(
-        `INSERT INTO product_empties (id, product_id, empty_product_id, quantity) VALUES (?, ?, ?, ?)`,
-        [pe.id, pe.product_id, pe.empty_product_id, pe.quantity]
+        `INSERT INTO product_empties (id, product_id, empty_product_id, quantity, unit, is_active) VALUES (?, ?, ?, ?, ?, ?)`,
+        [pe.id, pe.product_id, pe.empty_product_id, pe.quantity, pe.unit || 'PCE', pe.is_active ?? 1]
+      );
+    }
+
+    // Units
+    for (const u of UNITS) {
+      await database.runAsync(
+        `INSERT INTO units (code, name) VALUES (?, ?)`,
+        [u.code, u.name]
       );
     }
 
     // Customers
     for (const c of CUSTOMERS) {
       await database.runAsync(
-        `INSERT INTO customers (id, name, ship_to_name, legal_name, inn, kpp, address, city, region, postal_code, latitude, longitude, contact_person, phone, visit_time_from, visit_time_to, delivery_notes_text, vat_rate, customer_type, payment_terms, credit_limit, debt_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [c.id, c.name, c.ship_to_name || null, c.legal_name, c.inn, c.kpp, c.address, c.city, c.region, c.postal_code, c.latitude, c.longitude, c.contact_person, c.phone, c.visit_time_from || null, c.visit_time_to || null, c.delivery_notes_text || null, c.vat_rate ?? DEFAULT_VAT_PERCENT, c.customer_type, c.payment_terms, c.credit_limit, c.debt_amount]
+        `INSERT INTO customers (id, name, ship_to_name, legal_name, inn, kpp, address, city, region, postal_code, latitude, longitude, contact_person, phone, visit_time_from, visit_time_to, delivery_notes_text, vat_rate, customer_type, payment_terms, credit_limit, debt_amount, currency, price_list_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [c.id, c.name, c.ship_to_name || null, c.legal_name, c.inn, c.kpp, c.address, c.city, c.region, c.postal_code, c.latitude, c.longitude, c.contact_person, c.phone, c.visit_time_from || null, c.visit_time_to || null, c.delivery_notes_text || null, c.vat_rate ?? DEFAULT_VAT_PERCENT, c.customer_type, c.payment_terms, c.credit_limit, c.debt_amount, c.currency || 'RUB', c.price_list_id || null]
       );
     }
 
@@ -192,8 +244,8 @@ async function seedDatabase(database) {
     const { routes, routePoints } = generateRoutes();
     for (const r of routes) {
       await database.runAsync(
-        `INSERT INTO routes (id, date, driver_id, status, vehicle_number) VALUES (?, ?, ?, ?, ?)`,
-        [r.id, r.date, r.driver_id, r.status, r.vehicle_number]
+        `INSERT INTO routes (id, date, name, driver_id, status, vehicle_number) VALUES (?, ?, ?, ?, ?, ?)`,
+        [r.id, r.date, r.name || null, r.driver_id, r.status, r.vehicle_number]
       );
     }
     for (const rp of routePoints) {
@@ -207,14 +259,14 @@ async function seedDatabase(database) {
     const { orders, orderItems } = generateOrders();
     for (const o of orders) {
       await database.runAsync(
-        `INSERT INTO orders (id, customer_id, user_id, route_point_id, order_date, status, total_amount, discount_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [o.id, o.customer_id, o.user_id, o.route_point_id, o.order_date, o.status, o.total_amount, o.discount_amount]
+        `INSERT INTO orders (id, customer_id, user_id, route_id, route_point_id, order_date, status, total_amount, discount_amount, vat_amount, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [o.id, o.customer_id, o.user_id, o.route_id || null, o.route_point_id, o.order_date, o.status, o.total_amount, o.discount_amount, o.vat_amount || 0, o.currency || 'RUB']
       );
     }
     for (const oi of orderItems) {
       await database.runAsync(
-        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, total) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price, oi.discount_percent, oi.total]
+        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, vat_percent, total, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price, oi.discount_percent, oi.vat_percent ?? DEFAULT_VAT_PERCENT, oi.total, oi.unit || 'PCE', oi.currency || 'RUB']
       );
     }
 
@@ -222,20 +274,20 @@ async function seedDatabase(database) {
     const { deliveries, deliveryItems, payments } = generateDeliveriesAndPayments();
     for (const d of deliveries) {
       await database.runAsync(
-        `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_confirmed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [d.id, d.order_id, d.route_point_id, d.customer_id, d.driver_id, d.delivery_date, d.status, d.total_amount, d.signature_name, d.signature_confirmed]
+        `INSERT INTO deliveries (id, order_id, route_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, currency, signature_name, signature_confirmed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [d.id, d.order_id, d.route_id || null, d.route_point_id, d.customer_id, d.driver_id, d.delivery_date, d.status, d.total_amount, d.currency || 'RUB', d.signature_name, d.signature_confirmed]
       );
     }
     for (const di of deliveryItems) {
       await database.runAsync(
-        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [di.id, di.delivery_id, di.product_id, di.ordered_quantity, di.delivered_quantity, di.price, di.total, di.reason_code || null]
+        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [di.id, di.delivery_id, di.product_id, di.ordered_quantity, di.delivered_quantity, di.price, di.total, di.reason_code || null, di.unit || 'PCE', di.currency || 'RUB']
       );
     }
     for (const p of payments) {
       await database.runAsync(
-        `INSERT INTO payments (id, customer_id, user_id, order_id, route_point_id, payment_date, amount, payment_type, status, receipt_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [p.id, p.customer_id, p.user_id, p.order_id, p.route_point_id, p.payment_date, p.amount, p.payment_type, p.status, p.receipt_number]
+        `INSERT INTO payments (id, customer_id, user_id, order_id, delivery_id, route_point_id, payment_date, amount, change_amount, currency, payment_type, status, receipt_number) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [p.id, p.customer_id, p.user_id, p.order_id, p.delivery_id || null, p.route_point_id, p.payment_date, p.amount, p.change_amount || 0, p.currency || 'RUB', p.payment_type, p.status, p.receipt_number]
       );
     }
 
@@ -243,14 +295,14 @@ async function seedDatabase(database) {
     const { returns, returnItems } = generateReturns();
     for (const r of returns) {
       await database.runAsync(
-        `INSERT INTO returns (id, customer_id, driver_id, route_point_id, return_date, reason, status, total_amount, approved_by, approved_at, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [r.id, r.customer_id, r.driver_id, r.route_point_id, r.return_date, r.reason, r.status, r.total_amount, r.approved_by || null, r.approved_at || null, r.rejection_reason || null]
+        `INSERT INTO returns (id, customer_id, driver_id, route_point_id, return_date, reason, status, total_amount, currency, approved_by, approved_at, rejection_reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [r.id, r.customer_id, r.driver_id, r.route_point_id, r.return_date, r.reason, r.status, r.total_amount, r.currency || 'RUB', r.approved_by || null, r.approved_at || null, r.rejection_reason || null]
       );
     }
     for (const ri of returnItems) {
       await database.runAsync(
-        `INSERT INTO return_items (id, return_id, product_id, quantity, price, total, condition, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [ri.id, ri.return_id, ri.product_id, ri.quantity, ri.price, ri.total, ri.condition, ri.reason]
+        `INSERT INTO return_items (id, return_id, product_id, quantity, price, total, condition, reason, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [ri.id, ri.return_id, ri.product_id, ri.quantity, ri.price, ri.total, ri.condition, ri.reason, ri.unit || 'PCE', ri.currency || 'RUB']
       );
     }
 
@@ -291,8 +343,8 @@ async function seedDatabase(database) {
     }
     for (const ti of tripItems) {
       await database.runAsync(
-        `INSERT INTO loading_trip_items (id, loading_trip_id, product_id, planned_quantity, actual_quantity, scanned) VALUES (?, ?, ?, ?, ?, ?)`,
-        [ti.id, ti.loading_trip_id, ti.product_id, ti.planned_quantity, ti.actual_quantity, ti.scanned]
+        `INSERT INTO loading_trip_items (id, loading_trip_id, product_id, planned_quantity, actual_quantity, scanned, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [ti.id, ti.loading_trip_id, ti.product_id, ti.planned_quantity, ti.actual_quantity, ti.scanned, ti.unit || 'PCE']
       );
     }
 
@@ -300,8 +352,8 @@ async function seedDatabase(database) {
     const cashCollections = generateCashCollections();
     for (const cc of cashCollections) {
       await database.runAsync(
-        `INSERT INTO cash_collections (id, driver_id, route_id, collection_date, expected_amount, actual_amount, discrepancy, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cc.id, cc.driver_id, cc.route_id, cc.collection_date, cc.expected_amount, cc.actual_amount, cc.discrepancy, cc.status]
+        `INSERT INTO cash_collections (id, driver_id, route_id, collection_date, expected_amount, actual_amount, discrepancy, currency, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [cc.id, cc.driver_id, cc.route_id, cc.collection_date, cc.expected_amount, cc.actual_amount, cc.discrepancy, cc.currency || 'RUB', cc.status]
       );
     }
 
@@ -315,8 +367,8 @@ async function seedDatabase(database) {
     }
     for (const pri of packagingReturnItems) {
       await database.runAsync(
-        `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
-        [pri.id, pri.packaging_return_id, pri.product_id, pri.expected_quantity, pri.actual_quantity, pri.condition]
+        `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [pri.id, pri.packaging_return_id, pri.product_id, pri.expected_quantity, pri.actual_quantity, pri.condition, pri.unit || 'PCE']
       );
     }
 
@@ -387,7 +439,7 @@ export async function resetAndSeedDatabase() {
     'route_points', 'routes',
     'stock', 'vehicles',
     'gps_tracks',
-    'product_empties', 'price_lists', 'products',
+    'units', 'product_empties', 'price_lists', 'products',
     'customers', 'users',
   ];
 
@@ -561,6 +613,19 @@ export async function getAllOrders() {
   `);
 }
 
+export async function getTodayOrdersByUser(userId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  return database.getAllAsync(`
+    SELECT o.*, c.name as customer_name, c.address as customer_address, u.full_name as user_name
+    FROM orders o
+    JOIN customers c ON c.id = o.customer_id
+    JOIN users u ON u.id = o.user_id
+    WHERE o.user_id = ? AND date(o.order_date) = ?
+    ORDER BY o.order_date DESC, o.id
+  `, [userId, today]);
+}
+
 export async function getOrdersByCustomer(customerId) {
   const database = await getDatabase();
   return database.getAllAsync(`
@@ -658,9 +723,9 @@ export async function createOrder(order) {
   const id = generateId();
   const now = new Date().toISOString();
   await database.runAsync(
-    `INSERT INTO orders (id, customer_id, user_id, route_point_id, order_date, status, total_amount, discount_amount, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, '${ORDER_STATUS.DRAFT}', ?, 0, ?, ?, ?)`,
-    [id, order.customer_id, order.user_id, order.route_point_id || null, now, order.total_amount || 0, order.notes || null, now, now]
+    `INSERT INTO orders (id, customer_id, user_id, route_id, route_point_id, order_date, status, total_amount, discount_amount, vat_amount, currency, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, '${ORDER_STATUS.DRAFT}', ?, 0, 0, ?, ?, ?, ?)`,
+    [id, order.customer_id, order.user_id, order.route_id || null, order.route_point_id || null, now, order.total_amount || 0, order.currency || 'RUB', order.notes || null, now, now]
   );
   return id;
 }
@@ -761,8 +826,8 @@ export async function saveOrderItems(orderId, items) {
     for (const item of items) {
       const itemId = generateId();
       await database.runAsync(
-        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, total) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.total]
+        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, vat_percent, total, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.vat_percent ?? null, item.total, item.unit || 'PCE', item.currency || 'RUB']
       );
     }
     await database.execAsync('COMMIT');
@@ -787,9 +852,9 @@ export async function saveOrderWithItems(orderData, items, isEdit = false) {
     } else {
       orderId = generateId();
       await database.runAsync(
-        `INSERT INTO orders (id, customer_id, user_id, route_point_id, order_date, status, total_amount, discount_amount, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, '${ORDER_STATUS.DRAFT}', ?, 0, ?, ?, ?)`,
-        [orderId, orderData.customer_id, orderData.user_id, orderData.route_point_id || null, now, orderData.total_amount || 0, orderData.notes || null, now, now]
+        `INSERT INTO orders (id, customer_id, user_id, route_id, route_point_id, order_date, status, total_amount, discount_amount, vat_amount, currency, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, '${ORDER_STATUS.DRAFT}', ?, 0, 0, ?, ?, ?, ?)`,
+        [orderId, orderData.customer_id, orderData.user_id, orderData.route_id || null, orderData.route_point_id || null, now, orderData.total_amount || 0, orderData.currency || 'RUB', orderData.notes || null, now, now]
       );
     }
 
@@ -797,8 +862,8 @@ export async function saveOrderWithItems(orderData, items, isEdit = false) {
     for (const item of items) {
       const itemId = generateId();
       await database.runAsync(
-        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, total) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.total]
+        `INSERT INTO order_items (id, order_id, product_id, quantity, price, discount_percent, vat_percent, total, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, orderId, item.product_id, item.quantity, item.price, item.discount_percent || 0, item.vat_percent ?? null, item.total, item.unit || 'PCE', item.currency || 'RUB']
       );
     }
 
@@ -840,9 +905,9 @@ export async function createDelivery(delivery) {
   const id = generateId();
   const now = new Date().toISOString();
   await database.runAsync(
-    `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, '${DELIVERY_STATUS.PENDING}', ?, ?, ?)`,
-    [id, delivery.order_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, delivery.total_amount || 0, now, now]
+    `INSERT INTO deliveries (id, order_id, route_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, currency, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, '${DELIVERY_STATUS.PENDING}', ?, ?, ?, ?)`,
+    [id, delivery.order_id || null, delivery.route_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, delivery.total_amount || 0, delivery.currency || 'RUB', now, now]
   );
   return id;
 }
@@ -873,15 +938,15 @@ export async function createDeliveryWithItems(delivery, items) {
   try {
     await database.execAsync('BEGIN TRANSACTION');
     await database.runAsync(
-      `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-      [id, delivery.order_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, DELIVERY_STATUS.DELIVERED, delivery.total_amount || 0, delivery.signature_name || null, delivery.signature_data || null, delivery.signature_driver_data || null, now, now]
+      `INSERT INTO deliveries (id, order_id, route_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, currency, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+      [id, delivery.order_id || null, delivery.route_id || null, delivery.route_point_id || null, delivery.customer_id, delivery.driver_id, now, DELIVERY_STATUS.DELIVERED, delivery.total_amount || 0, delivery.currency || 'RUB', delivery.signature_name || null, delivery.signature_data || null, delivery.signature_driver_data || null, now, now]
     );
     for (const item of items) {
       const diId = generateId();
       await database.runAsync(
-        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [diId, id, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null]
+        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [diId, id, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null, item.unit || 'PCE', item.currency || 'RUB']
       );
     }
     await database.execAsync('COMMIT');
@@ -901,7 +966,7 @@ export async function updateDeliveryStatus(id, status, signatureName = null) {
   );
 }
 
-export async function processShipmentDelivery({ pointId, customerId, driverId, totalAmount, signatureName, signatureData, signatureDriverData, shipmentItems, vehicleId }) {
+export async function processShipmentDelivery({ pointId, customerId, driverId, totalAmount, signatureName, signatureData, signatureDriverData, shipmentItems, vehicleId, routeId, currency }) {
   const database = await getDatabase();
   await database.execAsync('BEGIN TRANSACTION');
   try {
@@ -916,16 +981,16 @@ export async function processShipmentDelivery({ pointId, customerId, driverId, t
     // 2. Create delivery + items
     const deliveryId = generateId();
     await database.runAsync(
-      `INSERT INTO deliveries (id, order_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
-       VALUES (?, NULL, ?, ?, ?, ?, '${DELIVERY_STATUS.DELIVERED}', ?, ?, ?, ?, 1, ?, ?)`,
-      [deliveryId, pointId, customerId, driverId, now, totalAmount, signatureName, signatureData, signatureDriverData, now, now]
+      `INSERT INTO deliveries (id, order_id, route_id, route_point_id, customer_id, driver_id, delivery_date, status, total_amount, currency, signature_name, signature_data, signature_driver_data, signature_confirmed, created_at, updated_at)
+       VALUES (?, NULL, ?, ?, ?, ?, ?, '${DELIVERY_STATUS.DELIVERED}', ?, ?, ?, ?, ?, 1, ?, ?)`,
+      [deliveryId, routeId || null, pointId, customerId, driverId, now, totalAmount, currency || 'RUB', signatureName, signatureData, signatureDriverData, now, now]
     );
 
     for (const item of shipmentItems) {
       const itemId = generateId();
       await database.runAsync(
-        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, deliveryId, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null]
+        `INSERT INTO delivery_items (id, delivery_id, product_id, ordered_quantity, delivered_quantity, price, total, reason_code, unit, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, deliveryId, item.product_id, item.ordered_quantity || 0, item.delivered_quantity, item.price, item.delivered_quantity * item.price, item.reason_code || null, item.unit || 'PCE', item.currency || 'RUB']
       );
     }
 
@@ -1014,9 +1079,9 @@ export async function createReturn(ret) {
   const id = generateId();
   const now = new Date().toISOString();
   await database.runAsync(
-    `INSERT INTO returns (id, customer_id, driver_id, route_point_id, return_date, reason, status, total_amount, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, '${RETURN_STATUS.PENDING_APPROVAL}', ?, ?, ?)`,
-    [id, ret.customer_id, ret.driver_id, ret.route_point_id || null, now, ret.reason, ret.total_amount || 0, ret.notes || null, now]
+    `INSERT INTO returns (id, customer_id, driver_id, route_point_id, return_date, reason, status, total_amount, currency, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, '${RETURN_STATUS.PENDING_APPROVAL}', ?, ?, ?, ?)`,
+    [id, ret.customer_id, ret.driver_id, ret.route_point_id || null, now, ret.reason, ret.total_amount || 0, ret.currency || 'RUB', ret.notes || null, now]
   );
   return id;
 }
@@ -1069,9 +1134,9 @@ export async function createPayment(payment) {
   const now = new Date().toISOString();
   await database.withTransactionAsync(async () => {
     await database.runAsync(
-      `INSERT INTO payments (id, customer_id, user_id, order_id, route_point_id, payment_date, amount, payment_type, status, receipt_number, notes, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`,
-      [id, payment.customer_id, payment.user_id, payment.order_id || null, payment.route_point_id || null, now, payment.amount, payment.payment_type, payment.receipt_number || null, payment.notes || null, now]
+      `INSERT INTO payments (id, customer_id, user_id, order_id, delivery_id, route_point_id, payment_date, amount, change_amount, currency, payment_type, status, receipt_number, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, ?)`,
+      [id, payment.customer_id, payment.user_id, payment.order_id || null, payment.delivery_id || null, payment.route_point_id || null, now, payment.amount, payment.change_amount || 0, payment.currency || 'RUB', payment.payment_type, payment.receipt_number || null, payment.notes || null, now]
     );
     // Subtract payment amount from customer's debt (never below 0)
     await database.runAsync(
@@ -1321,9 +1386,9 @@ export async function createCashCollection(collection) {
   const discrepancy = (collection.actual_amount || 0) - (collection.expected_amount || 0);
   const status = discrepancy === 0 ? CASH_COLLECTION_STATUS.COLLECTED : CASH_COLLECTION_STATUS.DISCREPANCY;
   await database.runAsync(
-    `INSERT INTO cash_collections (id, driver_id, route_id, collection_date, expected_amount, actual_amount, discrepancy, status, notes, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, collection.driver_id, collection.route_id || null, now, collection.expected_amount || 0, collection.actual_amount || 0, discrepancy, status, collection.notes || null, now]
+    `INSERT INTO cash_collections (id, driver_id, route_id, collection_date, expected_amount, actual_amount, discrepancy, currency, status, notes, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, collection.driver_id, collection.route_id || null, now, collection.expected_amount || 0, collection.actual_amount || 0, discrepancy, collection.currency || 'RUB', status, collection.notes || null, now]
   );
   return id;
 }
@@ -1382,8 +1447,8 @@ export async function savePackagingReturnItems(packagingReturnId, items) {
     for (const item of items) {
       const itemId = generateId();
       await database.runAsync(
-        `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition) VALUES (?, ?, ?, ?, ?, ?)`,
-        [itemId, packagingReturnId, item.product_id, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good']
+        `INSERT INTO packaging_return_items (id, packaging_return_id, product_id, expected_quantity, actual_quantity, condition, unit) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, packagingReturnId, item.product_id, item.expected_quantity || 0, item.actual_quantity || 0, item.condition || 'good', item.unit || 'PCE']
       );
     }
     await database.execAsync('COMMIT');
@@ -1763,9 +1828,9 @@ export async function createTourCheckin(checkin) {
   const id = generateId();
   const now = new Date().toISOString();
   await database.runAsync(
-    `INSERT INTO tour_checkins (id, driver_id, vehicle_id, route_id, type, status, vehicle_check, odometer_reading, cash_amount, signature_data, supervisor_name, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, checkin.driver_id, checkin.vehicle_id, checkin.route_id || null, checkin.type, checkin.status || CHECKIN_STATUS.IN_PROGRESS, checkin.vehicle_check || null, checkin.odometer_reading || null, checkin.cash_amount || null, checkin.signature_data || null, checkin.supervisor_name || null, checkin.notes || null, now, now]
+    `INSERT INTO tour_checkins (id, driver_id, vehicle_id, route_id, type, status, vehicle_check, odometer_reading, cash_amount, currency, signature_data, supervisor_name, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, checkin.driver_id, checkin.vehicle_id, checkin.route_id || null, checkin.type, checkin.status || CHECKIN_STATUS.IN_PROGRESS, checkin.vehicle_check || null, checkin.odometer_reading || null, checkin.cash_amount || null, checkin.currency || 'RUB', checkin.signature_data || null, checkin.supervisor_name || null, checkin.notes || null, now, now]
   );
   return id;
 }
@@ -1874,6 +1939,16 @@ export async function getTodayPaymentsTotal(driverId) {
   const today = new Date().toISOString().split('T')[0];
   const result = await database.getFirstAsync(
     `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE user_id = ? AND date(payment_date) = ?`,
+    [driverId, today]
+  );
+  return result?.total || 0;
+}
+
+export async function getTodayCashPaymentsTotal(driverId) {
+  const database = await getDatabase();
+  const today = new Date().toISOString().split('T')[0];
+  const result = await database.getFirstAsync(
+    `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE user_id = ? AND date(payment_date) = ? AND payment_type = 'cash'`,
     [driverId, today]
   );
   return result?.total || 0;
@@ -2104,9 +2179,9 @@ export async function createInventoryAdjustment({ vehicleId, warehouse, userId, 
       const itemId = generateId();
       const difference = item.adjusted_qty - item.previous_qty;
       await database.runAsync(
-        `INSERT INTO inventory_adjustment_items (id, adjustment_id, product_id, reason_id, previous_qty, adjusted_qty, difference, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [itemId, id, item.product_id, item.reason_id, item.previous_qty, item.adjusted_qty, difference, item.notes || null]
+        `INSERT INTO inventory_adjustment_items (id, adjustment_id, product_id, reason_id, previous_qty, adjusted_qty, difference, notes, unit)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [itemId, id, item.product_id, item.reason_id, item.previous_qty, item.adjusted_qty, difference, item.notes || null, item.unit || 'PCE']
       );
 
       // Apply the stock change
@@ -2180,9 +2255,9 @@ export async function createOnHandInventory({ customerId, routePointId, userId, 
     for (const item of items) {
       const itemId = generateId();
       await database.runAsync(
-        `INSERT INTO on_hand_inventory_items (id, on_hand_id, product_id, quantity, notes)
-         VALUES (?, ?, ?, ?, ?)`,
-        [itemId, id, item.product_id, item.quantity, item.notes || null]
+        `INSERT INTO on_hand_inventory_items (id, on_hand_id, product_id, quantity, notes, unit)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [itemId, id, item.product_id, item.quantity, item.notes || null, item.unit || 'PCE']
       );
     }
 

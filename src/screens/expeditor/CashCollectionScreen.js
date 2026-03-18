@@ -5,7 +5,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import useAuthStore from '../../store/authStore';
-import { getPayments, getRoutesByDate, createCashCollection } from '../../database';
+import { getPayments, getRoutesByDate, createCashCollection, getTodayTourCheckin, getTodayExpensesTotal } from '../../database';
 
 export default function CashCollectionScreen() {
   const { t } = useTranslation();
@@ -15,6 +15,7 @@ export default function CashCollectionScreen() {
   const [routeId, setRouteId] = useState(null);
   const [actualAmount, setActualAmount] = useState('');
   const [notes, setNotes] = useState('');
+  const [expectedAmount, setExpectedAmount] = useState(0);
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -25,13 +26,20 @@ export default function CashCollectionScreen() {
         const allPayments = await getPayments(user.id);
         const todayPayments = allPayments.filter((p) => p.payment_date?.startsWith(today));
         setPayments(todayPayments);
-        const total = todayPayments.reduce((s, p) => s + p.amount, 0);
-        setActualAmount(String(total));
+
+        // Expected = SOD cash + cash payments - expenses
+        const startCheckin = await getTodayTourCheckin(user.id, 'start');
+        const sodCash = startCheckin?.cash_amount || 0;
+        const cashPayments = todayPayments
+          .filter((p) => p.payment_type === 'cash')
+          .reduce((s, p) => s + p.amount, 0);
+        const expensesTotal = await getTodayExpensesTotal(user.id);
+        const expected = sodCash + cashPayments - expensesTotal;
+        setExpectedAmount(expected);
+        setActualAmount(String(expected));
       } catch (e) { console.error('CashCollection load:', e); }
     })();
   }, [user.id]));
-
-  const expectedAmount = payments.reduce((s, p) => s + p.amount, 0);
   const actual = parseFloat(actualAmount) || 0;
   const discrepancy = actual - expectedAmount;
 

@@ -11,7 +11,7 @@ import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
   getRoutesByDate, getRoutePoints, getOrdersByRoutes,
-  getUnreadNotificationCount,
+  getUnreadNotificationCount, getTodayExpensesTotal,
 } from '../../database';
 
 export default function PresellerHomeScreen() {
@@ -24,6 +24,7 @@ export default function PresellerHomeScreen() {
     totalOrders: 0, ordersAmount: 0,
     routeStatus: ROUTE_STATUS.PLANNED,
     unreadNotifications: 0,
+    todayExpenses: 0,
   });
 
   const loadData = useCallback(async () => {
@@ -45,13 +46,17 @@ export default function PresellerHomeScreen() {
       const routeOrders = await getOrdersByRoutes(routeIds);
       const ordersAmount = routeOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
 
-      const unread = await getUnreadNotificationCount(user.id);
+      const [unread, todayExpenses] = await Promise.all([
+        getUnreadNotificationCount(user.id),
+        getTodayExpensesTotal(user.id),
+      ]);
 
       setStats({
         totalPoints, completedPoints,
         totalOrders: routeOrders.length, ordersAmount,
         routeStatus,
         unreadNotifications: unread,
+        todayExpenses,
       });
     } catch (e) {
       console.error('PresellerHome load error:', e);
@@ -96,24 +101,45 @@ export default function PresellerHomeScreen() {
       {/* Day Summary */}
       <Text style={styles.sectionTitle}>{t('expeditorHome.daySummary')}</Text>
       <View style={styles.cardsRow}>
-        <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB, { screen: SCREEN_NAMES.ROUTE_LIST })}
+          activeOpacity={0.7}
+        >
           <Ionicons name="location-outline" size={28} color={COLORS.primary} />
           <Text style={styles.cardValue}>{stats.completedPoints} / {stats.totalPoints}</Text>
           <Text style={styles.cardLabel}>{t('expeditorHome.points')}</Text>
-        </View>
-        <View style={styles.card}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB, { screen: SCREEN_NAMES.ORDERS_LIST, params: { myToday: true } })}
+          activeOpacity={0.7}
+        >
           <Ionicons name="document-text-outline" size={28} color={COLORS.accent} />
           <Text style={styles.cardValue}>{stats.totalOrders}</Text>
           <Text style={styles.cardLabel}>{t('preseller.ordersToday')}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
-
-      {stats.ordersAmount > 0 && (
-        <View style={styles.amountCard}>
-          <Ionicons name="trending-up-outline" size={22} color={COLORS.success} />
-          <Text style={styles.amountText}>{t('preseller.ordersTotal')}: {formatMoney(stats.ordersAmount)}</Text>
-        </View>
-      )}
+      <View style={[styles.cardsRow, { marginTop: 12 }]}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate(SCREEN_NAMES.ROUTE_TAB, { screen: SCREEN_NAMES.EXPENSES })}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="receipt-outline" size={28} color={COLORS.error} />
+          <Text style={styles.cardValue}>{formatMoney(stats.todayExpenses)}</Text>
+          <Text style={styles.cardLabel}>{t('expeditorHome.expenses')}</Text>
+        </TouchableOpacity>
+        {stats.ordersAmount > 0 ? (
+          <View style={styles.card}>
+            <Ionicons name="trending-up-outline" size={28} color={COLORS.success} />
+            <Text style={styles.cardValue}>{formatMoney(stats.ordersAmount)}</Text>
+            <Text style={styles.cardLabel}>{t('preseller.ordersTotal')}</Text>
+          </View>
+        ) : (
+          <View style={styles.cardPlaceholder} />
+        )}
+      </View>
 
       {/* Route status */}
       <View style={[
@@ -171,11 +197,7 @@ const styles = StyleSheet.create({
   },
   cardValue: { fontSize: 20, fontWeight: '700', color: COLORS.text },
   cardLabel: { fontSize: 12, color: COLORS.textSecondary },
-  amountCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: COLORS.success + '10', borderRadius: 12, padding: 14, marginTop: 12,
-  },
-  amountText: { fontSize: 15, fontWeight: '600', color: COLORS.success },
+  cardPlaceholder: { flex: 1 },
   statusBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16,
     backgroundColor: COLORS.primary + '12', borderRadius: 12, padding: 14,

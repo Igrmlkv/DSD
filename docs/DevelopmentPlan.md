@@ -216,14 +216,13 @@
 
 - ❌ **Full text search** по списку визитов (имя клиента, номер, адрес)
 - ❌ **Изменение порядка визитов** (drag & reorder)
-- ❌ **Добавление визитов** (из customer master / one-time customer / дополнительный визит)
+- ❌ **Добавление визитов** (из customer master / дополнительный визит)
 - ❌ **Cancel visit** с обязательным reason code
 - 🟡 **Per-customer Activities tab** — фиксированный набор действий (не динамический)
 - ❌ **Per-customer Attachments tab** — фото, документы
 - 🟡 **Status icons** — базовые статусы есть, 5 статусов SAP частично покрыты
 
 **Нереализованные экраны:**
-- ❌ `AddVisitScreen.js` — выбор из customer master или создание one-time customer
 - ❌ `CancelVisitScreen.js` — ввод reason code
 
 ---

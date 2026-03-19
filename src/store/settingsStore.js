@@ -9,6 +9,7 @@ const useSettingsStore = create((set, get) => ({
   mapProvider: MAP_PROVIDER.YANDEX, // 'yandex' | 'osm'
   language: 'ru', // 'ru' | 'en'
   printFormType: PRINT_FORM_TYPE.UPD, // 'upd' | 'invoice'
+  hideEmptyProducts: true,        // feature flag — скрывать тару в заказах
   gpsTrackingEnabled: false,     // feature flag — GPS-трекинг
   gpsTrackingInterval: 30,       // секунды
   gpsTrackingDistance: 50,        // метры
@@ -41,8 +42,8 @@ const useSettingsStore = create((set, get) => ({
 
   _persist: async () => {
     try {
-      const { mapProvider, language, printFormType, companyInfo, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance } = get();
-      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify({ mapProvider, language, printFormType, companyInfo, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance }));
+      const { mapProvider, language, printFormType, companyInfo, hideEmptyProducts, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance } = get();
+      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify({ mapProvider, language, printFormType, companyInfo, hideEmptyProducts, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance }));
     } catch (e) {
       console.error('Settings save error:', e);
     }
@@ -66,6 +67,11 @@ const useSettingsStore = create((set, get) => ({
 
   setCompanyInfo: async (info) => {
     set({ companyInfo: { ...get().companyInfo, ...info } });
+    await get()._persist();
+  },
+
+  setHideEmptyProducts: async (val) => {
+    set({ hideEmptyProducts: val });
     await get()._persist();
   },
 

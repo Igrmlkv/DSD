@@ -47,7 +47,6 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "yandexMapApiKey": "b86f674c-5cc1-470b-aadf-9ae9091faee9",
       "eas": {
         "projectId": "415bfed9-72d3-45ef-a28a-72cdcec166a7"
       }

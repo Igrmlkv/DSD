@@ -6,6 +6,7 @@ import i18n, { initI18n } from './src/i18n';
 import AppNavigator from './src/navigation/AppNavigator';
 import { initDatabase } from './src/database';
 import useSettingsStore from './src/store/settingsStore';
+import { YANDEX_MAP_API_KEY } from './src/constants/config';
 
 import { UIManager, Platform } from 'react-native';
 
@@ -16,7 +17,7 @@ const yamapNativeAvailable = UIManager.getViewManagerConfig
 if (yamapNativeAvailable) {
   try {
     const YaMap = require('react-native-yamap').default;
-    YaMap.init('b86f674c-5cc1-470b-aadf-9ae9091faee9');
+    YaMap.init(YANDEX_MAP_API_KEY);
   } catch (e) {
     console.warn('YaMap init skipped:', e.message);
   }

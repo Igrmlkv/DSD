@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../store/authStore';
+import useSettingsStore from '../../store/settingsStore';
 import {
   getAllCustomers, getProductsWithPrices, getOrderById, getOrderItems,
   saveOrderWithItems, getAvailableVehicleStock,
@@ -25,6 +26,7 @@ export default function OrderEditScreen({ route, navigation }) {
   const routeId = route.params?.routeId || null;
   const isEdit = !!orderId;
   const user = useAuthStore((state) => state.user);
+  const hideEmptyProducts = useSettingsStore((s) => s.hideEmptyProducts);
   const isPreseller = user?.role === 'preseller';
 
   const [loading, setLoading] = useState(true);
@@ -54,7 +56,7 @@ export default function OrderEditScreen({ route, navigation }) {
 
   async function loadData() {
     try {
-      const [custs, prods] = await Promise.all([getAllCustomers(), getProductsWithPrices()]);
+      const [custs, prods] = await Promise.all([getAllCustomers(), getProductsWithPrices(hideEmptyProducts)]);
       setCustomers(custs);
       setProducts(prods);
 

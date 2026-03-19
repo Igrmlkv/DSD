@@ -1,7 +1,7 @@
 const { withAppDelegate, withMainApplication, withDangerousMod } = require('expo/config-plugins');
 const { mergeContents } = require('@expo/config-plugins/build/utils/generateCode');
 
-const YANDEX_MAP_API_KEY = 'YOUR_YANDEX_MAP_API_KEY';
+const { YANDEX_MAP_API_KEY } = require('../constants/config');
 
 function withYandexMapsIOS(config) {
   return withAppDelegate(config, (config) => {
@@ -15,7 +15,7 @@ function withYandexMapsIOS(config) {
       );
     }
 
-    const apiKey = config.extra?.yandexMapApiKey || YANDEX_MAP_API_KEY;
+    const apiKey = YANDEX_MAP_API_KEY;
     const mapKitInit = [
       `\t[YMKMapKit setApiKey:@"${apiKey}"];`,
       `\t[YMKMapKit setLocale:@"ru_RU"];`,

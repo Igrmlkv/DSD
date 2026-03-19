@@ -21,6 +21,8 @@ export default function SystemSettingsScreen() {
   const setPrintFormType = useSettingsStore((s) => s.setPrintFormType);
   const companyInfo = useSettingsStore((s) => s.companyInfo);
   const setCompanyInfo = useSettingsStore((s) => s.setCompanyInfo);
+  const hideEmptyProducts = useSettingsStore((s) => s.hideEmptyProducts);
+  const setHideEmptyProducts = useSettingsStore((s) => s.setHideEmptyProducts);
   const gpsTrackingEnabled = useSettingsStore((s) => s.gpsTrackingEnabled);
   const setGpsTrackingEnabled = useSettingsStore((s) => s.setGpsTrackingEnabled);
   const gpsTrackingInterval = useSettingsStore((s) => s.gpsTrackingInterval);
@@ -121,6 +123,24 @@ export default function SystemSettingsScreen() {
           iconColor={COLORS.success}
           title={t('systemSettings.passwordPolicy')}
           subtitle={t('systemSettings.passwordPolicySub')}
+        />
+      </View>
+
+      {/* Фильтр товаров */}
+      <Text style={styles.sectionTitle}>Фильтр товаров</Text>
+      <View style={styles.section}>
+        <SettingRow
+          icon="funnel"
+          iconColor={COLORS.accent}
+          title="Скрывать тару в заказах"
+          subtitle="Исключить возвратную тару из выбора товаров"
+          right={
+            <Switch
+              value={hideEmptyProducts}
+              onValueChange={setHideEmptyProducts}
+              trackColor={{ true: COLORS.primary }}
+            />
+          }
         />
       </View>
 

@@ -21,6 +21,8 @@ export const MAP_PROVIDER = {
   OSM: 'osm',
 };
 
+export const YANDEX_MAP_API_KEY = 'b86f674c-5cc1-470b-aadf-9ae9091faee9';
+
 // Карта: Москва по умолчанию
 export const DEFAULT_MAP_CENTER = { latitude: 55.75, longitude: 37.62, zoom: 11 };
 export const MAP_ZOOM = {

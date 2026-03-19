@@ -477,14 +477,17 @@ export async function getAllProducts() {
   `);
 }
 
-export async function getProductsWithPrices() {
+export async function getProductsWithPrices(excludeEmpties = false) {
   const database = await getDatabase();
+  const where = excludeEmpties
+    ? "WHERE p.is_active = 1 AND p.material_type != 'empty'"
+    : "WHERE p.is_active = 1";
   return database.getAllAsync(`
     SELECT p.id, p.name, p.sku, p.category, p.brand, p.volume, p.barcode,
            pl.price as base_price
     FROM products p
     LEFT JOIN price_lists pl ON pl.product_id = p.id AND pl.price_type = 'base'
-    WHERE p.is_active = 1
+    ${where}
     ORDER BY p.category, p.name
   `);
 }

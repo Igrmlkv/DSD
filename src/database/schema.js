@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 const CREATE_TABLES = [
   // --- Справочники ---
@@ -64,7 +64,7 @@ const CREATE_TABLES = [
     weight_unit TEXT DEFAULT 'KGM',
     vat_percent REAL DEFAULT 22,
     image_url TEXT,
-    material_type TEXT DEFAULT 'product' CHECK(material_type IN ('product','empty')),
+    material_type TEXT DEFAULT 'product',
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
@@ -81,6 +81,11 @@ const CREATE_TABLES = [
     is_active INTEGER DEFAULT 1,
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (empty_product_id) REFERENCES products(id)
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS price_list_types (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL
   )`,
 
   `CREATE TABLE IF NOT EXISTS price_lists (
@@ -345,7 +350,7 @@ const CREATE_TABLES = [
   `CREATE TABLE IF NOT EXISTS tour_checkins (
     id TEXT PRIMARY KEY,
     driver_id TEXT NOT NULL,
-    vehicle_id TEXT NOT NULL,
+    vehicle_id TEXT,
     route_id TEXT,
     type TEXT NOT NULL CHECK(type IN ('start','end')),
     checkin_date TEXT DEFAULT (datetime('now')),
@@ -781,6 +786,8 @@ const CREATE_TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_error_log_source ON error_log(source)`,
   `CREATE INDEX IF NOT EXISTS idx_error_log_date ON error_log(created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_error_log_user ON error_log(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_price_lists_product_type ON price_lists(product_id, price_type)`,
+  `CREATE INDEX IF NOT EXISTS idx_stock_product ON stock(product_id, warehouse)`,
 ];
 
 export { SCHEMA_VERSION, CREATE_TABLES };

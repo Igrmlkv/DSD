@@ -14,6 +14,16 @@ export function setLoggerScreen(screen) {
 }
 
 async function log(severity, source, message, extra = {}) {
+  // Always echo to console so logs are visible in the terminal / Metro output
+  const ts = new Date().toISOString().slice(11, 23);
+  const prefix = `[${ts}] [${severity.toUpperCase()}] [${source}]`;
+  if (severity === 'error' || severity === 'critical') {
+    console.error(prefix, message);
+  } else if (severity === 'warning') {
+    console.warn(prefix, message);
+  } else {
+    console.log(prefix, message);
+  }
   try {
     await addErrorLog({
       severity,

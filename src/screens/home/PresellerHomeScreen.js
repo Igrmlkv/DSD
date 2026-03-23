@@ -10,7 +10,7 @@ import { SCREEN_NAMES } from '../../constants/screens';
 import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
 import {
-  getRoutesByDate, getRoutePoints, getOrdersByRoutes,
+  getRoutesByDate, getRoutePoints, getTodayOrdersByUser,
   getUnreadNotificationCount, getTodayExpensesTotal,
 } from '../../database';
 
@@ -42,18 +42,16 @@ export default function PresellerHomeScreen() {
         }
       }
 
-      const routeIds = routes.map((r) => r.id);
-      const routeOrders = await getOrdersByRoutes(routeIds);
-      const ordersAmount = routeOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
-
-      const [unread, todayExpenses] = await Promise.all([
+      const [todayOrders, unread, todayExpenses] = await Promise.all([
+        getTodayOrdersByUser(user.id),
         getUnreadNotificationCount(user.id),
         getTodayExpensesTotal(user.id),
       ]);
+      const ordersAmount = todayOrders.reduce((s, o) => s + (o.total_amount || 0), 0);
 
       setStats({
         totalPoints, completedPoints,
-        totalOrders: routeOrders.length, ordersAmount,
+        totalOrders: todayOrders.length, ordersAmount,
         routeStatus,
         unreadNotifications: unread,
         todayExpenses,

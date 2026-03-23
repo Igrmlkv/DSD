@@ -416,11 +416,17 @@ export function deliveryNoteTemplate(note, items) {
 }
 
 export function orderConfirmationTemplate(order, items, customer) {
-  const vatRate = customer?.vat_rate ?? DEFAULT_VAT_PERCENT;
+  const fallbackRate = customer?.vat_rate ?? DEFAULT_VAT_PERCENT;
   const subtotal = (items || []).reduce((s, i) => s + (i.total || 0), 0);
   const discountTotal = (items || []).reduce((s, i) => s + (i.quantity * i.price * ((i.discount_percent || 0) / 100)), 0);
   const netTotal = subtotal;
-  const vatAmount = Math.round(netTotal * (vatRate / 100) * 100) / 100;
+  const vatAmount = Math.round((items || []).reduce((s, i) => {
+    const lineNet = i.total || (i.quantity * i.price * (1 - (i.discount_percent || 0) / 100));
+    const rate = (i.vat_percent ?? fallbackRate) / 100;
+    return s + lineNet * rate;
+  }, 0) * 100) / 100;
+  const vatRates = [...new Set((items || []).map((i) => i.vat_percent ?? fallbackRate))];
+  const vatLabel = vatRates.length === 1 ? `${vatRates[0]}%` : 'mixed';
   const grandTotal = Math.round((netTotal + vatAmount) * 100) / 100;
 
   const itemRows = (items || []).map((item, i) => `
@@ -460,7 +466,7 @@ export function orderConfirmationTemplate(order, items, customer) {
     <div class="totals">
       ${discountTotal > 0 ? `<div class="row"><span class="label">Скидка:</span><span class="value">${formatCurrency(discountTotal)} ₽</span></div>` : ''}
       <div class="row"><span class="label">Итого:</span><span class="value">${formatCurrency(netTotal)} ₽</span></div>
-      <div class="row"><span class="label">НДС (${vatRate}%):</span><span class="value">${formatCurrency(vatAmount)} ₽</span></div>
+      <div class="row"><span class="label">НДС (${vatLabel}):</span><span class="value">${formatCurrency(vatAmount)} ₽</span></div>
       <div class="row grand-total"><span class="label">ИТОГО С НДС:</span><span class="value">${formatCurrency(grandTotal)} ₽</span></div>
     </div>
     <div class="signatures">

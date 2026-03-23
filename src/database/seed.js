@@ -4,11 +4,11 @@ import { PROMO_PRICE_MULTIPLIER } from '../constants/config';
 // Пользователи системы — 4 пользователя, 3 роли
 // ============================================================
 const USERS = [
-  { id: 'usr-001', username: 'petrov', password_hash: 'hash_petrov', full_name: 'Петров Алексей Иванович', role: 'expeditor', phone: '+79161234567', vehicle_id: 'veh-001' },
-  { id: 'usr-003', username: 'kozlov', password_hash: 'hash_kozlov', full_name: 'Козлов Дмитрий Сергеевич', role: 'expeditor', phone: '+79031112233', vehicle_id: 'veh-002' },
-  { id: 'usr-004', username: 'ivanova', password_hash: 'hash_ivanova', full_name: 'Иванова Елена Николаевна', role: 'supervisor', phone: '+79057778899', vehicle_id: null },
-  { id: 'usr-005', username: 'sokolov', password_hash: 'hash_sokolov', full_name: 'Соколов Артём Владимирович', role: 'preseller', phone: '+79261234500', vehicle_id: 'veh-003' },
-  { id: 'usr-006', username: 'admin', password_hash: 'hash_admin', full_name: 'Администратор Системы', role: 'admin', phone: '+79990001122', vehicle_id: null },
+  { id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', username: 'volkov', password_hash: 'hash_volkov', full_name: 'Волков Сергей Михайлович', role: 'expeditor', phone: '+79161234567', vehicle_id: null },
+  { id: '9cebb77c-154f-5cd7-af84-4c223905b465', username: 'morozov', password_hash: 'hash_morozov', full_name: 'Морозов Андрей Павлович', role: 'expeditor', phone: '+79031112233', vehicle_id: null },
+  { id: '5718680f-48ee-53a4-a217-f33eca82a41f', username: 'kuznetsova', password_hash: 'hash_kuznetsova', full_name: 'Кузнецова Марина Олеговна', role: 'supervisor', phone: '+79057778899', vehicle_id: null },
+  { id: 'f3aedca0-8c6d-52ae-ae6a-f27064544b7d', username: 'lebedev', password_hash: 'hash_lebedev', full_name: 'Лебедев Денис Игоревич', role: 'preseller', phone: '+79261234500', vehicle_id: null },
+  { id: 'b81efc22-d34c-5e4d-9148-e3f448c8a3fe', username: 'admin', password_hash: 'hash_admin', full_name: 'Администратор Системы', role: 'admin', phone: '+79990001122', vehicle_id: null },
 ];
 
 // ============================================================
@@ -66,6 +66,20 @@ const PRODUCTS = [
 ];
 
 // ============================================================
+// Услуги (аренда и обслуживание оборудования)
+// ============================================================
+const SERVICES = [
+  { id: 'svc-001', sku: 'SVC-001', name: 'Аренда холодильника PepsiCo (мес.)', category: 'Услуги', subcategory: 'Аренда оборудования', brand: 'PepsiCo', material_type: 'service' },
+  { id: 'svc-002', sku: 'SVC-002', name: 'Аренда холодильника витринного (мес.)', category: 'Услуги', subcategory: 'Аренда оборудования', brand: 'PepsiCo', material_type: 'service' },
+  { id: 'svc-003', sku: 'SVC-003', name: 'Аренда премикс-машины (мес.)', category: 'Услуги', subcategory: 'Аренда оборудования', brand: 'PepsiCo', material_type: 'service' },
+  { id: 'svc-004', sku: 'SVC-004', name: 'Обслуживание холодильника (разовое)', category: 'Услуги', subcategory: 'Обслуживание', brand: 'PepsiCo', material_type: 'service' },
+  { id: 'svc-005', sku: 'SVC-005', name: 'Обслуживание премикс-машины (разовое)', category: 'Услуги', subcategory: 'Обслуживание', brand: 'PepsiCo', material_type: 'service' },
+  { id: 'svc-006', sku: 'SVC-006', name: 'Доставка оборудования', category: 'Услуги', subcategory: 'Логистика', brand: 'PepsiCo', material_type: 'service' },
+  { id: 'svc-007', sku: 'SVC-007', name: 'Монтаж/демонтаж оборудования', category: 'Услуги', subcategory: 'Обслуживание', brand: 'PepsiCo', material_type: 'service' },
+  { id: 'svc-008', sku: 'SVC-008', name: 'Аренда постмикс-аппарата (мес.)', category: 'Услуги', subcategory: 'Аренда оборудования', brand: 'PepsiCo', material_type: 'service' },
+];
+
+// ============================================================
 // Возвратная тара (материалы типа empty из ERP)
 // ============================================================
 const EMPTIES = [
@@ -119,6 +133,9 @@ function generatePrices() {
     'prd-028': 89, 'prd-029': 139, 'prd-030': 129,
     'prd-031': 89, 'prd-032': 79,
     'prd-033': 85, 'prd-034': 55, 'prd-035': 35,
+    // Услуги
+    'svc-001': 5000, 'svc-002': 7500, 'svc-003': 12000, 'svc-004': 3000,
+    'svc-005': 4500, 'svc-006': 8000, 'svc-007': 6000, 'svc-008': 15000,
   };
 
   const prices = [];
@@ -187,9 +204,9 @@ const CUSTOMERS = [
 // Транспортные средства (оба — Москва, регион 77)
 // ============================================================
 const VEHICLES = [
-  { id: 'veh-001', plate_number: 'А123БВ77', model: 'ГАЗель Next', driver_id: 'usr-001', capacity_kg: 1500 },
-  { id: 'veh-002', plate_number: 'К456МН77', model: 'ГАЗель Business', driver_id: 'usr-003', capacity_kg: 1200 },
-  { id: 'veh-003', plate_number: 'Е789ОР77', model: 'Lada Largus', driver_id: 'usr-005', capacity_kg: 700 },
+  { id: '98e8b157-455e-5dd7-9dad-cb803a5bda04', plate_number: 'А123БВ77', model: 'ГАЗель Next', driver_id: null, capacity_kg: 1500 },
+  { id: '5d4d7a82-6dea-5d0b-a346-b2c64f6baecc', plate_number: 'К456МН77', model: 'ГАЗель Business', driver_id: null, capacity_kg: 1200 },
+  { id: '04c9924c-32b3-5b60-9160-466a8a8fa4a0', plate_number: 'Е789ОР77', model: 'Lada Largus', driver_id: null, capacity_kg: 700 },
 ];
 
 // ============================================================
@@ -240,7 +257,7 @@ function generateVehicleStock() {
     stock.push({
       id: `vstk-${String(idx++).padStart(3, '0')}`,
       product_id: item.product_id,
-      warehouse: 'veh-001',
+      warehouse: '98e8b157-455e-5dd7-9dad-cb803a5bda04',
       quantity: item.quantity,
       reserved: 0,
     });
@@ -267,7 +284,7 @@ function generateVehicleStock() {
     stock.push({
       id: `vstk-${String(idx++).padStart(3, '0')}`,
       product_id: item.product_id,
-      warehouse: 'veh-002',
+      warehouse: '5d4d7a82-6dea-5d0b-a346-b2c64f6baecc',
       quantity: item.quantity,
       reserved: 0,
     });
@@ -285,15 +302,15 @@ function generateRoutes() {
 
   const routes = [
     // Сегодня — Петров ×2, Козлов ×1, Соколов ×2
-    { id: 'rte-001', date: today, name: 'Центр + Запад', driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
-    { id: 'rte-002', date: today, name: 'Юг', driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
-    { id: 'rte-003', date: today, name: 'Восток', driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
-    { id: 'rte-004', date: today, name: 'Центр (Preseller)', driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
-    { id: 'rte-005', date: today, name: 'Север + Запад (Preseller)', driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
+    { id: 'rte-001', date: today, name: 'Центр + Запад', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-002', date: today, name: 'Юг', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-003', date: today, name: 'Восток', driver_id: '9cebb77c-154f-5cd7-af84-4c223905b465', status: 'planned', vehicle_number: 'К456МН77' },
+    { id: 'rte-004', date: today, name: 'Центр (Preseller)', driver_id: 'f3aedca0-8c6d-52ae-ae6a-f27064544b7d', status: 'planned', vehicle_number: 'Е789ОР77' },
+    { id: 'rte-005', date: today, name: 'Север + Запад (Preseller)', driver_id: 'f3aedca0-8c6d-52ae-ae6a-f27064544b7d', status: 'planned', vehicle_number: 'Е789ОР77' },
     // Завтра — Петров ×1, Козлов ×1, Соколов ×1
-    { id: 'rte-006', date: tomorrow, name: 'Север + Восток', driver_id: 'usr-001', status: 'planned', vehicle_number: 'А123БВ77' },
-    { id: 'rte-007', date: tomorrow, name: 'Запад + Центр', driver_id: 'usr-003', status: 'planned', vehicle_number: 'К456МН77' },
-    { id: 'rte-008', date: tomorrow, name: 'Юг + HoReCa (Preseller)', driver_id: 'usr-005', status: 'planned', vehicle_number: 'Е789ОР77' },
+    { id: 'rte-006', date: tomorrow, name: 'Север + Восток', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', status: 'planned', vehicle_number: 'А123БВ77' },
+    { id: 'rte-007', date: tomorrow, name: 'Запад + Центр', driver_id: '9cebb77c-154f-5cd7-af84-4c223905b465', status: 'planned', vehicle_number: 'К456МН77' },
+    { id: 'rte-008', date: tomorrow, name: 'Юг + HoReCa (Preseller)', driver_id: 'f3aedca0-8c6d-52ae-ae6a-f27064544b7d', status: 'planned', vehicle_number: 'Е789ОР77' },
   ];
 
   const routePoints = [
@@ -370,14 +387,14 @@ function generateOrders() {
   const today = new Date().toISOString().split('T')[0];
 
   const orders = [
-    { id: 'ord-001', customer_id: 'cst-001', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-001', order_date: today, status: 'confirmed', total_amount: 12450, discount_amount: 0, vat_amount: 2739, currency: 'RUB' },
-    { id: 'ord-002', customer_id: 'cst-002', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 8970, discount_amount: 500, vat_amount: 1973.4, currency: 'RUB' },
-    { id: 'ord-003', customer_id: 'cst-005', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-005', order_date: today, status: 'confirmed', total_amount: 23100, discount_amount: 1200, vat_amount: 5082, currency: 'RUB' },
-    { id: 'ord-004', customer_id: 'cst-009', user_id: 'usr-003', route_id: 'rte-003', route_point_id: 'rp-013', order_date: today, status: 'confirmed', total_amount: 15600, discount_amount: 0, vat_amount: 3432, currency: 'RUB' },
-    { id: 'ord-005', customer_id: 'cst-016', user_id: 'usr-003', route_id: 'rte-003', route_point_id: 'rp-015', order_date: today, status: 'draft', total_amount: 7890, discount_amount: 0, vat_amount: 1735.8, currency: 'RUB' },
+    { id: 'ord-001', customer_id: 'cst-001', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_id: 'rte-001', route_point_id: 'rp-001', order_date: today, status: 'confirmed', total_amount: 12450, discount_amount: 0, vat_amount: 2739, currency: 'RUB' },
+    { id: 'ord-002', customer_id: 'cst-002', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_id: 'rte-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 8970, discount_amount: 500, vat_amount: 1973.4, currency: 'RUB' },
+    { id: 'ord-003', customer_id: 'cst-005', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_id: 'rte-001', route_point_id: 'rp-005', order_date: today, status: 'confirmed', total_amount: 23100, discount_amount: 1200, vat_amount: 5082, currency: 'RUB' },
+    { id: 'ord-004', customer_id: 'cst-009', user_id: '9cebb77c-154f-5cd7-af84-4c223905b465', route_id: 'rte-003', route_point_id: 'rp-013', order_date: today, status: 'confirmed', total_amount: 15600, discount_amount: 0, vat_amount: 3432, currency: 'RUB' },
+    { id: 'ord-005', customer_id: 'cst-016', user_id: '9cebb77c-154f-5cd7-af84-4c223905b465', route_id: 'rte-003', route_point_id: 'rp-015', order_date: today, status: 'draft', total_amount: 7890, discount_amount: 0, vat_amount: 1735.8, currency: 'RUB' },
     // Дополнительные заказы Петрова — маршрут 1, точки 2 и 3
-    { id: 'ord-006', customer_id: 'cst-002', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 5740, discount_amount: 0, vat_amount: 1262.8, currency: 'RUB' },
-    { id: 'ord-007', customer_id: 'cst-003', user_id: 'usr-001', route_id: 'rte-001', route_point_id: 'rp-003', order_date: today, status: 'confirmed', total_amount: 9350, discount_amount: 400, vat_amount: 2057, currency: 'RUB' },
+    { id: 'ord-006', customer_id: 'cst-002', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_id: 'rte-001', route_point_id: 'rp-002', order_date: today, status: 'confirmed', total_amount: 5740, discount_amount: 0, vat_amount: 1262.8, currency: 'RUB' },
+    { id: 'ord-007', customer_id: 'cst-003', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_id: 'rte-001', route_point_id: 'rp-003', order_date: today, status: 'confirmed', total_amount: 9350, discount_amount: 400, vat_amount: 2057, currency: 'RUB' },
   ];
 
   const orderItems = [
@@ -435,8 +452,8 @@ function generateDeliveriesAndPayments() {
   const today = new Date().toISOString().split('T')[0];
 
   const deliveries = [
-    { id: 'dlv-001', order_id: 'ord-001', route_id: 'rte-001', route_point_id: 'rp-001', customer_id: 'cst-001', driver_id: 'usr-001', delivery_date: today, status: 'delivered', total_amount: 12450, currency: 'RUB', signature_name: 'Кузнецова А.В.', signature_confirmed: 1 },
-    { id: 'dlv-002', order_id: 'ord-002', route_id: 'rte-001', route_point_id: 'rp-002', customer_id: 'cst-002', driver_id: 'usr-001', delivery_date: today, status: 'delivered', total_amount: 8470, currency: 'RUB', signature_name: 'Белов И.П.', signature_confirmed: 1 },
+    { id: 'dlv-001', order_id: 'ord-001', route_id: 'rte-001', route_point_id: 'rp-001', customer_id: 'cst-001', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', delivery_date: today, status: 'delivered', total_amount: 12450, currency: 'RUB', signature_name: 'Кузнецова А.В.', signature_confirmed: 1 },
+    { id: 'dlv-002', order_id: 'ord-002', route_id: 'rte-001', route_point_id: 'rp-002', customer_id: 'cst-002', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', delivery_date: today, status: 'delivered', total_amount: 8470, currency: 'RUB', signature_name: 'Белов И.П.', signature_confirmed: 1 },
   ];
 
   const deliveryItems = [
@@ -452,8 +469,8 @@ function generateDeliveriesAndPayments() {
   ];
 
   const payments = [
-    { id: 'pay-001', customer_id: 'cst-001', user_id: 'usr-001', order_id: 'ord-001', delivery_id: 'dlv-001', route_point_id: 'rp-001', payment_date: today, amount: 12450, change_amount: 0, currency: 'RUB', payment_type: 'cash', status: 'completed', receipt_number: 'ПКО-001' },
-    { id: 'pay-002', customer_id: 'cst-002', user_id: 'usr-001', order_id: 'ord-002', delivery_id: 'dlv-002', route_point_id: 'rp-002', payment_date: today, amount: 5000, change_amount: 0, currency: 'RUB', payment_type: 'card', status: 'completed', receipt_number: 'ПКО-002' },
+    { id: 'pay-001', customer_id: 'cst-001', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', order_id: 'ord-001', delivery_id: 'dlv-001', route_point_id: 'rp-001', payment_date: today, amount: 12450, change_amount: 0, currency: 'RUB', payment_type: 'cash', status: 'completed', receipt_number: 'ПКО-001' },
+    { id: 'pay-002', customer_id: 'cst-002', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', order_id: 'ord-002', delivery_id: 'dlv-002', route_point_id: 'rp-002', payment_date: today, amount: 5000, change_amount: 0, currency: 'RUB', payment_type: 'card', status: 'completed', receipt_number: 'ПКО-002' },
   ];
 
   return { deliveries, deliveryItems, payments };
@@ -467,10 +484,10 @@ function generateReturns() {
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
   const returns = [
-    { id: 'ret-001', customer_id: 'cst-001', driver_id: 'usr-001', route_point_id: 'rp-001', return_date: today, reason: 'damaged', status: 'pending_approval', total_amount: 780 },
-    { id: 'ret-002', customer_id: 'cst-005', driver_id: 'usr-001', route_point_id: 'rp-005', return_date: today, reason: 'expired', status: 'pending_approval', total_amount: 1560 },
-    { id: 'ret-003', customer_id: 'cst-009', driver_id: 'usr-003', route_point_id: 'rp-013', return_date: yesterday, reason: 'quality', status: 'approved', total_amount: 390, approved_by: 'usr-004', approved_at: `${yesterday}T14:30:00` },
-    { id: 'ret-004', customer_id: 'cst-002', driver_id: 'usr-001', route_point_id: 'rp-002', return_date: yesterday, reason: 'unsold', status: 'rejected', total_amount: 5500, approved_by: 'usr-004', approved_at: `${yesterday}T15:00:00`, rejection_reason: 'Превышен лимит возврата' },
+    { id: 'ret-001', customer_id: 'cst-001', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_point_id: 'rp-001', return_date: today, reason: 'damaged', status: 'pending_approval', total_amount: 780 },
+    { id: 'ret-002', customer_id: 'cst-005', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_point_id: 'rp-005', return_date: today, reason: 'expired', status: 'pending_approval', total_amount: 1560 },
+    { id: 'ret-003', customer_id: 'cst-009', driver_id: '9cebb77c-154f-5cd7-af84-4c223905b465', route_point_id: 'rp-013', return_date: yesterday, reason: 'quality', status: 'approved', total_amount: 390, approved_by: '5718680f-48ee-53a4-a217-f33eca82a41f', approved_at: `${yesterday}T14:30:00` },
+    { id: 'ret-004', customer_id: 'cst-002', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_point_id: 'rp-002', return_date: yesterday, reason: 'unsold', status: 'rejected', total_amount: 5500, approved_by: '5718680f-48ee-53a4-a217-f33eca82a41f', approved_at: `${yesterday}T15:00:00`, rejection_reason: 'Превышен лимит возврата' },
   ];
 
   const returnItems = [
@@ -492,20 +509,20 @@ function generateNotifications() {
 
   return [
     // Экспедитор Петров
-    { id: 'ntf-001', user_id: 'usr-001', title: 'Маршрут назначен', message: 'Вам назначен маршрут на сегодня: Москва центр, 7 точек', type: 'info', is_read: 0, related_entity: 'route', related_id: 'rte-001', created_at: now },
-    { id: 'ntf-002', user_id: 'usr-001', title: 'Загрузка рейса', message: 'Подготовьте автомобиль к загрузке до 08:00', type: 'warning', is_read: 0, related_entity: 'loading_trip', related_id: null, created_at: now },
-    { id: 'ntf-003', user_id: 'usr-001', title: 'Возврат отклонён', message: 'Возврат по Магнит #8834 отклонён супервайзером: Превышен лимит возврата', type: 'error', is_read: 1, related_entity: 'return', related_id: 'ret-004', created_at: now },
+    { id: 'ntf-001', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', title: 'Маршрут назначен', message: 'Вам назначен маршрут на сегодня: Москва центр, 7 точек', type: 'info', is_read: 0, related_entity: 'route', related_id: 'rte-001', created_at: now },
+    { id: 'ntf-002', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', title: 'Загрузка рейса', message: 'Подготовьте автомобиль к загрузке до 08:00', type: 'warning', is_read: 0, related_entity: 'loading_trip', related_id: null, created_at: now },
+    { id: 'ntf-003', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', title: 'Возврат отклонён', message: 'Возврат по Магнит #8834 отклонён супервайзером: Превышен лимит возврата', type: 'error', is_read: 1, related_entity: 'return', related_id: 'ret-004', created_at: now },
 
     // Экспедитор Козлов
-    { id: 'ntf-004', user_id: 'usr-003', title: 'Маршрут назначен', message: 'Вам назначен маршрут на сегодня: Москва восток, 6 точек', type: 'info', is_read: 0, related_entity: 'route', related_id: 'rte-003', created_at: now },
+    { id: 'ntf-004', user_id: '9cebb77c-154f-5cd7-af84-4c223905b465', title: 'Маршрут назначен', message: 'Вам назначен маршрут на сегодня: Москва восток, 6 точек', type: 'info', is_read: 0, related_entity: 'route', related_id: 'rte-003', created_at: now },
 
     // Супервайзер Иванова
-    { id: 'ntf-005', user_id: 'usr-004', title: 'Возврат на утверждение', message: 'Новый возврат от Петрова А.И. — Пятёрочка #1245, 780 ₽', type: 'warning', is_read: 0, related_entity: 'return', related_id: 'ret-001', created_at: now },
-    { id: 'ntf-006', user_id: 'usr-004', title: 'Возврат на утверждение', message: 'Новый возврат от Петрова А.И. — Перекрёсток #312, 1 560 ₽', type: 'warning', is_read: 0, related_entity: 'return', related_id: 'ret-002', created_at: now },
-    { id: 'ntf-007', user_id: 'usr-004', title: 'Задержка на маршруте', message: 'Козлов Д.С. отстаёт от графика на 15 мин', type: 'error', is_read: 0, related_entity: 'route', related_id: 'rte-003', created_at: now },
+    { id: 'ntf-005', user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', title: 'Возврат на утверждение', message: 'Новый возврат от Петрова А.И. — Пятёрочка #1245, 780 ₽', type: 'warning', is_read: 0, related_entity: 'return', related_id: 'ret-001', created_at: now },
+    { id: 'ntf-006', user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', title: 'Возврат на утверждение', message: 'Новый возврат от Петрова А.И. — Перекрёсток #312, 1 560 ₽', type: 'warning', is_read: 0, related_entity: 'return', related_id: 'ret-002', created_at: now },
+    { id: 'ntf-007', user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', title: 'Задержка на маршруте', message: 'Козлов Д.С. отстаёт от графика на 15 мин', type: 'error', is_read: 0, related_entity: 'route', related_id: 'rte-003', created_at: now },
 
     // Администратор
-    { id: 'ntf-008', user_id: 'usr-006', title: 'Ошибка синхронизации', message: 'Устройство Козлова Д.С. не синхронизировалось более 2 часов', type: 'error', is_read: 0, related_entity: 'device', related_id: 'dev-002', created_at: now },
+    { id: 'ntf-008', user_id: 'b81efc22-d34c-5e4d-9148-e3f448c8a3fe', title: 'Ошибка синхронизации', message: 'Устройство Козлова Д.С. не синхронизировалось более 2 часов', type: 'error', is_read: 0, related_entity: 'device', related_id: 'dev-002', created_at: now },
   ];
 }
 
@@ -517,10 +534,10 @@ function generateDevices() {
   const twoHoursAgo = new Date(Date.now() - 7200000).toISOString();
 
   return [
-    { id: 'dev-001', user_id: 'usr-001', device_model: 'Samsung Galaxy A54', os_version: 'Android 14', app_version: '1.0.0', last_sync_at: now, status: 'active', storage_used_mb: 145.3 },
-    { id: 'dev-002', user_id: 'usr-003', device_model: 'Xiaomi Redmi Note 12', os_version: 'Android 13', app_version: '1.0.0', last_sync_at: twoHoursAgo, status: 'active', storage_used_mb: 98.7 },
-    { id: 'dev-003', user_id: 'usr-004', device_model: 'iPhone 15', os_version: 'iOS 17.4', app_version: '1.0.0', last_sync_at: now, status: 'active', storage_used_mb: 67.2 },
-    { id: 'dev-004', user_id: 'usr-006', device_model: 'iPad Pro 12.9', os_version: 'iPadOS 17.4', app_version: '1.0.0', last_sync_at: now, status: 'active', storage_used_mb: 210.5 },
+    { id: 'dev-001', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', device_model: 'Samsung Galaxy A54', os_version: 'Android 14', app_version: '1.0.0', last_sync_at: now, status: 'active', storage_used_mb: 145.3 },
+    { id: 'dev-002', user_id: '9cebb77c-154f-5cd7-af84-4c223905b465', device_model: 'Xiaomi Redmi Note 12', os_version: 'Android 13', app_version: '1.0.0', last_sync_at: twoHoursAgo, status: 'active', storage_used_mb: 98.7 },
+    { id: 'dev-003', user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', device_model: 'iPhone 15', os_version: 'iOS 17.4', app_version: '1.0.0', last_sync_at: now, status: 'active', storage_used_mb: 67.2 },
+    { id: 'dev-004', user_id: 'b81efc22-d34c-5e4d-9148-e3f448c8a3fe', device_model: 'iPad Pro 12.9', os_version: 'iPadOS 17.4', app_version: '1.0.0', last_sync_at: now, status: 'active', storage_used_mb: 210.5 },
   ];
 }
 
@@ -532,21 +549,21 @@ function generateAuditLog() {
   const entries = [];
 
   const actions = [
-    { user_id: 'usr-001', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства Samsung Galaxy A54' },
-    { user_id: 'usr-001', action: 'route_start', entity_type: 'route', entity_id: 'rte-001', details: 'Начат маршрут Москва центр' },
-    { user_id: 'usr-001', action: 'delivery_complete', entity_type: 'delivery', entity_id: 'dlv-001', details: 'Доставка завершена — Пятёрочка #1245, 12 450 ₽' },
-    { user_id: 'usr-001', action: 'payment_received', entity_type: 'payment', entity_id: 'pay-001', details: 'Принята оплата наличными 12 450 ₽' },
-    { user_id: 'usr-001', action: 'delivery_complete', entity_type: 'delivery', entity_id: 'dlv-002', details: 'Доставка завершена — Магнит #8834, 8 470 ₽' },
-    { user_id: 'usr-001', action: 'return_created', entity_type: 'return', entity_id: 'ret-001', details: 'Создан возврат — Пятёрочка #1245, повреждение, 780 ₽' },
-    { user_id: 'usr-003', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства Xiaomi Redmi Note 12' },
-    { user_id: 'usr-003', action: 'route_start', entity_type: 'route', entity_id: 'rte-002', details: 'Начат маршрут Москва юг-восток' },
-    { user_id: 'usr-004', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства iPhone 15' },
-    { user_id: 'usr-004', action: 'return_approved', entity_type: 'return', entity_id: 'ret-003', details: 'Утверждён возврат — Пятёрочка #3456, 390 ₽' },
-    { user_id: 'usr-004', action: 'return_rejected', entity_type: 'return', entity_id: 'ret-004', details: 'Отклонён возврат — Магнит #8834, превышен лимит' },
-    { user_id: 'usr-006', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства iPad Pro 12.9' },
-    { user_id: 'usr-006', action: 'user_updated', entity_type: 'user', entity_id: 'usr-001', details: 'Обновлены данные пользователя Петров А.И.' },
-    { user_id: 'usr-006', action: 'sync_forced', entity_type: 'device', entity_id: 'dev-002', details: 'Принудительная синхронизация устройства Козлова Д.С.' },
-    { user_id: 'usr-006', action: 'settings_changed', entity_type: 'settings', details: 'Изменён лимит возвратов: 5 000 → 10 000 ₽' },
+    { user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства Samsung Galaxy A54' },
+    { user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', action: 'route_start', entity_type: 'route', entity_id: 'rte-001', details: 'Начат маршрут Москва центр' },
+    { user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', action: 'delivery_complete', entity_type: 'delivery', entity_id: 'dlv-001', details: 'Доставка завершена — Пятёрочка #1245, 12 450 ₽' },
+    { user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', action: 'payment_received', entity_type: 'payment', entity_id: 'pay-001', details: 'Принята оплата наличными 12 450 ₽' },
+    { user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', action: 'delivery_complete', entity_type: 'delivery', entity_id: 'dlv-002', details: 'Доставка завершена — Магнит #8834, 8 470 ₽' },
+    { user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', action: 'return_created', entity_type: 'return', entity_id: 'ret-001', details: 'Создан возврат — Пятёрочка #1245, повреждение, 780 ₽' },
+    { user_id: '9cebb77c-154f-5cd7-af84-4c223905b465', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства Xiaomi Redmi Note 12' },
+    { user_id: '9cebb77c-154f-5cd7-af84-4c223905b465', action: 'route_start', entity_type: 'route', entity_id: 'rte-002', details: 'Начат маршрут Москва юг-восток' },
+    { user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства iPhone 15' },
+    { user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', action: 'return_approved', entity_type: 'return', entity_id: 'ret-003', details: 'Утверждён возврат — Пятёрочка #3456, 390 ₽' },
+    { user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', action: 'return_rejected', entity_type: 'return', entity_id: 'ret-004', details: 'Отклонён возврат — Магнит #8834, превышен лимит' },
+    { user_id: 'b81efc22-d34c-5e4d-9148-e3f448c8a3fe', action: 'login', entity_type: 'session', details: 'Вход в систему с устройства iPad Pro 12.9' },
+    { user_id: 'b81efc22-d34c-5e4d-9148-e3f448c8a3fe', action: 'user_updated', entity_type: 'user', entity_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', details: 'Обновлены данные пользователя Петров А.И.' },
+    { user_id: 'b81efc22-d34c-5e4d-9148-e3f448c8a3fe', action: 'sync_forced', entity_type: 'device', entity_id: 'dev-002', details: 'Принудительная синхронизация устройства Козлова Д.С.' },
+    { user_id: 'b81efc22-d34c-5e4d-9148-e3f448c8a3fe', action: 'settings_changed', entity_type: 'settings', details: 'Изменён лимит возвратов: 5 000 → 10 000 ₽' },
   ];
 
   for (let i = 0; i < actions.length; i++) {
@@ -569,8 +586,8 @@ function generateLoadingTrips() {
   const today = new Date().toISOString().split('T')[0];
 
   const trips = [
-    { id: 'lt-001', driver_id: 'usr-001', vehicle_id: 'veh-001', route_id: 'rte-001', loading_date: today, status: 'loaded', total_items: 19, loaded_items: 19 },
-    { id: 'lt-002', driver_id: 'usr-003', vehicle_id: 'veh-002', route_id: 'rte-003', loading_date: today, status: 'loaded', total_items: 12, loaded_items: 12 },
+    { id: 'lt-001', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', vehicle_id: '98e8b157-455e-5dd7-9dad-cb803a5bda04', route_id: 'rte-001', loading_date: today, status: 'loaded', total_items: 19, loaded_items: 19 },
+    { id: 'lt-002', driver_id: '9cebb77c-154f-5cd7-af84-4c223905b465', vehicle_id: '5d4d7a82-6dea-5d0b-a346-b2c64f6baecc', route_id: 'rte-003', loading_date: today, status: 'loaded', total_items: 12, loaded_items: 12 },
   ];
 
   const tripItems = [
@@ -620,7 +637,7 @@ function generateCashCollections() {
   const today = new Date().toISOString().split('T')[0];
 
   return [
-    { id: 'cc-001', driver_id: 'usr-001', route_id: 'rte-001', collection_date: today, expected_amount: 17450, actual_amount: 17450, discrepancy: 0, status: 'collected' },
+    { id: 'cc-001', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_id: 'rte-001', collection_date: today, expected_amount: 17450, actual_amount: 17450, discrepancy: 0, status: 'collected' },
   ];
 }
 
@@ -631,7 +648,7 @@ function generatePackagingReturns() {
   const today = new Date().toISOString().split('T')[0];
 
   const packagingReturns = [
-    { id: 'pkr-001', customer_id: 'cst-001', driver_id: 'usr-001', route_point_id: 'rp-001', return_date: today, status: 'confirmed' },
+    { id: 'pkr-001', customer_id: 'cst-001', driver_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', route_point_id: 'rp-001', return_date: today, status: 'confirmed' },
   ];
 
   const packagingReturnItems = [
@@ -648,16 +665,16 @@ function generateErrorLog() {
   const h = (hh, mm) => `${today}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:00.000Z`;
 
   const entries = [
-    { id: 'elog-001', severity: 'error', source: 'database', message: 'UNIQUE constraint failed: stock.warehouse, stock.product_id', context: '{"warehouse":"veh-001","product_id":"prd-001"}', stack_trace: null, user_id: 'usr-001', screen: 'ShipmentScreen', created_at: h(8, 14) },
+    { id: 'elog-001', severity: 'error', source: 'database', message: 'UNIQUE constraint failed: stock.warehouse, stock.product_id', context: '{"warehouse":"veh-001","product_id":"prd-001"}', stack_trace: null, user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', screen: 'ShipmentScreen', created_at: h(8, 14) },
     { id: 'elog-002', severity: 'warning', source: 'sync', message: 'Sync upload timeout after 30s — request aborted', context: '{"entity":"orders","attempt":2}', stack_trace: null, user_id: null, screen: null, created_at: h(8, 30) },
     { id: 'elog-003', severity: 'critical', source: 'database', message: 'Database migration failed: column "material_type" already exists', context: null, stack_trace: 'Error: column already exists\n    at initDatabase (database.js:65)\n    at App.js:12', user_id: null, screen: null, created_at: h(7, 2) },
-    { id: 'elog-004', severity: 'error', source: 'pricing', message: 'Price not found for product prd-015 in price_lists', context: '{"product_id":"prd-015","customer_id":"cst-005"}', stack_trace: null, user_id: 'usr-004', screen: 'OrderEditScreen', created_at: h(9, 45) },
-    { id: 'elog-005', severity: 'info', source: 'auth', message: 'User session restored from secure storage', context: '{"user":"petrov"}', stack_trace: null, user_id: 'usr-001', screen: 'LoginScreen', created_at: h(7, 55) },
-    { id: 'elog-006', severity: 'warning', source: 'location', message: 'GPS accuracy low: 150m (threshold 50m)', context: '{"lat":55.7558,"lon":37.6173,"accuracy":150}', stack_trace: null, user_id: 'usr-001', screen: 'RouteListScreen', created_at: h(10, 12) },
-    { id: 'elog-007', severity: 'error', source: 'document', message: 'PDF generation failed: expo-print returned null', context: '{"invoice_id":"inv-001"}', stack_trace: 'Error: Print result is null\n    at documentService.js:42\n    at InvoiceSummaryScreen.js:88', user_id: 'usr-001', screen: 'InvoiceSummaryScreen', created_at: h(11, 20) },
-    { id: 'elog-008', severity: 'debug', source: 'navigation', message: 'Screen transition: ExpeditorHome -> RouteList', context: null, stack_trace: null, user_id: 'usr-001', screen: 'RouteListScreen', created_at: h(8, 5) },
+    { id: 'elog-004', severity: 'error', source: 'pricing', message: 'Price not found for product prd-015 in price_lists', context: '{"product_id":"prd-015","customer_id":"cst-005"}', stack_trace: null, user_id: '5718680f-48ee-53a4-a217-f33eca82a41f', screen: 'OrderEditScreen', created_at: h(9, 45) },
+    { id: 'elog-005', severity: 'info', source: 'auth', message: 'User session restored from secure storage', context: '{"user":"volkov"}', stack_trace: null, user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', screen: 'LoginScreen', created_at: h(7, 55) },
+    { id: 'elog-006', severity: 'warning', source: 'location', message: 'GPS accuracy low: 150m (threshold 50m)', context: '{"lat":55.7558,"lon":37.6173,"accuracy":150}', stack_trace: null, user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', screen: 'RouteListScreen', created_at: h(10, 12) },
+    { id: 'elog-007', severity: 'error', source: 'document', message: 'PDF generation failed: expo-print returned null', context: '{"invoice_id":"inv-001"}', stack_trace: 'Error: Print result is null\n    at documentService.js:42\n    at InvoiceSummaryScreen.js:88', user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', screen: 'InvoiceSummaryScreen', created_at: h(11, 20) },
+    { id: 'elog-008', severity: 'debug', source: 'navigation', message: 'Screen transition: ExpeditorHome -> RouteList', context: null, stack_trace: null, user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', screen: 'RouteListScreen', created_at: h(8, 5) },
     { id: 'elog-009', severity: 'error', source: 'sync', message: 'Failed to parse server response: Unexpected token < in JSON', context: '{"url":"/api/sync/upload","status":502}', stack_trace: 'SyntaxError: Unexpected token <\n    at JSON.parse\n    at syncService.js:123', user_id: null, screen: null, created_at: h(12, 0) },
-    { id: 'elog-010', severity: 'warning', source: 'inventory', message: 'Negative stock detected after adjustment: prd-003 qty=-2', context: '{"product_id":"prd-003","warehouse":"veh-001","qty":-2}', stack_trace: null, user_id: 'usr-001', screen: 'AdjustInventoryScreen', created_at: h(13, 30) },
+    { id: 'elog-010', severity: 'warning', source: 'inventory', message: 'Negative stock detected after adjustment: prd-003 qty=-2', context: '{"product_id":"prd-003","warehouse":"veh-001","qty":-2}', stack_trace: null, user_id: '8e9e98fe-2150-571c-bc19-e9916a052bf3', screen: 'AdjustInventoryScreen', created_at: h(13, 30) },
   ];
 
   return entries;
@@ -667,6 +684,7 @@ export {
   USERS,
   PRODUCTS,
   EMPTIES,
+  SERVICES,
   PRODUCT_EMPTIES,
   UNITS,
   CUSTOMERS,

@@ -36,6 +36,8 @@ export default function OrdersScreen({ route: screenRoute }) {
 
   useFocusEffect(
     useCallback(() => {
+      setItems({});
+      setExpandedOrder(null);
       loadOrders();
     }, [todayOnly, myToday])
   );

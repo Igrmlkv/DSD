@@ -5,11 +5,13 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
-import { getDbStats, resetAndSeedDatabase } from '../../database';
+import { getDbStats, resetAndSeedDatabase, clearReferenceData, ensureUserInDb } from '../../database';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore from '../../store/settingsStore';
 import { stopTracking } from '../../services/locationService';
 import useLocationStore from '../../store/locationStore';
+import { API_CONFIG, getBaseUrl } from '../../constants/api';
+import { resetServerWatermarks } from '../../services/syncService';
 
 export default function SystemSettingsScreen() {
   const { t } = useTranslation();
@@ -29,10 +31,16 @@ export default function SystemSettingsScreen() {
   const setGpsTrackingInterval = useSettingsStore((s) => s.setGpsTrackingInterval);
   const gpsTrackingDistance = useSettingsStore((s) => s.gpsTrackingDistance);
   const setGpsTrackingDistance = useSettingsStore((s) => s.setGpsTrackingDistance);
+  const serverSyncEnabled = useSettingsStore((s) => s.serverSyncEnabled);
+  const setServerSyncEnabled = useSettingsStore((s) => s.setServerSyncEnabled);
+  const apiBaseUrl = useSettingsStore((s) => s.apiBaseUrl);
+  const setApiBaseUrl = useSettingsStore((s) => s.setApiBaseUrl);
   const [dbStats, setDbStats] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editCompany, setEditCompany] = useState({});
+  const [showUrlModal, setShowUrlModal] = useState(false);
+  const [editUrl, setEditUrl] = useState('');
 
   // Настройки (mock state)
   const [autoSync, setAutoSync] = useState(true);
@@ -102,6 +110,90 @@ export default function SystemSettingsScreen() {
             setSyncInterval(next);
           }}
         />
+      </View>
+
+      {/* Интеграция с сервером */}
+      <Text style={styles.sectionTitle}>{t('systemSettings.serverIntegrationSection')}</Text>
+      <View style={styles.section}>
+        <SettingRow
+          icon="cloud"
+          iconColor={COLORS.primary}
+          title={t('systemSettings.serverSync')}
+          subtitle={t('systemSettings.serverSyncSub')}
+          right={
+            <Switch
+              value={serverSyncEnabled}
+              onValueChange={(val) => {
+                if (val) {
+                  Alert.alert(
+                    t('systemSettings.serverSyncEnableTitle'),
+                    t('systemSettings.serverSyncEnableMsg'),
+                    [
+                      { text: t('common.cancel'), style: 'cancel' },
+                      { text: t('common.confirm'), onPress: () => setServerSyncEnabled(true) },
+                    ],
+                  );
+                } else {
+                  Alert.alert(
+                    t('systemSettings.serverSyncDisableTitle'),
+                    t('systemSettings.serverSyncDisableMsg'),
+                    [
+                      { text: t('common.cancel'), style: 'cancel' },
+                      {
+                        text: t('common.confirm'),
+                        style: 'destructive',
+                        onPress: async () => {
+                          await logout();
+                          await setServerSyncEnabled(false);
+                        },
+                      },
+                    ],
+                  );
+                }
+              }}
+              trackColor={{ true: COLORS.primary }}
+            />
+          }
+        />
+        {serverSyncEnabled && (
+          <>
+            <View style={styles.separator} />
+            <SettingRow
+              icon="link"
+              iconColor={COLORS.info}
+              title={t('systemSettings.serverUrl')}
+              subtitle={apiBaseUrl || API_CONFIG.BASE_URL}
+              onPress={() => {
+                setEditUrl(apiBaseUrl);
+                setShowUrlModal(true);
+              }}
+            />
+            <View style={styles.separator} />
+            <SettingRow
+              icon="pulse"
+              iconColor={COLORS.success}
+              title={t('systemSettings.serverHealth')}
+              subtitle={t('systemSettings.serverHealthSub')}
+              onPress={async () => {
+                try {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 5000);
+                  const response = await fetch(getBaseUrl() + API_CONFIG.ENDPOINTS.HEALTH, {
+                    signal: controller.signal,
+                  });
+                  clearTimeout(timeoutId);
+                  if (response.ok) {
+                    Alert.alert(t('systemSettings.serverHealthOk'), t('systemSettings.serverHealthMsg'));
+                  } else {
+                    Alert.alert(t('systemSettings.serverHealthFail'), `HTTP ${response.status}`);
+                  }
+                } catch (e) {
+                  Alert.alert(t('systemSettings.serverHealthFail'), e.message);
+                }
+              }}
+            />
+          </>
+        )}
       </View>
 
       {/* Лимиты */}
@@ -210,6 +302,35 @@ export default function SystemSettingsScreen() {
           </View>
         ))}
         <SettingRow
+          icon="trash-outline"
+          iconColor={COLORS.accent}
+          title={t('systemSettings.clearReferences')}
+          subtitle={t('systemSettings.clearReferencesSub')}
+          onPress={() => Alert.alert(t('systemSettings.clearReferencesConfirm'), t('systemSettings.clearReferencesConfirmMsg'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('systemSettings.clearReferencesButton'), style: 'destructive', onPress: async () => {
+              try {
+                // 1. Clear local reference data
+                await clearReferenceData();
+                // 2. Re-establish logged-in user in DB (cleared tables may have broken FKs)
+                const user = useAuthStore.getState().user;
+                if (user) {
+                  try { await ensureUserInDb(user); } catch (e) { console.warn('ensureUserInDb after clear:', e.message); }
+                }
+                // 3. Reset server watermarks so next sync re-sends all data
+                if (useSettingsStore.getState().serverSyncEnabled) {
+                  try { await resetServerWatermarks(); } catch (e) { console.warn('resetServerWatermarks:', e.message); }
+                }
+                await loadData();
+                Alert.alert(t('common.done'), t('systemSettings.clearReferencesDone'));
+              } catch (e) {
+                Alert.alert(t('common.error'), e.message);
+              }
+            }},
+          ])}
+        />
+        <View style={styles.separator} />
+        <SettingRow
           icon="refresh"
           iconColor={COLORS.error}
           title={t('systemSettings.resetDatabase')}
@@ -222,7 +343,7 @@ export default function SystemSettingsScreen() {
                 await loadData();
                 Alert.alert(t('common.done'), t('systemSettings.resetDone'));
               } catch (e) {
-                Alert.alert('Ошибка', e.message);
+                Alert.alert(t('common.error'), e.message);
               }
             }},
           ])}
@@ -303,6 +424,51 @@ export default function SystemSettingsScreen() {
       </TouchableOpacity>
 
       <View style={{ height: 40 }} />
+
+      {/* Server URL Modal */}
+      <Modal visible={showUrlModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{t('systemSettings.serverUrlTitle')}</Text>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>{t('systemSettings.serverUrl')}</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={editUrl}
+                onChangeText={setEditUrl}
+                placeholder={t('systemSettings.serverUrlPlaceholder')}
+                placeholderTextColor={COLORS.tabBarInactive}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+            </View>
+            <TouchableOpacity
+              style={{ marginBottom: 12 }}
+              onPress={() => setEditUrl('')}
+            >
+              <Text style={{ color: COLORS.info, fontSize: 14 }}>{t('systemSettings.serverUrlReset')}</Text>
+            </TouchableOpacity>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setShowUrlModal(false)}
+              >
+                <Text style={styles.modalBtnCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnSave]}
+                onPress={async () => {
+                  await setApiBaseUrl(editUrl.trim());
+                  setShowUrlModal(false);
+                }}
+              >
+                <Text style={styles.modalBtnSaveText}>{t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Company Info Modal */}
       <Modal visible={showCompanyModal} animationType="slide" transparent>

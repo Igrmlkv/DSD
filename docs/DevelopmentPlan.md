@@ -7,7 +7,7 @@
 
 ## Общая стратегия
 
-Текущее покрытие frontend-функционала SAP DSD for Android — **~55-60%** *(обновлено 2026-03-17 после аудита реализации)*.
+Текущее покрытие frontend-функционала SAP DSD for Android — **~62-67%** *(обновлено 2026-03-20 после аудита реализации)*.
 План разбит на **5 фаз**, упорядоченных по бизнес-критичности и зависимостям.
 Каждая фаза содержит рабочие пакеты (WP) с детализацией требований из PDF SAP.
 
@@ -42,34 +42,40 @@
 
 ---
 
-### WP-1.2: Синхронизация данных (Data Synchronization) 🟡 Частично
+### WP-1.2: Синхронизация данных (Data Synchronization) 🟡 Частично (значительный прогресс)
 
-**Текущее состояние (актуально):** Таблицы `sync_log`, `sync_meta` существуют. `SyncMonitoringScreen` — реальный UI с данными из `getSyncStats()`, `getSyncConflicts()`. `ConflictResolutionScreen` существует. **Нет HTTP-клиента, нет реального API, нет sync engine.**
+**Текущее состояние (актуально 2026-03-20):** Реализован полноценный sync engine. `apiClient.js` — HTTP-клиент с Bearer-авторизацией, token refresh, retry с exponential backoff. `syncService.js` — pull (paginated, cursor-based), push (batched, 50 ops), status check, full sync orchestrator (push→pull→status), auto-sync с configurable интервалом (15 мин), background sync при возврате из background. `syncLogger.js` — логирование операций в `sync_log`. `syncPayloadBuilder.js` — построение payload для orders, deliveries, returns, inventory adjustments. `api.js` — REST API endpoints (login, refresh, logout, sync/pull, sync/push, sync/status, watermarks, health). `SyncMonitoringScreen` — реальный дашборд с данными из `getSyncDashboardData()`, `getSyncConflicts()`, ручной запуск sync. App.js управляет lifecycle auto-sync (start/stop).
 
 **Требования SAP DSD (стр. 67, раздел 4 стр. 18-20, стр. 109-118):**
 
 #### Download (перед туром):
-- ❌ Загрузка tour data: master data (клиенты, материалы, цены) + транзакционные данные (visit list, shipment, orders)
-- ❌ Индикатор прогресса загрузки
+- ✅ Загрузка tour data: master data (клиенты, материалы, цены) + транзакционные данные (visit list, routes, loading trips) — `pullEntities()` загружает 14 типов сущностей
+- ❌ Индикатор прогресса загрузки (UI progress bar)
 - ❌ Confirmation по завершении ("Tour download is complete")
-- ❌ Поддержка полного и дельта-обновления
+- ✅ Поддержка дельта-обновления через watermarks (`sync_meta`), cursor-based pagination
 
 #### Upload (после тура):
-- ❌ Выгрузка: созданные deliveries, invoices, payments, signatures, inventory adjustments, expenses
-- ❌ Обработка ошибок выгрузки (retry, application log)
+- ✅ Выгрузка: pending operations из `sync_log` через `pushPendingOperations()` — orders, deliveries, returns, inventory adjustments
+- ✅ Обработка ошибок выгрузки (retry с exponential backoff, `sync_attempts` counter, `last_error` tracking)
 
 #### OCS — Occasionally Connected Scenario (стр. 112-118):
-- ❌ Дельта-загрузка mid-tour: добавление клиентов, материалов, deliveries, orders
-- ❌ Дельта-выгрузка: промежуточная выгрузка completed visits
+- ✅ Дельта-загрузка mid-tour: auto-sync каждые 15 мин + sync при возврате из background
+- ✅ Дельта-выгрузка: pending push каждые 30 сек проверяет наличие неотправленных операций
 - ❌ Maintenance blocking status — контроль когда delta data можно создавать
 
 **Реализация:**
-- ❌ HTTP-клиент (axios / fetch) с offline queue
-- ❌ REST API contract (или адаптер для будущего ERP-backend)
-- ❌ Sync engine: полная загрузка + дельта + conflict resolution
-- ❌ Retry logic с exponential backoff
-- 🟡 `SyncMonitoringScreen` — UI есть, реальной логики нет
-- 🟡 `ConflictResolutionScreen` — UI есть, реальной логики нет
+- ✅ HTTP-клиент (`apiClient.js`) с Bearer auth, token refresh, timeout, retry (3 попытки, exponential backoff)
+- ✅ REST API contract (`api.js`) — endpoints для auth, sync, health
+- ✅ Sync engine (`syncService.js`): pull (paginated), push (batched), status check, full sync orchestrator
+- ✅ Retry logic с exponential backoff (`MAX_RETRY_ATTEMPTS=3`, `RETRY_MULTIPLIER=2`)
+- ✅ Auto-sync scheduler (`startAutoSync`/`stopAutoSync`) с lifecycle management в App.js
+- ✅ Background sync при AppState change (минимум 5 мин между синхронизациями)
+- ✅ `SyncMonitoringScreen` — реальный дашборд с entity-level статусами, ручной sync, навигация к Conflicts/Audit/Errors
+- 🟡 `ConflictResolutionScreen` — UI есть, базовая логика конфликтов через `getSyncConflicts()`
+- ✅ Sync logging (`syncLogger.js`) — запись операций в `sync_log`
+- ✅ Payload builders (`syncPayloadBuilder.js`) — для 6 типов бизнес-документов
+- ✅ Watermark reset (`resetServerWatermarks`) для принудительной полной перезагрузки
+- ❌ `clearReferenceData()` + re-pull для полного обновления справочников (функция в database, не интегрирована в UI)
 
 ---
 
@@ -412,7 +418,7 @@
 - ✅ Карта с маршрутами + color coding
 - ✅ Selection filtering по экспедиторам
 - ✅ Visit list с KPI
-- ❌ GPS tracking configuration (interval, consent screen)
+- 🟡 GPS tracking configuration — настройки `gpsTrackingEnabled`, `gpsTrackingInterval`, `gpsTrackingDistance` в `SystemSettingsScreen` и `settingsStore`, нет consent screen
 - ❌ Planned vs actual route comparison
 - ❌ Visit details (время прибытия/убытия, координаты)
 - ❌ Web-dashboard (React/Next.js) для dispatchers
@@ -438,42 +444,48 @@
 
 ## Фаза 5 — Production Readiness
 
-### WP-5.1: Аутентификация и авторизация 🟡 Частично
+### WP-5.1: Аутентификация и авторизация 🟡 Частично (значительный прогресс)
 
-**Текущее состояние (актуально):** Mock auth с 5 hardcoded accounts (`petrov`, `kozlov`, `ivanova`, `sokolov`, `admin`, пароль "1"). Role-based navigation (4 роли: expeditor, supervisor, admin, preseller). `expo-secure-store` для токенов.
+**Текущее состояние (актуально 2026-03-20):** Dual-mode auth: mock auth (5 accounts, пароль "1") при `serverSyncEnabled=false`, серверная JWT-аутентификация при `serverSyncEnabled=true`. `authService.js` — login через REST API (`/api/auth/login`) с JWT decode, logout через API. `apiClient.js` — Bearer token в headers, автоматический token refresh через `/api/auth/refresh`, race-condition protection (single refresh promise). `secureStorage.js` — хранение access/refresh tokens, device ID генерация.
 
 **Доработка:**
-- ❌ Замена mock auth на реальную OAuth2/JWT аутентификацию
+- ✅ Серверная JWT аутентификация — `authService.js` login/logout через REST API
+- ✅ Token refresh — `apiClient.js` автоматический refresh при 401, race-condition safe
+- ✅ Device ID tracking — `getDeviceId()` генерирует и сохраняет UUID устройства
 - ✅ Role-based access control (RBAC) — навигационный уровень реализован
+- ✅ Mock auth fallback — 5 тестовых аккаунтов при отключённом server sync
 - ❌ Supervisor password prompt для авторизованных операций (inventory adjust, check-out discrepancy)
-- ❌ Session management (token refresh, timeout)
+- 🟡 Session management — token refresh реализован, timeout не реализован (нет session expiry UI)
 
 ---
 
-### WP-5.2: Offline-first Architecture 🟡 Частично
+### WP-5.2: Offline-first Architecture 🟡 Частично (значительный прогресс)
 
-**Текущее состояние (актуально):** Все данные хранятся локально в SQLite (offline by default). `sync_log` таблица как offline queue. Нет реального sync engine.
+**Текущее состояние (актуально 2026-03-20):** Все данные хранятся локально в SQLite (offline by default). `sync_log` — рабочий offline queue с push через `syncService.pushPendingOperations()`. Auto-sync scheduler с periodic push (30 сек) и full sync (15 мин). Background sync при возврате из background (AppState listener). `syncLogger.js` записывает мутации в `sync_log`. Togglable через `serverSyncEnabled` в настройках.
 
 **Доработка:**
-- 🟡 Offline queue для мутаций — таблица `sync_log` есть, логики нет
-- ❌ Sync conflict resolution strategy (last-write-wins / merge)
+- ✅ Offline queue для мутаций — `sync_log` + `syncLogger.js` + `pushPendingOperations()`
+- ✅ Auto-sync scheduler — periodic full sync + frequent pending push
+- ✅ Background sync при возврате приложения из background (с минимальным gap 5 мин)
+- ✅ Server sync toggle — включение/выключение серверного режима через `SystemSettingsScreen`
+- 🟡 Sync conflict resolution — `getSyncConflicts()` в database, `ConflictResolutionScreen` UI, стратегия не определена (нет last-write-wins / merge)
 - ❌ Data versioning (optimistic locking)
-- ❌ Background sync при появлении сети
 - ❌ Индикатор online/offline статуса в header
+- ❌ Network state detection (NetInfo) для автоматического переключения offline/online
 
 ---
 
-### WP-5.3: Error Handling и Application Log 🟡 Частично
+### WP-5.3: Error Handling и Application Log 🟡 Частично (значительный прогресс)
 
-**Текущее состояние (актуально):** `AuditLogScreen.js` — просмотр лога активностей из таблицы `audit_log`. Нет structured error handling framework.
+**Текущее состояние (актуально 2026-03-20):** `loggerService.js` — полноценный structured logging framework с 5 severity levels (debug, info, warning, error, critical). `ErrorLogScreen.js` — просмотр структурированных ошибок по severity, source, screen. `AuditLogScreen.js` — просмотр лога активностей. Таблицы `audit_log` и `error_log` в схеме. Sync errors логируются в console (sync_attempts, last_error в `sync_log`).
 
 **Требования SAP DSD (стр. 136, раздел 6.9):**
 
-- 🟡 **Application Log Monitoring** — `AuditLogScreen` с базовым логом
-- ❌ Pricing errors (header + item level)
-- ❌ Sync errors (upload/download failures)
+- ✅ **Application Log Monitoring** — `AuditLogScreen` + `ErrorLogScreen`
+- ❌ Pricing errors (header + item level) — pricing engine не реализован
+- 🟡 Sync errors — retry attempts и last_error трекаются в `sync_log`, нет UI для просмотра sync errors
 - ❌ Document creation errors в логе
-- ❌ **Structured logging:** timestamp, severity, source, message, context
+- ✅ **Structured logging:** `loggerService.js` — timestamp, severity (5 levels), source, message, context, stack_trace, user_id, screen
 - ❌ **Log export** — отправка логов в backend для анализа
 
 ---
@@ -529,7 +541,7 @@ WP-5.x (Production) — параллельно с фазами 2-4
 | 🔵 **P4** | WP-4.3 Van Seller | ❌ Не реализовано | Новый сценарий |
 | 🔵 **P4** | WP-4.4 Tour Monitor+ | 🟡 Частично | Enhancement |
 | 🔵 **P4** | WP-4.5 Barcode+ | 🟡 Частично | Enhancement |
-| ⚪ **P5** | WP-5.1-5.3 Production | 🟡 Частично | Параллельно с основной разработкой |
+| ⚪ **P5** | WP-5.1-5.3 Production | 🟡 Частично (прогресс) | Параллельно с основной разработкой |
 
 ---
 
@@ -537,16 +549,16 @@ WP-5.x (Production) — параллельно с фазами 2-4
 
 | Фаза | Покрытие SAP DSD |
 | --- | --- |
-| Текущее состояние | ~55-60% *(обновлено 2026-03-17)* |
-| После Фазы 1 | ~65-70% |
-| После Фазы 2 | ~75-80% |
+| Текущее состояние | ~62-67% *(обновлено 2026-03-20)* |
+| После Фазы 1 (завершение sync) | ~70-73% |
+| После Фазы 2 | ~78-82% |
 | После Фазы 3 | ~88-92% |
 | После Фазы 4 | ~93-96% |
 | После Фазы 5 | Production-ready |
 
 ---
 
-## Итоговый обзор реализации (аудит 2026-03-17)
+## Итоговый обзор реализации (аудит 2026-03-20)
 
 ### ✅ Реализовано (6 WP)
 
@@ -563,7 +575,7 @@ WP-5.x (Production) — параллельно с фазами 2-4
 
 | WP | Название | Что реализовано | Что отсутствует |
 | --- | --- | --- | --- |
-| WP-1.2 | Data Sync | Таблицы `sync_log`/`sync_meta`, UI мониторинга, `ConflictResolutionScreen` | HTTP-клиент, реальный sync engine, retry logic, OCS |
+| WP-1.2 | Data Sync | `apiClient.js` (HTTP + token refresh + retry), `syncService.js` (pull/push/status/auto-sync), `syncLogger.js`, `syncPayloadBuilder.js`, `api.js` (endpoints), `SyncMonitoringScreen` (real dashboard), App.js auto-sync lifecycle | Progress indicator при загрузке, maintenance blocking, UI для полного re-pull справочников |
 | WP-2.3 | PDF/Print | `expo-print`, `expo-sharing`, `documentService.js`, `PrintPreviewScreen.js`, HTML-шаблоны | Bluetooth-печать, кастомные шаблоны отчётов |
 | WP-2.4 | Preseller Role | Роль, навигация, `PresellerVisitScreen`, `OrderConfirmationScreen` | Интеграция с pricing engine, deal conditions, sync |
 | WP-2.5 | Visit List+ | Список с статусами, `VisitScreen` с action hub | Поиск, drag-to-reorder, AddVisit, CancelVisit |
@@ -572,9 +584,9 @@ WP-5.x (Production) — параллельно с фазами 2-4
 | WP-4.1 | Reports | `AnalyticsReportsScreen.js` — KPI дашборд, фильтры по периоду | SAP-style отчёты, presettlement, route performance |
 | WP-4.4 | Tour Monitor | `MonitoringMapScreen.js` — multi-route карта, color coding | GPS tracking, planned vs actual, web dashboard |
 | WP-4.5 | Barcode+ | Реальная камера в `LoadingTripScreen` | `ScanningScreen` — заглушка, нет `BarcodeScanner` компонента |
-| WP-5.1 | Auth & RBAC | Role-based navigation, `expo-secure-store` | OAuth2/JWT, supervisor password prompt, session management |
-| WP-5.2 | Offline-first | SQLite локально, таблица `sync_log` | Реальный sync engine, conflict resolution, online/offline индикатор |
-| WP-5.3 | Error Handling | `AuditLogScreen`, таблица `audit_log` | Structured logging, pricing/sync error reporting, log export |
+| WP-5.1 | Auth & RBAC | JWT server auth (`authService.js` login/logout via API), token refresh (`apiClient.js`), device ID, mock fallback, role-based navigation | Supervisor password prompt, session timeout UI |
+| WP-5.2 | Offline-first | SQLite локально, `sync_log` с реальным push, auto-sync scheduler, background sync при AppState change, server sync toggle | Conflict resolution strategy, data versioning, online/offline индикатор, NetInfo |
+| WP-5.3 | Error Handling | `loggerService.js` (structured, 5 severity levels), `ErrorLogScreen`, `AuditLogScreen`, `error_log`+`audit_log` таблицы | Pricing/sync error integration в ErrorLog UI, log export |
 
 ### ❌ Не реализовано (5 WP)
 

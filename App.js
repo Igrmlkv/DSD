@@ -7,6 +7,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { initDatabase } from './src/database';
 import useSettingsStore from './src/store/settingsStore';
 import { YANDEX_MAP_API_KEY } from './src/constants/config';
+import { startAutoSync, stopAutoSync } from './src/services/syncService';
 
 import { UIManager, Platform } from 'react-native';
 
@@ -38,6 +39,7 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState(null);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const serverSyncEnabled = useSettingsStore((s) => s.serverSyncEnabled);
 
   useEffect(() => {
     Promise.all([
@@ -51,6 +53,16 @@ export default function App() {
         setError(err.message);
       });
   }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (serverSyncEnabled) {
+      startAutoSync();
+    } else {
+      stopAutoSync();
+    }
+    return () => stopAutoSync();
+  }, [ready, serverSyncEnabled]);
 
   if (error) {
     return (

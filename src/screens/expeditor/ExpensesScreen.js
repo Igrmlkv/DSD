@@ -232,9 +232,19 @@ export default function ExpensesScreen() {
     }
     try {
       let expenseId;
+      const newAttachments = attachments.filter((a) => a.isNew);
       if (editingExpense) {
         await updateExpense(editingExpense.id, { amount: amountNum, notes });
         expenseId = editingExpense.id;
+        // Save new attachments for existing expense
+        for (const att of newAttachments) {
+          await createExpenseAttachment({
+            expenseId,
+            fileType: att.fileType,
+            localUri: att.localUri,
+            fileName: att.fileName,
+          });
+        }
       } else {
         expenseId = await createExpense({
           driver_id: user?.id,
@@ -243,17 +253,7 @@ export default function ExpensesScreen() {
           expense_type_name: selectedType.name,
           amount: amountNum,
           notes,
-        });
-      }
-      // Save new attachments to DB
-      const newAttachments = attachments.filter((a) => a.isNew);
-      for (const att of newAttachments) {
-        await createExpenseAttachment({
-          expenseId,
-          fileType: att.fileType,
-          localUri: att.localUri,
-          fileName: att.fileName,
-        });
+        }, newAttachments);
       }
       setShowModal(false);
       setAttachments([]);

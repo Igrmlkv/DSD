@@ -13,6 +13,7 @@ import {
 } from '../../database';
 import { COLORS } from '../../constants/colors';
 import { ORDER_STATUS } from '../../constants/statuses';
+import { DEFAULT_VAT_PERCENT } from '../../constants/config';
 
 function formatMoney(v) {
   return Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 0 }) + ' R';
@@ -56,13 +57,17 @@ export default function OrderEditScreen({ route, navigation }) {
 
   async function loadData() {
     try {
-      const [custs, prods] = await Promise.all([getAllCustomers(), getProductsWithPrices(hideEmptyProducts)]);
+      const initialCustomerId = route.params?.customerId || null;
+      const [custs, prods] = await Promise.all([
+        getAllCustomers(),
+        getProductsWithPrices(hideEmptyProducts, initialCustomerId, isPreseller),
+      ]);
       setCustomers(custs);
       setProducts(prods);
 
       // Load available vehicle stock (stock minus unshipped orders)
       if (user?.vehicleId && !isPreseller) {
-        const stock = await getAvailableVehicleStock(user.vehicleId, user.id, orderId || null);
+        const stock = await getAvailableVehicleStock(user.vehicleId, user.id, orderId || null, null, initialCustomerId);
         const map = {};
         for (const s of stock) {
           map[s.product_id] = s.available_quantity;
@@ -84,8 +89,21 @@ export default function OrderEditScreen({ route, navigation }) {
           price: i.price,
           quantity: i.quantity,
           discount_percent: i.discount_percent || 0,
+          vat_percent: i.vat_percent ?? DEFAULT_VAT_PERCENT,
           total: i.total,
         })));
+
+        // Reload prices for the order's customer if different from route param
+        if (order.customer_id && order.customer_id !== initialCustomerId) {
+          const customerProds = await getProductsWithPrices(hideEmptyProducts, order.customer_id, isPreseller);
+          setProducts(customerProds);
+          if (user?.vehicleId && !isPreseller) {
+            const stock = await getAvailableVehicleStock(user.vehicleId, user.id, orderId || null, null, order.customer_id);
+            const map = {};
+            for (const s of stock) map[s.product_id] = s.available_quantity;
+            setStockMap(map);
+          }
+        }
       }
     } catch (e) {
       console.error(e);
@@ -94,11 +112,28 @@ export default function OrderEditScreen({ route, navigation }) {
     }
   }
 
+  // Reload product prices when customer changes
+  async function reloadPricesForCustomer(custId) {
+    try {
+      const prods = await getProductsWithPrices(hideEmptyProducts, custId, isPreseller);
+      setProducts(prods);
+      if (user?.vehicleId && !isPreseller) {
+        const stock = await getAvailableVehicleStock(user.vehicleId, user.id, orderId || null, null, custId);
+        const map = {};
+        for (const s of stock) map[s.product_id] = s.available_quantity;
+        setStockMap(map);
+      }
+    } catch (e) {
+      console.error('Failed to reload prices:', e);
+    }
+  }
+
   function selectCustomer(c) {
     setCustomerId(c.id);
     setCustomerName(c.name);
     setShowCustomerPicker(false);
     setCustomerSearch('');
+    reloadPricesForCustomer(c.id);
   }
 
   function togglePickerItem(p) {
@@ -117,7 +152,8 @@ export default function OrderEditScreen({ route, navigation }) {
       const price = p.base_price || 0;
       return {
         product_id: p.id, name: p.name, sku: p.sku, volume: p.volume,
-        price, quantity: 1, discount_percent: 0, total: price, maxStock: isPreseller ? null : available,
+        price, quantity: 1, discount_percent: 0, vat_percent: p.vat_percent ?? DEFAULT_VAT_PERCENT,
+        total: price, maxStock: isPreseller ? null : available,
       };
     });
     setLines((prev) => [...prev, ...newLines]);
@@ -139,7 +175,8 @@ export default function OrderEditScreen({ route, navigation }) {
     const price = p.base_price || 0;
     setLines((prev) => [...prev, {
       product_id: p.id, name: p.name, sku: p.sku, volume: p.volume,
-      price, quantity: 1, discount_percent: 0, total: price, maxStock: isPreseller ? null : available,
+      price, quantity: 1, discount_percent: 0, vat_percent: p.vat_percent ?? DEFAULT_VAT_PERCENT,
+      total: price, maxStock: isPreseller ? null : available,
     }]);
     setShowProductPicker(false);
     setProductSearch('');
@@ -164,6 +201,8 @@ export default function OrderEditScreen({ route, navigation }) {
   }
 
   const totalAmount = lines.reduce((s, l) => s + l.total, 0);
+  const vatAmount = lines.reduce((s, l) => s + l.total * ((l.vat_percent || 0) / 100), 0);
+  const grandTotal = totalAmount + vatAmount;
 
   async function handleSave() {
     if (!customerId) {
@@ -181,14 +220,16 @@ export default function OrderEditScreen({ route, navigation }) {
 
     setSaving(true);
     try {
+      const vatAmt = Math.round(vatAmount * 100) / 100;
       const orderData = isEdit
-        ? { id: orderId, customer_id: customerId, total_amount: totalAmount, discount_amount: 0, notes, status: ORDER_STATUS.DRAFT }
-        : { customer_id: customerId, user_id: user.id, route_point_id: pointId, total_amount: totalAmount, notes };
+        ? { id: orderId, customer_id: customerId, total_amount: totalAmount, discount_amount: 0, vat_amount: vatAmt, notes, status: ORDER_STATUS.DRAFT }
+        : { customer_id: customerId, user_id: user.id, route_point_id: pointId, total_amount: totalAmount, vat_amount: vatAmt, notes };
       const itemsData = lines.map((l) => ({
         product_id: l.product_id,
         quantity: l.quantity,
         price: l.price,
         discount_percent: l.discount_percent || 0,
+        vat_percent: l.vat_percent ?? DEFAULT_VAT_PERCENT,
         total: l.total,
       }));
       await saveOrderWithItems(orderData, itemsData, isEdit);
@@ -294,7 +335,7 @@ export default function OrderEditScreen({ route, navigation }) {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.pickerName, noStock && styles.pickerNameDisabled]}>{item.name}</Text>
-                    <Text style={styles.pickerSub}>{item.sku} | {item.brand} | {item.volume}</Text>
+                    <Text style={styles.pickerSub}>{item.sku}{item.brand ? ` | ${item.brand}` : ''}{item.volume ? ` | ${item.volume}` : ''}</Text>
                     {!isPreseller && user?.vehicleId && (
                       <Text style={[styles.pickerStock, noStock && styles.pickerStockEmpty]}>
                         {t('orderEdit.inVehicle')}: {available} {t('orderEdit.pcs')}
@@ -440,8 +481,18 @@ export default function OrderEditScreen({ route, navigation }) {
         {/* Итого */}
         {lines.length > 0 && (
           <View style={styles.totalBar}>
-            <Text style={styles.totalLabel}>{t('orderEdit.total')}</Text>
-            <Text style={styles.totalValue}>{formatMoney(totalAmount)}</Text>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalSubLabel}>{t('orderEdit.subtotal')}</Text>
+              <Text style={styles.totalSubValue}>{formatMoney(totalAmount)}</Text>
+            </View>
+            <View style={styles.totalRow}>
+              <Text style={styles.totalSubLabel}>{t('orderEdit.vat')}</Text>
+              <Text style={styles.totalSubValue}>{formatMoney(vatAmount)}</Text>
+            </View>
+            <View style={[styles.totalRow, styles.grandTotalRow]}>
+              <Text style={styles.totalLabel}>{t('orderEdit.total')}</Text>
+              <Text style={styles.totalValue}>{formatMoney(grandTotal)}</Text>
+            </View>
           </View>
         )}
 
@@ -512,9 +563,12 @@ const styles = StyleSheet.create({
   },
 
   totalBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: COLORS.white, borderRadius: 10, padding: 16, marginTop: 16,
   },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  grandTotalRow: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 8, marginTop: 4, marginBottom: 0 },
+  totalSubLabel: { fontSize: 13, color: COLORS.textSecondary },
+  totalSubValue: { fontSize: 13, fontWeight: '600', color: COLORS.text },
   totalLabel: { fontSize: 16, fontWeight: '700', color: COLORS.text },
   totalValue: { fontSize: 20, fontWeight: '700', color: COLORS.primary },
 

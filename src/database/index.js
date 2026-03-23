@@ -3,6 +3,8 @@ export {
   getDatabase,
   initDatabase,
   resetAndSeedDatabase,
+  clearReferenceData,
+  clearAllData,
   generateId,
 
   // Products
@@ -66,7 +68,10 @@ export {
   // Stock & Warehouse
   getStockWithProducts,
   getVehicleByDriver,
+  getActiveVehicles,
+  assignVehicleToDriver,
   getVehicleStock,
+  hasNonZeroVehicleStock,
   getAvailableVehicleStock,
   getUnloadingData,
 
@@ -113,6 +118,7 @@ export {
   getUserById,
   createUser,
   updateUser,
+  ensureUserInDb,
 
   // Supervisor Analytics
   getSupervisorStats,
@@ -121,6 +127,7 @@ export {
   // Sync
   getSyncStats,
   getSyncConflicts,
+  getSyncDashboardData,
 
   // Stats
   getDbStats,
@@ -132,6 +139,7 @@ export {
   getLastOdometerReading,
   saveVehicleCheckItems,
   getVehicleCheckItems,
+  syncTourCheckin,
   getOrCreateTodayCheckin,
   getOrCreateTodayEndCheckin,
   getTodayPaymentsTotal,

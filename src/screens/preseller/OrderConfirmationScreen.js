@@ -136,12 +136,16 @@ export default function OrderConfirmationScreen({ route }) {
     );
   }
 
-  // Pricing breakdown
+  // Pricing breakdown — per-item VAT using product vat_percent
   const subtotal = items.reduce((s, i) => s + i.quantity * i.price, 0);
   const discountTotal = items.reduce((s, i) => s + i.quantity * i.price * (i.discount_percent || 0) / 100, 0);
-  const vatPercent = customer?.vat_rate ?? DEFAULT_VAT_PERCENT;
-  const taxRate = vatPercent / 100;
-  const taxAmount = Math.round((subtotal - discountTotal) * taxRate * 100) / 100;
+  const taxAmount = Math.round(items.reduce((s, i) => {
+    const lineNet = i.total || (i.quantity * i.price * (1 - (i.discount_percent || 0) / 100));
+    const rate = (i.vat_percent ?? customer?.vat_rate ?? DEFAULT_VAT_PERCENT) / 100;
+    return s + lineNet * rate;
+  }, 0) * 100) / 100;
+  const vatRates = [...new Set(items.map((i) => i.vat_percent ?? customer?.vat_rate ?? DEFAULT_VAT_PERCENT))];
+  const vatLabel = vatRates.length === 1 ? vatRates[0] : null;
   const total = subtotal - discountTotal + taxAmount;
 
   return (
@@ -192,7 +196,7 @@ export default function OrderConfirmationScreen({ route }) {
           </View>
         )}
         <View style={styles.pricingRow}>
-          <Text style={styles.pricingLabel}>{t('invoice.taxDynamic', { rate: vatPercent })}</Text>
+          <Text style={styles.pricingLabel}>{vatLabel ? t('invoice.taxDynamic', { rate: vatLabel }) : t('invoice.tax')}</Text>
           <Text style={styles.pricingValue}>{taxAmount.toLocaleString()} ₽</Text>
         </View>
         <View style={[styles.pricingRow, styles.grandTotalRow]}>

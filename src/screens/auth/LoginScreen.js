@@ -6,9 +6,11 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../../store/authStore';
+import useSettingsStore from '../../store/settingsStore';
 import { TEST_ACCOUNTS } from '../../services/authService';
 import { ROLES } from '../../constants/roles';
 import { COLORS } from '../../constants/colors';
+import { getBaseUrl } from '../../constants/api';
 
 export default function LoginScreen() {
   const { t } = useTranslation();
@@ -16,6 +18,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const authLogin = useAuthStore((state) => state.login);
+  const serverSyncEnabled = useSettingsStore((s) => s.serverSyncEnabled);
 
   const handleLogin = async () => {
     if (!login.trim() || !password.trim()) {
@@ -55,7 +58,10 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.appName}>DSD Mini</Text>
-        <Text style={styles.title}>{t('auth.title')}</Text>
+        <Text style={[styles.title, !serverSyncEnabled && { marginBottom: 30 }]}>{t('auth.title')}</Text>
+        {serverSyncEnabled && (
+          <Text style={styles.serverUrl}>{getBaseUrl()}</Text>
+        )}
 
         <TextInput
           style={styles.input}
@@ -88,34 +94,38 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>{t('auth.testAccounts')}</Text>
-          <View style={styles.dividerLine} />
-        </View>
+        {!serverSyncEnabled && (
+          <>
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>{t('auth.testAccounts')}</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
-        <View style={styles.accountsList}>
-          {TEST_ACCOUNTS.map((acc) => {
-            const roleCfg = ROLES[acc.role];
-            return (
-              <TouchableOpacity
-                key={acc.username}
-                style={styles.accountCard}
-                onPress={() => quickLogin(acc.username)}
-                disabled={isLoading}
-              >
-                <View style={styles.accountIcon}>
-                  <Ionicons name={roleCfg.icon} size={20} color={COLORS.primary} />
-                </View>
-                <View style={styles.accountInfo}>
-                  <Text style={styles.accountName}>{acc.fullName}</Text>
-                  <Text style={styles.accountRole}>{roleCfg.label}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={COLORS.border} />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+            <View style={styles.accountsList}>
+              {TEST_ACCOUNTS.map((acc) => {
+                const roleCfg = ROLES[acc.role];
+                return (
+                  <TouchableOpacity
+                    key={acc.username}
+                    style={styles.accountCard}
+                    onPress={() => quickLogin(acc.username)}
+                    disabled={isLoading}
+                  >
+                    <View style={styles.accountIcon}>
+                      <Ionicons name={roleCfg.icon} size={20} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.accountInfo}>
+                      <Text style={styles.accountName}>{acc.fullName}</Text>
+                      <Text style={styles.accountRole}>{roleCfg.label}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.border} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -129,7 +139,10 @@ const styles = StyleSheet.create({
     color: COLORS.accent, marginBottom: 8,
   },
   title: {
-    fontSize: 18, textAlign: 'center', color: COLORS.textSecondary, marginBottom: 30,
+    fontSize: 18, textAlign: 'center', color: COLORS.textSecondary, marginBottom: 4,
+  },
+  serverUrl: {
+    fontSize: 12, textAlign: 'center', color: COLORS.tabBarInactive, marginBottom: 24,
   },
   input: {
     borderWidth: 1, borderColor: COLORS.border, borderRadius: 8,

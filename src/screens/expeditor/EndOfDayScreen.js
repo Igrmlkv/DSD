@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image,
 } from 'react-native';
@@ -14,7 +14,8 @@ import {
   updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
   getOrCreateTodayEndCheckin, getVehicleCheckItems,
   getUnloadingData, getTodayCashPaymentsTotal, getTodayTourCheckin,
-  getTodayExpensesTotal,
+  getTodayExpensesTotal, syncTourCheckin, hasVerifiedLoadingTrip,
+  hasNonZeroVehicleStock,
 } from '../../database';
 import { stopTracking } from '../../services/locationService';
 import MaterialCheckInStep from './MaterialCheckInStep';
@@ -23,7 +24,9 @@ import OdometerStep from './OdometerStep';
 import VehicleCheckStep from './VehicleCheckStep';
 import SignaturePad from '../../components/SignaturePad';
 
-const STEPS = ['materialCheckIn', 'cashCheckIn', 'odometer', 'vehicleCheck', 'signature', 'confirm'];
+const ALL_STEPS = ['materialCheckIn', 'cashCheckIn', 'odometer', 'vehicleCheck', 'signature', 'confirm'];
+const VEHICLE_STEPS = ['odometer', 'vehicleCheck'];
+const MATERIAL_STEPS = ['materialCheckIn'];
 
 export default function EndOfDayScreen() {
   const { t } = useTranslation();
@@ -33,6 +36,13 @@ export default function EndOfDayScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [checkinId, setCheckinId] = useState(null);
   const [vehicle, setVehicle] = useState(null);
+  const [needsMaterialCheckIn, setNeedsMaterialCheckIn] = useState(false);
+  const STEPS = useMemo(() => {
+    let steps = ALL_STEPS;
+    if (!vehicle) steps = steps.filter((s) => !VEHICLE_STEPS.includes(s));
+    if (!needsMaterialCheckIn) steps = steps.filter((s) => !MATERIAL_STEPS.includes(s));
+    return steps;
+  }, [vehicle, needsMaterialCheckIn]);
   const [readOnly, setReadOnly] = useState(false);
   const [dayNotStarted, setDayNotStarted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -60,8 +70,14 @@ export default function EndOfDayScreen() {
         const v = await getVehicleByDriver(user?.id);
         setVehicle(v);
 
+        // Show material check-in if there was a loading trip OR vehicle still has stock
+        const hadTrip = await hasVerifiedLoadingTrip(user?.id);
+        const hasStock = v?.id ? await hasNonZeroVehicleStock(v.id) : false;
+        const showMaterialStep = hadTrip || hasStock;
+        setNeedsMaterialCheckIn(showMaterialStep);
+
         // Load unloading data for material check-in
-        if (v?.id) {
+        if (v?.id && showMaterialStep) {
           const uData = await getUnloadingData(v.id, user?.id);
           setUnloadingData(uData);
         }
@@ -294,6 +310,9 @@ export default function EndOfDayScreen() {
         );
       }
 
+      // Sync the completed checkin to MW with a full payload
+      await syncTourCheckin(checkinId);
+
       await stopTracking();
 
       Alert.alert(t('endOfDay.routeCompleted'), t('endOfDay.routeCompletedMsg'), [
@@ -379,30 +398,36 @@ export default function EndOfDayScreen() {
             <Text style={styles.stepSubtitle}>{t('endOfDayConfirm.subtitle')}</Text>
 
             <View style={styles.summaryCard}>
-              <SummaryRow
-                icon="cube-outline"
-                label={t('endOfDayConfirm.materialCheckIn')}
-                value={materialData?.items?.length > 0 ? t('endOfDayConfirm.passed') : t('endOfDayConfirm.notDone')}
-                ok={materialData?.items?.length > 0}
-              />
+              {needsMaterialCheckIn && (
+                <SummaryRow
+                  icon="cube-outline"
+                  label={t('endOfDayConfirm.materialCheckIn')}
+                  value={materialData?.items?.length > 0 ? t('endOfDayConfirm.passed') : t('endOfDayConfirm.notDone')}
+                  ok={materialData?.items?.length > 0}
+                />
+              )}
               <SummaryRow
                 icon="cash-outline"
                 label={t('endOfDayConfirm.cashCheckIn')}
                 value={cashData?.value != null ? `${cashData.value} ₽` : t('endOfDayConfirm.notDone')}
                 ok={cashData?.value != null}
               />
-              <SummaryRow
-                icon="speedometer-outline"
-                label={t('endOfDayConfirm.odometer')}
-                value={odometerData?.value ? `${odometerData.value} ${t('endOfDayConfirm.km')}` : t('endOfDayConfirm.notDone')}
-                ok={!!odometerData?.value}
-              />
-              <SummaryRow
-                icon="car-sport-outline"
-                label={t('endOfDayConfirm.vehicleCheck')}
-                value={vehicleCheckData?.checks?.every((c) => c.checked) ? t('endOfDayConfirm.passed') : t('endOfDayConfirm.notDone')}
-                ok={vehicleCheckData?.checks?.every((c) => c.checked)}
-              />
+              {!!vehicle && (
+                <SummaryRow
+                  icon="speedometer-outline"
+                  label={t('endOfDayConfirm.odometer')}
+                  value={odometerData?.value ? `${odometerData.value} ${t('endOfDayConfirm.km')}` : t('endOfDayConfirm.notDone')}
+                  ok={!!odometerData?.value}
+                />
+              )}
+              {!!vehicle && (
+                <SummaryRow
+                  icon="car-sport-outline"
+                  label={t('endOfDayConfirm.vehicleCheck')}
+                  value={vehicleCheckData?.checks?.every((c) => c.checked) ? t('endOfDayConfirm.passed') : t('endOfDayConfirm.notDone')}
+                  ok={vehicleCheckData?.checks?.every((c) => c.checked)}
+                />
+              )}
               <SummaryRow
                 icon="create-outline"
                 label={t('endOfDayConfirm.signature')}

@@ -30,7 +30,7 @@ export default function ReturnsScreen({ route }) {
   const [notes, setNotes] = useState('');
 
   const openPicker = async () => {
-    const prods = await getProductsWithPrices();
+    const prods = await getProductsWithPrices(false, customerId, false);
     setProducts(prods);
     setSearchText('');
     setShowPicker(true);

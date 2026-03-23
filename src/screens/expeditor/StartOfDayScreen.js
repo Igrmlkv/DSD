@@ -1,6 +1,7 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert, Animated, Image,
+  Modal, FlatList, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,24 +14,33 @@ import useAuthStore from '../../store/authStore';
 import {
   updateTourCheckin, saveVehicleCheckItems, getVehicleByDriver,
   hasVerifiedLoadingTrip, getOrCreateTodayCheckin, getVehicleCheckItems,
+  getActiveVehicles, assignVehicleToDriver, syncTourCheckin,
 } from '../../database';
 import VehicleCheckStep from './VehicleCheckStep';
 import OdometerStep from './OdometerStep';
 import CheckOutCashStep from './CheckOutCashStep';
 import SignaturePad from '../../components/SignaturePad';
 
-const EXPEDITOR_STEPS = ['vehicleCheck', 'materials', 'odometer', 'cash', 'signature', 'confirm'];
-const PRESELLER_STEPS = ['vehicleCheck', 'odometer', 'cash', 'signature', 'confirm'];
+const VEHICLE_STEPS = ['vehicleCheck', 'odometer'];
+
+function getSteps(role, hasVehicle) {
+  const base = role === 'preseller'
+    ? ['vehicleSelect', 'vehicleCheck', 'odometer', 'cash', 'signature', 'confirm']
+    : ['vehicleSelect', 'vehicleCheck', 'materials', 'odometer', 'cash', 'signature', 'confirm'];
+  if (!hasVehicle) return base.filter((s) => !VEHICLE_STEPS.includes(s));
+  return base;
+}
 
 export default function StartOfDayScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
-  const STEPS = user?.role === 'preseller' ? PRESELLER_STEPS : EXPEDITOR_STEPS;
+  const updateVehicle = useAuthStore((s) => s.updateVehicle);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [checkinId, setCheckinId] = useState(null);
   const [vehicle, setVehicle] = useState(null);
+  const STEPS = useMemo(() => getSteps(user?.role, !!vehicle), [user?.role, vehicle]);
   const [materialsLoaded, setMaterialsLoaded] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,6 +53,12 @@ export default function StartOfDayScreen() {
   const [supervisorName, setSupervisorName] = useState('');
   const [hasSignature, setHasSignature] = useState(false);
 
+  // Vehicle picker state
+  const [allVehicles, setAllVehicles] = useState([]);
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false);
+  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [pickerSelectedId, setPickerSelectedId] = useState(null);
+
   const signatureRef = useRef(null);
   const slideAnim = useRef(new Animated.Value(0)).current;
 
@@ -51,6 +67,8 @@ export default function StartOfDayScreen() {
       try {
         const v = await getVehicleByDriver(user?.id);
         setVehicle(v);
+        const vehicles = await getActiveVehicles();
+        setAllVehicles(vehicles);
         const checkin = await getOrCreateTodayCheckin(user?.id, v?.id);
         if (checkin) {
           setCheckinId(checkin.id);
@@ -216,6 +234,46 @@ export default function StartOfDayScreen() {
     }
   };
 
+  const filteredVehicles = useMemo(() => {
+    if (!vehicleSearch.trim()) return allVehicles;
+    const q = vehicleSearch.toLowerCase();
+    return allVehicles.filter(
+      (v) => v.plate_number?.toLowerCase().includes(q) || v.model?.toLowerCase().includes(q)
+    );
+  }, [allVehicles, vehicleSearch]);
+
+  const openVehiclePicker = () => {
+    setPickerSelectedId(vehicle?.id || null);
+    setShowVehiclePicker(true);
+  };
+
+  const closeVehiclePicker = () => {
+    setShowVehiclePicker(false);
+    setVehicleSearch('');
+    setPickerSelectedId(null);
+  };
+
+  const confirmVehicleSelection = async () => {
+    const selectedVehicle = allVehicles.find((v) => v.id === pickerSelectedId);
+    setShowVehiclePicker(false);
+    setVehicleSearch('');
+    setPickerSelectedId(null);
+    if (!selectedVehicle || selectedVehicle.id === vehicle?.id) return;
+    try {
+      await assignVehicleToDriver(selectedVehicle.id, user.id);
+      await updateVehicle(selectedVehicle.id, selectedVehicle.plate_number, selectedVehicle.model);
+      setVehicle(selectedVehicle);
+      const vehicles = await getActiveVehicles();
+      setAllVehicles(vehicles);
+      if (checkinId) {
+        await updateTourCheckin(checkinId, { vehicle_id: selectedVehicle.id });
+      }
+    } catch (e) {
+      console.error('Vehicle select error:', e);
+      Alert.alert(t('common.error'), e.message);
+    }
+  };
+
   const handleSignatureChange = useCallback((hasSig, data) => {
     setHasSignature(hasSig);
     if (data) setSignatureData(data);
@@ -251,6 +309,9 @@ export default function StartOfDayScreen() {
         );
       }
 
+      // Sync the completed checkin to MW with a full payload
+      await syncTourCheckin(checkinId);
+
       Alert.alert(t('startOfDay.tourStarted'), t('startOfDay.tourStartedMsg'), [
         { text: 'OK', onPress: () => {
           if (user?.role === 'preseller') {
@@ -269,6 +330,32 @@ export default function StartOfDayScreen() {
 
   const renderStep = () => {
     switch (STEPS[currentStep]) {
+      case 'vehicleSelect':
+        return (
+          <View style={styles.centeredStep}>
+            <Ionicons
+              name={vehicle ? 'car-sport' : 'car-sport-outline'}
+              size={64}
+              color={vehicle ? COLORS.primary : COLORS.accent}
+            />
+            <Text style={styles.stepTitle}>{t('startOfDay.vehicleSelection')}</Text>
+            <Text style={styles.stepSubtitle}>
+              {vehicle
+                ? `${vehicle.plate_number} — ${vehicle.model || ''}`
+                : t('startOfDay.noVehicleAssigned')}
+            </Text>
+            {!readOnly && (
+              <TouchableOpacity
+                style={styles.loadBtn}
+                onPress={openVehiclePicker}
+              >
+                <Text style={styles.loadBtnText}>
+                  {vehicle ? t('startOfDay.changeVehicle') : t('startOfDay.selectVehicle')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        );
       case 'vehicleCheck':
         return <VehicleCheckStep data={vehicleCheckData} onUpdate={setVehicleCheckData} readOnly={readOnly} />;
       case 'materials':
@@ -346,11 +433,19 @@ export default function StartOfDayScreen() {
 
             <View style={styles.summaryCard}>
               <SummaryRow
-                icon="car-sport-outline"
-                label={t('tourConfirm.vehicleCheck')}
-                value={vehicleCheckData?.checks?.every((c) => c.checked) ? t('tourConfirm.passed') : t('tourConfirm.notDone')}
-                ok={vehicleCheckData?.checks?.every((c) => c.checked)}
+                icon="car"
+                label={t('startOfDay.vehicleSelection')}
+                value={vehicle ? vehicle.plate_number : t('startOfDay.noVehicleAssigned')}
+                ok={!!vehicle}
               />
+              {!!vehicle && (
+                <SummaryRow
+                  icon="car-sport-outline"
+                  label={t('tourConfirm.vehicleCheck')}
+                  value={vehicleCheckData?.checks?.every((c) => c.checked) ? t('tourConfirm.passed') : t('tourConfirm.notDone')}
+                  ok={vehicleCheckData?.checks?.every((c) => c.checked)}
+                />
+              )}
               {STEPS.includes('materials') && (
                 <SummaryRow
                   icon="cube-outline"
@@ -359,12 +454,14 @@ export default function StartOfDayScreen() {
                   ok={materialsLoaded}
                 />
               )}
-              <SummaryRow
-                icon="speedometer-outline"
-                label={t('tourConfirm.odometer')}
-                value={odometerData?.value ? `${odometerData.value} ${t('tourConfirm.km')}` : t('tourConfirm.notDone')}
-                ok={!!odometerData?.value}
-              />
+              {!!vehicle && (
+                <SummaryRow
+                  icon="speedometer-outline"
+                  label={t('tourConfirm.odometer')}
+                  value={odometerData?.value ? `${odometerData.value} ${t('tourConfirm.km')}` : t('tourConfirm.notDone')}
+                  ok={!!odometerData?.value}
+                />
+              )}
               <SummaryRow
                 icon="cash-outline"
                 label={t('tourConfirm.cashOnHand')}
@@ -449,6 +546,76 @@ export default function StartOfDayScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Vehicle picker modal */}
+      <Modal visible={showVehiclePicker} animationType="slide" onRequestClose={closeVehiclePicker}>
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t('startOfDay.selectVehicle')}</Text>
+            <TouchableOpacity onPress={closeVehiclePicker}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.modalSearchWrap}>
+            <Ionicons name="search" size={18} color={COLORS.textSecondary} />
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder={t('startOfDay.searchVehicle')}
+              placeholderTextColor={COLORS.textSecondary}
+              value={vehicleSearch}
+              onChangeText={setVehicleSearch}
+              autoCorrect={false}
+            />
+          </View>
+          <FlatList
+            data={filteredVehicles}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            renderItem={({ item }) => {
+              const isPickerSelected = item.id === pickerSelectedId;
+              const isOccupied = item.driver_id && String(item.driver_id) !== String(user?.id);
+              const disabled = isOccupied;
+              return (
+                <TouchableOpacity
+                  style={[styles.vehicleRow, isPickerSelected && styles.vehicleRowSelected, disabled && styles.vehicleRowDisabled]}
+                  onPress={() => !disabled && setPickerSelectedId(item.id)}
+                  disabled={disabled}
+                >
+                  <View style={styles.vehicleRowInfo}>
+                    <Text style={[styles.vehiclePlate, disabled && styles.vehicleTextDisabled]}>
+                      {item.plate_number}
+                    </Text>
+                    <Text style={[styles.vehicleModel, disabled && styles.vehicleTextDisabled]}>
+                      {item.model || ''}
+                      {isOccupied ? ` · ${t('startOfDay.vehicleOccupied', { driver: item.driver_name || '—' })}` : ''}
+                    </Text>
+                  </View>
+                  {isPickerSelected && (
+                    <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
+                  )}
+                  {isOccupied && !isPickerSelected && (
+                    <Ionicons name="lock-closed" size={18} color={COLORS.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+          />
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.modalBackBtn} onPress={closeVehiclePicker}>
+              <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+              <Text style={styles.modalBackBtnText}>{t('startOfDay.back')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalSelectBtn, !pickerSelectedId && styles.modalSelectBtnDisabled]}
+              onPress={confirmVehicleSelection}
+              disabled={!pickerSelectedId}
+            >
+              <Ionicons name="checkmark" size={20} color={COLORS.white} />
+              <Text style={styles.modalSelectBtnText}>{t('startOfDay.confirmSelect')}</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -541,4 +708,46 @@ const styles = StyleSheet.create({
   signatureImage: {
     width: '100%', height: '100%',
   },
+  // Vehicle picker modal
+  modalContainer: { flex: 1, backgroundColor: COLORS.background },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 16, backgroundColor: COLORS.white,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  modalSearchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    margin: 16, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: COLORS.white, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  modalSearchInput: { flex: 1, fontSize: 15, color: COLORS.text, padding: 0 },
+  vehicleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginBottom: 8, padding: 14,
+    backgroundColor: COLORS.white, borderRadius: 12,
+  },
+  vehicleRowSelected: { borderWidth: 2, borderColor: COLORS.primary },
+  vehicleRowDisabled: { opacity: 0.5 },
+  vehicleRowInfo: { flex: 1 },
+  vehiclePlate: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  vehicleModel: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
+  vehicleTextDisabled: { color: COLORS.textSecondary },
+  modalFooter: {
+    flexDirection: 'row', gap: 12, padding: 16,
+    backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  modalBackBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 14, paddingHorizontal: 20,
+    borderRadius: 12, borderWidth: 1, borderColor: COLORS.border,
+  },
+  modalBackBtnText: { fontSize: 15, color: COLORS.text, fontWeight: '500' },
+  modalSelectBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 14,
+  },
+  modalSelectBtnDisabled: { opacity: 0.4 },
+  modalSelectBtnText: { fontSize: 15, color: COLORS.white, fontWeight: '700' },
 });

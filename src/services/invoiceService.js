@@ -1,6 +1,7 @@
 import { getDatabase, generateId } from '../database';
 import { DOC_PREFIX, DEFAULT_VAT_PERCENT } from '../constants/config';
 import { INVOICE_STATUS, DELIVERY_NOTE_STATUS } from '../constants/statuses';
+import { logSyncOperation } from './syncLogger';
 
 // Generate sequential number: INV-YYYYMMDD-XXXX
 async function generateNumber(prefix) {
@@ -59,6 +60,26 @@ export async function createInvoiceFromDelivery(deliveryId) {
       );
     }
 
+    await logSyncOperation('invoice', id, 'create', {
+      customer_id: delivery.customer_id,
+      delivery_id: deliveryId,
+      order_id: delivery.order_id,
+      invoice_number: invoiceNumber,
+      invoice_date: now,
+      status: INVOICE_STATUS.DRAFT,
+      subtotal,
+      tax_amount: taxAmount,
+      total_amount: totalAmount,
+      currency: delivery.currency || 'RUB',
+      items: items.map((it, idx) => ({
+        id: undefined, // generated above but not captured; MW will assign
+        product_id: it.product_id,
+        quantity: it.delivered_quantity,
+        unit_price: it.price,
+        tax_percent: vatPercent,
+      })),
+    });
+
     await database.execAsync('COMMIT');
     return { id, invoiceNumber, totalAmount };
   } catch (error) {
@@ -74,6 +95,7 @@ export async function confirmInvoice(invoiceId) {
     `UPDATE invoices SET status = '${INVOICE_STATUS.CONFIRMED}', updated_at = ? WHERE id = ?`,
     [now, invoiceId]
   );
+  await logSyncOperation('invoice', invoiceId, 'update', { id: invoiceId, status: INVOICE_STATUS.CONFIRMED });
 }
 
 export async function getInvoiceWithItems(invoiceId) {
@@ -136,6 +158,14 @@ export async function createReceipt({ paymentId, invoiceId, customerId, driverId
     [id, paymentId, invoiceId, customerId, driverId, receiptNumber, now, paymentMethod, amountDue, amountPaid, changeAmount, 'RUB', signatureCustomer, notes, now]
   );
 
+  await logSyncOperation('receipt', id, 'create', {
+    payment_id: paymentId, invoice_id: invoiceId, customer_id: customerId,
+    receipt_number: receiptNumber, receipt_date: now, payment_method: paymentMethod,
+    amount_due: amountDue, amount_paid: amountPaid, change_amount: changeAmount,
+    amount: amountPaid, currency: 'RUB', status: 'completed',
+    signature_customer: signatureCustomer, notes,
+  });
+
   return { id, receiptNumber };
 }
 
@@ -173,6 +203,12 @@ export async function createDeliveryNote(deliveryId, invoiceId) {
      VALUES (?, ?, ?, ?, ?, ?, ?, '${DELIVERY_NOTE_STATUS.CONFIRMED}', ?, ?, ?, ?)`,
     [id, deliveryId, invoiceId, noteNumber, now, delivery.customer_id, delivery.driver_id, totalAmount, delivery.currency || 'RUB', items.length, now]
   );
+
+  await logSyncOperation('delivery_note', id, 'create', {
+    delivery_id: deliveryId, invoice_id: invoiceId, customer_id: delivery.customer_id,
+    note_number: noteNumber, note_date: now, status: DELIVERY_NOTE_STATUS.CONFIRMED,
+    total_amount: totalAmount, currency: delivery.currency || 'RUB', total_items: items.length,
+  });
 
   return { id, noteNumber };
 }

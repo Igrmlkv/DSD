@@ -85,7 +85,7 @@ export default function ShipmentScreen({ route }) {
           setDeliveredQty(initial);
 
           if (user?.vehicleId) {
-            const stock = await getAvailableVehicleStock(user.vehicleId, user.id, null, pointId);
+            const stock = await getAvailableVehicleStock(user.vehicleId, user.id, null, pointId, customerId);
             const map = {};
             for (const s of stock) { map[s.product_id] = s.available_quantity; }
             setStockMap(map);
@@ -153,7 +153,7 @@ export default function ShipmentScreen({ route }) {
         Alert.alert(t('common.error'), t('shipmentScreen.noVehicle'));
         return;
       }
-      const stock = await getAvailableVehicleStock(vehicleId, user.id, null, pointId);
+      const stock = await getAvailableVehicleStock(vehicleId, user.id, null, pointId, customerId);
       // Filter out items already in the order, show only available
       const existingProductIds = new Set(items.map((i) => i.product_id));
       const available = stock.filter((s) => s.available_quantity > 0 && !existingProductIds.has(s.product_id));

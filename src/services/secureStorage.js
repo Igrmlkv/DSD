@@ -1,10 +1,12 @@
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
 
 const KEYS = {
   ACCESS_TOKEN: 'access_token',
   REFRESH_TOKEN: 'refresh_token',
   USER_DATA: 'user_data',
   PIN_CODE: 'pin_code',
+  DEVICE_ID: 'device_id',
 };
 
 export async function saveTokens(accessToken, refreshToken) {
@@ -53,6 +55,17 @@ export async function hasPIN() {
   return pin !== null;
 }
 
+// --- Device ID ---
+
+export async function getDeviceId() {
+  let deviceId = await SecureStore.getItemAsync(KEYS.DEVICE_ID);
+  if (!deviceId) {
+    deviceId = Crypto.randomUUID();
+    await SecureStore.setItemAsync(KEYS.DEVICE_ID, deviceId);
+  }
+  return deviceId;
+}
+
 // --- Очистка ---
 
 export async function clearAll() {
@@ -60,4 +73,5 @@ export async function clearAll() {
   await SecureStore.deleteItemAsync(KEYS.REFRESH_TOKEN);
   await SecureStore.deleteItemAsync(KEYS.USER_DATA);
   await SecureStore.deleteItemAsync(KEYS.PIN_CODE);
+  // Note: DEVICE_ID is intentionally NOT cleared — it survives logout
 }

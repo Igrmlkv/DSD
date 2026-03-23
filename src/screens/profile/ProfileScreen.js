@@ -1,19 +1,45 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, ActivityIndicator, Modal, FlatList, TextInput, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
 import useAuthStore from '../../store/authStore';
-import { getUnreadNotificationCount } from '../../database';
+import useSettingsStore from '../../store/settingsStore';
+import { getUnreadNotificationCount, getDatabase, getActiveVehicles, assignVehicleToDriver } from '../../database';
+import { performFullSync } from '../../services/syncService';
 
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
+  const updateVehicle = useAuthStore((s) => s.updateVehicle);
+  const serverSyncEnabled = useSettingsStore((s) => s.serverSyncEnabled);
   const [unreadCount, setUnreadCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [pendingCount, setPendingCount] = useState(0);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
+  const [allVehicles, setAllVehicles] = useState([]);
+  const [showVehiclePicker, setShowVehiclePicker] = useState(false);
+  const [vehicleSearch, setVehicleSearch] = useState('');
+  const [pickerSelectedId, setPickerSelectedId] = useState(null);
+
+  const loadSyncData = useCallback(async () => {
+    if (!serverSyncEnabled) return;
+    try {
+      const database = await getDatabase();
+      const pending = await database.getFirstAsync(
+        `SELECT COUNT(*) as count FROM sync_log WHERE synced = 0`
+      );
+      setPendingCount(pending?.count || 0);
+      const meta = await database.getFirstAsync(
+        `SELECT MAX(last_sync_at) as last_sync_at FROM sync_meta`
+      );
+      setLastSyncAt(meta?.last_sync_at || null);
+    } catch (e) { console.error('Sync data load:', e); }
+  }, [serverSyncEnabled]);
 
   const loadData = useCallback(async () => {
     try {
@@ -21,10 +47,78 @@ export default function ProfileScreen() {
         const count = await getUnreadNotificationCount(user.id);
         setUnreadCount(count);
       }
+      if (user?.role === 'expeditor' || user?.role === 'preseller') {
+        const vehicles = await getActiveVehicles();
+        setAllVehicles(vehicles);
+      }
+      await loadSyncData();
     } catch (e) { console.error('Profile load:', e); }
-  }, [user?.id]);
+  }, [user?.id, user?.role, loadSyncData]);
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+
+  const handleSync = useCallback(async () => {
+    setSyncStatus('syncing');
+    try {
+      await performFullSync();
+      setSyncStatus('success');
+      await loadSyncData();
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    } catch (e) {
+      console.error('Manual sync error:', e);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  }, [loadSyncData]);
+
+  const filteredVehicles = useMemo(() => {
+    if (!vehicleSearch.trim()) return allVehicles;
+    const q = vehicleSearch.toLowerCase();
+    return allVehicles.filter(
+      (v) => v.plate_number?.toLowerCase().includes(q) || v.model?.toLowerCase().includes(q)
+    );
+  }, [allVehicles, vehicleSearch]);
+
+  const openVehiclePicker = useCallback(() => {
+    setPickerSelectedId(user?.vehicleId || null);
+    setShowVehiclePicker(true);
+  }, [user?.vehicleId]);
+
+  const closeVehiclePicker = useCallback(() => {
+    setShowVehiclePicker(false);
+    setVehicleSearch('');
+    setPickerSelectedId(null);
+  }, []);
+
+  const confirmVehicleSelection = useCallback(async () => {
+    const selectedVehicle = allVehicles.find((v) => v.id === pickerSelectedId);
+    setShowVehiclePicker(false);
+    setVehicleSearch('');
+    setPickerSelectedId(null);
+    if (!selectedVehicle || selectedVehicle.id === user?.vehicleId) return;
+    try {
+      await assignVehicleToDriver(selectedVehicle.id, user.id);
+      await updateVehicle(selectedVehicle.id, selectedVehicle.plate_number, selectedVehicle.model);
+      const vehicles = await getActiveVehicles();
+      setAllVehicles(vehicles);
+    } catch (e) {
+      Alert.alert(t('common.error'), e.message);
+    }
+  }, [allVehicles, pickerSelectedId, user?.id, user?.vehicleId, updateVehicle, t]);
+
+  const formatLastSync = (dateStr) => {
+    if (!dateStr) return t('profileScreen.syncNever');
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getSyncBadge = () => {
+    if (syncStatus === 'syncing') return { color: COLORS.accent, icon: 'sync', text: '...' };
+    if (syncStatus === 'error') return { color: COLORS.error, icon: 'alert-circle', text: '!' };
+    if (syncStatus === 'success') return { color: COLORS.success, icon: 'checkmark-circle', text: null };
+    if (pendingCount > 0) return { color: COLORS.error, icon: 'cloud-upload', text: String(pendingCount) };
+    return { color: COLORS.success, icon: 'checkmark-circle', text: null };
+  };
 
   const MenuRow = ({ icon, iconColor, title, subtitle, badge, onPress }) => (
     <TouchableOpacity style={styles.menuRow} onPress={onPress}>
@@ -43,6 +137,8 @@ export default function ProfileScreen() {
       <Ionicons name="chevron-forward" size={18} color={COLORS.tabBarInactive} />
     </TouchableOpacity>
   );
+
+  const syncBadge = getSyncBadge();
 
   return (
     <ScrollView
@@ -64,10 +160,17 @@ export default function ProfileScreen() {
             <Ionicons name="call-outline" size={13} color={COLORS.textSecondary} /> {user.phone}
           </Text>
         )}
-        {user?.vehicle_number && (
-          <Text style={styles.profileVehicle}>
-            <Ionicons name="car-outline" size={13} color={COLORS.textSecondary} /> {user.vehicle_number}
-          </Text>
+        {(user?.role === 'expeditor' || user?.role === 'preseller') && (
+          <TouchableOpacity onPress={openVehiclePicker} style={styles.vehicleTouchable}>
+            <Text style={styles.profileVehicle}>
+              <Ionicons name="car-outline" size={13} color={COLORS.textSecondary} />
+              {' '}
+              {user?.vehiclePlate
+                ? `${user.vehiclePlate} — ${user.vehicleModel || ''}`
+                : t('profileScreen.noVehicle')}
+            </Text>
+            <Text style={styles.tapToChange}>{t('profileScreen.tapToChange')}</Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -91,6 +194,67 @@ export default function ProfileScreen() {
         />
       </View>
 
+      {/* Синхронизация */}
+      {serverSyncEnabled && (
+        <View style={styles.syncSection}>
+          <View style={styles.syncHeader}>
+            <View style={[styles.menuIcon, { backgroundColor: COLORS.primary + '15' }]}>
+              <Ionicons name="sync" size={20} color={COLORS.primary} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>{t('profileScreen.syncSection')}</Text>
+              <Text style={styles.menuSubtitle}>
+                {t('profileScreen.syncLastSync')}: {formatLastSync(lastSyncAt)}
+              </Text>
+            </View>
+            <View style={[styles.syncStatusBadge, { backgroundColor: syncBadge.color + '15' }]}>
+              <Ionicons name={syncBadge.icon} size={14} color={syncBadge.color} />
+              {syncBadge.text && (
+                <Text style={[styles.syncStatusText, { color: syncBadge.color }]}>{syncBadge.text}</Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.separator} />
+
+          <View style={styles.syncPendingRow}>
+            <View style={[styles.menuIcon, { backgroundColor: COLORS.accent + '15' }]}>
+              <Ionicons name="cloud-upload-outline" size={20} color={COLORS.accent} />
+            </View>
+            <View style={styles.menuInfo}>
+              <Text style={styles.menuTitle}>{t('profileScreen.syncPending')}</Text>
+            </View>
+            <Text style={[styles.pendingCountText, pendingCount > 0 && { color: COLORS.error }]}>
+              {pendingCount}
+            </Text>
+          </View>
+
+          <View style={styles.separator} />
+
+          <TouchableOpacity
+            style={[styles.syncButton, syncStatus === 'syncing' && styles.syncButtonDisabled]}
+            onPress={handleSync}
+            disabled={syncStatus === 'syncing'}
+          >
+            {syncStatus === 'syncing' ? (
+              <ActivityIndicator size="small" color={COLORS.white} />
+            ) : (
+              <Ionicons name="sync" size={18} color={COLORS.white} />
+            )}
+            <Text style={styles.syncButtonText}>
+              {syncStatus === 'syncing' ? t('profileScreen.syncInProgress') : t('profileScreen.syncNow')}
+            </Text>
+          </TouchableOpacity>
+
+          {syncStatus === 'success' && (
+            <Text style={styles.syncResultText}>{t('profileScreen.syncSuccess')}</Text>
+          )}
+          {syncStatus === 'error' && (
+            <Text style={[styles.syncResultText, { color: COLORS.error }]}>{t('profileScreen.syncError')}</Text>
+          )}
+        </View>
+      )}
+
       {/* Информация */}
       <View style={styles.infoSection}>
         <View style={styles.infoRow}>
@@ -102,6 +266,15 @@ export default function ProfileScreen() {
           <Text style={styles.infoLabel}>{t('profileScreen.role')}</Text>
           <Text style={styles.infoValue}>{t('roles.' + user?.role) || user?.role}</Text>
         </View>
+        {(user?.role === 'expeditor' || user?.role === 'preseller') && (
+          <>
+            <View style={styles.separator} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>{t('profileScreen.vehicle')}</Text>
+              <Text style={styles.infoValue}>{user?.vehiclePlate || t('profileScreen.noVehicle')}</Text>
+            </View>
+          </>
+        )}
         <View style={styles.separator} />
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>{t('profileScreen.status')}</Text>
@@ -113,6 +286,76 @@ export default function ProfileScreen() {
       </View>
 
       <Text style={styles.version}>DSD Mini v1.0.0</Text>
+
+      {/* Vehicle picker modal */}
+      <Modal visible={showVehiclePicker} animationType="slide" onRequestClose={closeVehiclePicker}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{t('startOfDay.selectVehicle')}</Text>
+            <TouchableOpacity onPress={closeVehiclePicker}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.modalSearchWrap}>
+            <Ionicons name="search" size={18} color={COLORS.textSecondary} />
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder={t('startOfDay.searchVehicle')}
+              placeholderTextColor={COLORS.textSecondary}
+              value={vehicleSearch}
+              onChangeText={setVehicleSearch}
+              autoCorrect={false}
+            />
+          </View>
+          <FlatList
+            data={filteredVehicles}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            renderItem={({ item }) => {
+              const isPickerSelected = item.id === pickerSelectedId;
+              const isOccupied = item.driver_id && String(item.driver_id) !== String(user?.id);
+              const disabled = isOccupied;
+              return (
+                <TouchableOpacity
+                  style={[styles.vehicleRow, isPickerSelected && styles.vehicleRowSelected, disabled && styles.vehicleRowDisabled]}
+                  onPress={() => !disabled && setPickerSelectedId(item.id)}
+                  disabled={disabled}
+                >
+                  <View style={styles.vehicleRowInfo}>
+                    <Text style={[styles.vehiclePlateText, disabled && styles.vehicleTextDisabled]}>
+                      {item.plate_number}
+                    </Text>
+                    <Text style={[styles.vehicleModelText, disabled && styles.vehicleTextDisabled]}>
+                      {item.model || ''}
+                      {isOccupied ? ` · ${t('startOfDay.vehicleOccupied', { driver: item.driver_name || '—' })}` : ''}
+                    </Text>
+                  </View>
+                  {isPickerSelected && (
+                    <Ionicons name="checkmark-circle" size={22} color={COLORS.primary} />
+                  )}
+                  {isOccupied && !isPickerSelected && (
+                    <Ionicons name="lock-closed" size={18} color={COLORS.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              );
+            }}
+          />
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.modalBackBtn} onPress={closeVehiclePicker}>
+              <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+              <Text style={styles.modalBackBtnText}>{t('startOfDay.back')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalSelectBtn, !pickerSelectedId && styles.modalSelectBtnDisabled]}
+              onPress={confirmVehicleSelection}
+              disabled={!pickerSelectedId}
+            >
+              <Ionicons name="checkmark" size={20} color={COLORS.white} />
+              <Text style={styles.modalSelectBtnText}>{t('startOfDay.confirmSelect')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -144,4 +387,60 @@ const styles = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.success },
   statusText: { fontSize: 14, fontWeight: '500', color: COLORS.success },
   version: { textAlign: 'center', fontSize: 12, color: COLORS.tabBarInactive, marginTop: 24 },
+  // Sync section
+  syncSection: { backgroundColor: COLORS.white, borderRadius: 14, marginTop: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  syncHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  syncStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  syncStatusText: { fontSize: 11, fontWeight: '600' },
+  syncPendingRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  pendingCountText: { fontSize: 15, fontWeight: '600', color: COLORS.text, marginRight: 4 },
+  syncButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.primary, borderRadius: 12, marginHorizontal: 14, marginVertical: 12, paddingVertical: 12 },
+  syncButtonDisabled: { opacity: 0.6 },
+  syncButtonText: { fontSize: 15, fontWeight: '600', color: COLORS.white },
+  syncResultText: { textAlign: 'center', fontSize: 13, fontWeight: '500', color: COLORS.success, paddingBottom: 10 },
+  // Vehicle
+  vehicleTouchable: { alignItems: 'center', marginTop: 4 },
+  tapToChange: { fontSize: 11, color: COLORS.primary, marginTop: 2 },
+  // Vehicle picker modal
+  modalContainer: { flex: 1, backgroundColor: COLORS.background },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 16, backgroundColor: COLORS.white,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+  modalSearchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    margin: 16, paddingHorizontal: 14, paddingVertical: 10,
+    backgroundColor: COLORS.white, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.border,
+  },
+  modalSearchInput: { flex: 1, fontSize: 15, color: COLORS.text, padding: 0 },
+  vehicleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginBottom: 8, padding: 14,
+    backgroundColor: COLORS.white, borderRadius: 12,
+  },
+  vehicleRowSelected: { borderWidth: 2, borderColor: COLORS.primary },
+  vehicleRowDisabled: { opacity: 0.5 },
+  vehicleRowInfo: { flex: 1 },
+  vehiclePlateText: { fontSize: 16, fontWeight: '700', color: COLORS.text },
+  vehicleModelText: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
+  vehicleTextDisabled: { color: COLORS.textSecondary },
+  modalFooter: {
+    flexDirection: 'row', gap: 12, padding: 16,
+    backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  modalBackBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingVertical: 14, paddingHorizontal: 20,
+    borderRadius: 12, borderWidth: 1, borderColor: COLORS.border,
+  },
+  modalBackBtnText: { fontSize: 15, color: COLORS.text, fontWeight: '500' },
+  modalSelectBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 14,
+  },
+  modalSelectBtnDisabled: { opacity: 0.4 },
+  modalSelectBtnText: { fontSize: 15, color: COLORS.white, fontWeight: '700' },
 });

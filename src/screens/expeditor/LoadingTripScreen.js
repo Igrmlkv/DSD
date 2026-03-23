@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -43,6 +43,17 @@ export default function LoadingTripScreen() {
   const adjustQty = async (item, delta) => {
     if (isVerified) return;
     const newQty = Math.max(0, item.actual_quantity + delta);
+    const scanned = newQty > 0;
+    await updateLoadingTripItem(item.id, newQty, scanned);
+    setItems((prev) => prev.map((i) =>
+      i.id === item.id ? { ...i, actual_quantity: newQty, scanned: scanned ? 1 : 0 } : i
+    ));
+  };
+
+  const setQty = async (item, text) => {
+    if (isVerified) return;
+    const parsed = parseInt(text, 10);
+    const newQty = isNaN(parsed) ? 0 : Math.max(0, parsed);
     const scanned = newQty > 0;
     await updateLoadingTripItem(item.id, newQty, scanned);
     setItems((prev) => prev.map((i) =>
@@ -167,7 +178,13 @@ export default function LoadingTripScreen() {
               <Ionicons name="remove" size={16} color={COLORS.primary} />
             </TouchableOpacity>
             <View style={styles.qtyCenter}>
-              <Text style={[styles.qtyValue, isDiff && styles.qtyDiff]}>{item.actual_quantity}</Text>
+              <TextInput
+                style={[styles.qtyInput, isDiff && styles.qtyDiff]}
+                value={String(item.actual_quantity ?? 0)}
+                onChangeText={(text) => setQty(item, text)}
+                keyboardType="numeric"
+                selectTextOnFocus
+              />
               <Text style={styles.qtyPlanned}>/ {item.planned_quantity}</Text>
             </View>
             <TouchableOpacity style={styles.qtyBtn} onPress={() => adjustQty(item, 1)}>
@@ -313,6 +330,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   qtyCenter: { alignItems: 'center', minWidth: 40 },
+  qtyInput: {
+    fontSize: 16, fontWeight: '700', color: COLORS.text, textAlign: 'center',
+    minWidth: 40, paddingVertical: 2, paddingHorizontal: 4,
+    borderBottomWidth: 1, borderBottomColor: COLORS.border,
+  },
   qtyValue: { fontSize: 16, fontWeight: '700', color: COLORS.text },
   qtyPlanned: { fontSize: 10, color: COLORS.textSecondary },
   qtyDiff: { color: COLORS.error },

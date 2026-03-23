@@ -21,6 +21,8 @@ const useSettingsStore = create((set, get) => ({
     directorName: '',
     accountantName: '',
   },
+  serverSyncEnabled: false,
+  apiBaseUrl: '',
   isLoaded: false,
 
   loadSettings: async () => {
@@ -42,8 +44,8 @@ const useSettingsStore = create((set, get) => ({
 
   _persist: async () => {
     try {
-      const { mapProvider, language, printFormType, companyInfo, hideEmptyProducts, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance } = get();
-      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify({ mapProvider, language, printFormType, companyInfo, hideEmptyProducts, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance }));
+      const { mapProvider, language, printFormType, companyInfo, hideEmptyProducts, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance, serverSyncEnabled, apiBaseUrl } = get();
+      await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify({ mapProvider, language, printFormType, companyInfo, hideEmptyProducts, gpsTrackingEnabled, gpsTrackingInterval, gpsTrackingDistance, serverSyncEnabled, apiBaseUrl }));
     } catch (e) {
       console.error('Settings save error:', e);
     }
@@ -87,6 +89,16 @@ const useSettingsStore = create((set, get) => ({
 
   setGpsTrackingDistance: async (m) => {
     set({ gpsTrackingDistance: m });
+    await get()._persist();
+  },
+
+  setServerSyncEnabled: async (val) => {
+    set({ serverSyncEnabled: val });
+    await get()._persist();
+  },
+
+  setApiBaseUrl: async (url) => {
+    set({ apiBaseUrl: url });
     await get()._persist();
   },
 }));

@@ -33,6 +33,9 @@ const useSettingsStore = create((set, get) => ({
         if (parsed.language) {
           i18n.changeLanguage(parsed.language);
         }
+        // Reset server connection settings
+        parsed.serverSyncEnabled = false;
+        parsed.apiBaseUrl = '';
         set({ ...parsed, isLoaded: true });
       } else {
         set({ isLoaded: true });

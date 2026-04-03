@@ -153,7 +153,7 @@ export async function apiRequest(endpoint, options = {}) {
         const errMsg = typeof rawDetail === 'string'
           ? rawDetail
           : rawDetail ? JSON.stringify(rawDetail) : `HTTP ${response.status}`;
-        logError(TAG, `Request failed: ${method} ${endpoint.substring(0, 60)} — ${response.status} ${errMsg}`);
+        logError(TAG, `Request failed: ${method} ${endpoint} — ${response.status} ${errMsg}`);
         const err = new Error(errMsg);
         err.status = response.status;
         throw err;
@@ -166,11 +166,11 @@ export async function apiRequest(endpoint, options = {}) {
       if (error instanceof AuthError) throw error;
 
       if (error.name === 'AbortError') {
-        logError(TAG, `Request timed out after ${timeout}ms: ${method} ${endpoint.substring(0, 60)}`);
+        logError(TAG, `Request timed out after ${timeout}ms: ${method} ${endpoint}`);
         lastError = new Error('Request timed out');
         lastError.status = 0;
       } else if (isNetworkError(error)) {
-        logError(TAG, `Network error: ${error.message} — ${method} ${endpoint.substring(0, 60)}`);
+        logError(TAG, `Network error: ${error.message} — ${method} ${endpoint}`);
         lastError = error;
         lastError.status = 0;
       } else {

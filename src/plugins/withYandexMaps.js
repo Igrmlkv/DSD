@@ -1,4 +1,4 @@
-const { withAppDelegate, withMainApplication, withDangerousMod } = require('expo/config-plugins');
+const { withAppDelegate, withDangerousMod, withAndroidManifest } = require('expo/config-plugins');
 const { mergeContents } = require('@expo/config-plugins/build/utils/generateCode');
 
 const { YANDEX_MAP_API_KEY } = require('../constants/config');
@@ -34,12 +34,18 @@ function withYandexMapsIOS(config) {
 }
 
 function withYandexMapsAndroid(config) {
-  return withDangerousMod(config, [
-    'android',
-    async (config) => {
-      return config;
-    },
-  ]);
+  return withAndroidManifest(config, (config) => {
+    const manifest = config.modResults.manifest;
+
+    // Add tools:overrideLibrary for Yandex Maps SDK (requires minSdk 26, project uses 24)
+    if (!manifest['uses-sdk']) {
+      manifest['uses-sdk'] = [{}];
+    }
+    manifest['uses-sdk'][0].$= manifest['uses-sdk'][0].$ || {};
+    manifest['uses-sdk'][0].$['tools:overrideLibrary'] = 'com.yandex.maps.mobile, ru.vvdev.yamap';
+
+    return config;
+  });
 }
 
 module.exports = function withYandexMaps(config) {

@@ -14,6 +14,7 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const updateVehicle = useAuthStore((s) => s.updateVehicle);
   const serverSyncEnabled = useSettingsStore((s) => s.serverSyncEnabled);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -60,7 +61,16 @@ export default function ProfileScreen() {
   const handleSync = useCallback(async () => {
     setSyncStatus('syncing');
     try {
-      await performFullSync();
+      const result = await performFullSync();
+      if (result?.authExpired) {
+        setSyncStatus('error');
+        Alert.alert(
+          t('common.error'),
+          t('syncMonitoring.sessionExpired'),
+          [{ text: 'OK', onPress: () => useAuthStore.getState().logout() }]
+        );
+        return;
+      }
       setSyncStatus('success');
       await loadSyncData();
       setTimeout(() => setSyncStatus('idle'), 3000);
@@ -69,7 +79,7 @@ export default function ProfileScreen() {
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 3000);
     }
-  }, [loadSyncData]);
+  }, [loadSyncData, t]);
 
   const filteredVehicles = useMemo(() => {
     if (!vehicleSearch.trim()) return allVehicles;
@@ -285,6 +295,23 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {user?.role !== 'admin' && (
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          onPress={() => Alert.alert(
+            t('systemSettings.logoutTitle'),
+            t('systemSettings.logoutMsg'),
+            [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('systemSettings.logoutButton'), style: 'destructive', onPress: () => logout() },
+            ]
+          )}
+        >
+          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
+          <Text style={styles.logoutText}>{t('systemSettings.logout')}</Text>
+        </TouchableOpacity>
+      )}
+
       <Text style={styles.version}>DSD Mini v1.0.0</Text>
 
       {/* Vehicle picker modal */}
@@ -386,6 +413,8 @@ const styles = StyleSheet.create({
   statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.success },
   statusText: { fontSize: 14, fontWeight: '500', color: COLORS.success },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.white, borderRadius: 14, padding: 16, marginTop: 24, borderWidth: 1, borderColor: COLORS.error + '30' },
+  logoutText: { fontSize: 16, fontWeight: '600', color: COLORS.error },
   version: { textAlign: 'center', fontSize: 12, color: COLORS.tabBarInactive, marginTop: 24 },
   // Sync section
   syncSection: { backgroundColor: COLORS.white, borderRadius: 14, marginTop: 16, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },

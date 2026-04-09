@@ -541,7 +541,8 @@
     "syncPartialMsg": "Некоторые этапы завершились с ошибками:\n{{details}}",
     "syncCompleteTitle": "Синхронизация завершена",
     "syncCompleteMsg": "Отправлено: {{pushed}}, получено: {{pulled}}",
-    "syncErrorTitle": "Ошибка синхронизации"
+    "syncErrorTitle": "Ошибка синхронизации",
+    "sessionExpired": "Сессия истекла. Пожалуйста, войдите в систему заново."
   },
   "conflictResolution": {
     "entityTypes": {

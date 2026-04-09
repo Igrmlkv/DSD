@@ -155,45 +155,41 @@ export default function SystemSettingsScreen() {
             />
           }
         />
-        {serverSyncEnabled && (
-          <>
-            <View style={styles.separator} />
-            <SettingRow
-              icon="link"
-              iconColor={COLORS.info}
-              title={t('systemSettings.serverUrl')}
-              subtitle={apiBaseUrl || API_CONFIG.BASE_URL}
-              onPress={() => {
-                setEditUrl(apiBaseUrl);
-                setShowUrlModal(true);
-              }}
-            />
-            <View style={styles.separator} />
-            <SettingRow
-              icon="pulse"
-              iconColor={COLORS.success}
-              title={t('systemSettings.serverHealth')}
-              subtitle={t('systemSettings.serverHealthSub')}
-              onPress={async () => {
-                try {
-                  const controller = new AbortController();
-                  const timeoutId = setTimeout(() => controller.abort(), 5000);
-                  const response = await fetch(getBaseUrl() + API_CONFIG.ENDPOINTS.HEALTH, {
-                    signal: controller.signal,
-                  });
-                  clearTimeout(timeoutId);
-                  if (response.ok) {
-                    Alert.alert(t('systemSettings.serverHealthOk'), t('systemSettings.serverHealthMsg'));
-                  } else {
-                    Alert.alert(t('systemSettings.serverHealthFail'), `HTTP ${response.status}`);
-                  }
-                } catch (e) {
-                  Alert.alert(t('systemSettings.serverHealthFail'), e.message);
-                }
-              }}
-            />
-          </>
-        )}
+        <View style={styles.separator} />
+        <SettingRow
+          icon="link"
+          iconColor={COLORS.info}
+          title={t('systemSettings.serverUrl')}
+          subtitle={apiBaseUrl || API_CONFIG.BASE_URL}
+          onPress={() => {
+            setEditUrl(apiBaseUrl);
+            setShowUrlModal(true);
+          }}
+        />
+        <View style={styles.separator} />
+        <SettingRow
+          icon="pulse"
+          iconColor={COLORS.success}
+          title={t('systemSettings.serverHealth')}
+          subtitle={t('systemSettings.serverHealthSub')}
+          onPress={async () => {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 5000);
+              const response = await fetch(getBaseUrl() + API_CONFIG.ENDPOINTS.HEALTH, {
+                signal: controller.signal,
+              });
+              clearTimeout(timeoutId);
+              if (response.ok) {
+                Alert.alert(t('systemSettings.serverHealthOk'), t('systemSettings.serverHealthMsg'));
+              } else {
+                Alert.alert(t('systemSettings.serverHealthFail'), `HTTP ${response.status}`);
+              }
+            } catch (e) {
+              Alert.alert(t('systemSettings.serverHealthFail'), e.message);
+            }
+          }}
+        />
       </View>
 
       {/* Лимиты */}

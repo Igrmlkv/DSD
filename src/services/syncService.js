@@ -664,6 +664,16 @@ async function refreshUserVehicle() {
 // AUTO-SYNC (F.6)
 // =====================================================
 
+async function handleAuthExpired() {
+  logWarning(TAG, 'Auth expired — stopping auto-sync and logging out');
+  stopAutoSync();
+  try {
+    await useAuthStore.getState().logout();
+  } catch (e) {
+    logWarning(TAG, `Logout after auth expiry failed: ${e.message}`);
+  }
+}
+
 function scheduleNextSync() {
   if (autoSyncTimeoutId) {
     clearTimeout(autoSyncTimeoutId);
@@ -674,7 +684,11 @@ function scheduleNextSync() {
 
   autoSyncTimeoutId = setTimeout(async () => {
     try {
-      await performFullSync();
+      const result = await performFullSync();
+      if (result?.authExpired) {
+        await handleAuthExpired();
+        return;
+      }
     } catch (err) {
       logWarning(TAG, `Auto-sync error: ${err.message}`);
     }
@@ -707,26 +721,33 @@ export function startAutoSync() {
         await pushPendingOperations();
       }
     } catch (err) {
+      if (err instanceof AuthError) {
+        await handleAuthExpired();
+        return;
+      }
       logWarning(TAG, `Pending push error: ${err.message}`);
     }
   }, PENDING_PUSH_INTERVAL_MS);
 
   // Sync when app returns from background
-  appStateSubscription = AppState.addEventListener('change', (nextState) => {
+  appStateSubscription = AppState.addEventListener('change', async (nextState) => {
     if (nextState === 'active' && useSettingsStore.getState().serverSyncEnabled) {
       const elapsed = Date.now() - lastSyncTimestamp;
       if (elapsed >= MIN_BACKGROUND_SYNC_GAP_MS) {
-        performFullSync().catch((err) =>
-          logWarning(TAG, `Background return sync error: ${err.message}`)
-        );
+        try {
+          const result = await performFullSync();
+          if (result?.authExpired) await handleAuthExpired();
+        } catch (err) {
+          logWarning(TAG, `Background return sync error: ${err.message}`);
+        }
       }
     }
   });
 
   // Trigger immediate sync
-  performFullSync().catch((err) =>
-    logWarning(TAG, `Initial sync error: ${err.message}`)
-  );
+  performFullSync()
+    .then(async (result) => { if (result?.authExpired) await handleAuthExpired(); })
+    .catch((err) => logWarning(TAG, `Initial sync error: ${err.message}`));
 }
 
 export function stopAutoSync() {

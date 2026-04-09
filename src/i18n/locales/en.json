@@ -541,7 +541,8 @@
     "syncPartialMsg": "Some phases failed:\n{{details}}",
     "syncCompleteTitle": "Sync complete",
     "syncCompleteMsg": "Pushed: {{pushed}}, pulled: {{pulled}}",
-    "syncErrorTitle": "Sync error"
+    "syncErrorTitle": "Sync error",
+    "sessionExpired": "Session expired. Please log in again."
   },
   "conflictResolution": {
     "entityTypes": {

@@ -7,6 +7,7 @@ import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { getSyncConflicts, getSyncDashboardData } from '../../database';
 import useSettingsStore from '../../store/settingsStore';
+import useAuthStore from '../../store/authStore';
 import { performFullSync } from '../../services/syncService';
 
 const LOCALE_MAP = { ru: 'ru-RU', en: 'en-US' };
@@ -42,8 +43,16 @@ export default function SyncMonitoringScreen() {
     setSyncing(true);
     try {
       const result = await performFullSync({ force: true });
-      await loadData();
 
+      if (result.authExpired) {
+        Alert.alert(
+          t('common.error'),
+          t('syncMonitoring.sessionExpired'),
+          [{ text: 'OK', onPress: () => useAuthStore.getState().logout() }]
+        );
+        return;
+      }
+      await loadData();
       if (result.skipped) {
         Alert.alert(t('syncMonitoring.syncSkipped'), t('syncMonitoring.syncSkippedMsg'));
       } else if (result.hasErrors) {

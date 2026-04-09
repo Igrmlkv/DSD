@@ -17,19 +17,11 @@ const MAP_PROVIDERS = [
 export default function SettingsScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
   const roleConfig = getRoleConfig(user?.role);
   const mapProvider = useSettingsStore((s) => s.mapProvider);
   const setMapProvider = useSettingsStore((s) => s.setMapProvider);
   const language = useSettingsStore((s) => s.language);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
-
-  const handleLogout = () => {
-    Alert.alert(t('settingsScreen.logoutTitle'), t('settingsScreen.logoutMsg'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('settingsScreen.logoutButton'), style: 'destructive', onPress: logout },
-    ]);
-  };
 
   const sections = [
     {
@@ -110,10 +102,6 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Ionicons name="log-out-outline" size={22} color={COLORS.error} />
-        <Text style={styles.logoutText}>{t('settingsScreen.logoutButton')}</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -137,10 +125,4 @@ const styles = StyleSheet.create({
   },
   radioSelected: { borderColor: COLORS.primary },
   radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.primary },
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, padding: 16, backgroundColor: COLORS.error + '10',
-    borderRadius: 14, marginTop: 10,
-  },
-  logoutText: { fontSize: 16, fontWeight: '600', color: COLORS.error },
 });

@@ -18,6 +18,13 @@ const DEFAULT_ENTITY_TYPES = [
   'product_empties', 'expense_types', 'adjustment_reasons', 'units',
 ];
 
+const MERCH_PULL_ENTITY_TYPES = ['audit_templates', 'kpi_results'];
+
+function getDefaultPullEntityTypes() {
+  const merchOn = useSettingsStore.getState().merchandisingEnabled;
+  return merchOn ? [...DEFAULT_ENTITY_TYPES, ...MERCH_PULL_ENTITY_TYPES] : DEFAULT_ENTITY_TYPES;
+}
+
 // Whitelist of allowed table names — prevents SQL injection if ENTITY_TABLE_MAP
 // is ever extended with external input.
 const ALLOWED_TABLES = new Set([
@@ -29,6 +36,8 @@ const ALLOWED_TABLES = new Set([
   'packaging_returns', 'cash_collections',
   'tour_checkins', 'expenses', 'visit_reports',
   'inventory_adjustments', 'on_hand_inventory',
+  // Merchandising Audit (spec §5.3)
+  'audit_templates', 'audit_answers', 'audit_photos', 'kpi_results',
 ]);
 
 // Maps entity types (as used in API requests) to local SQLite table names.
@@ -66,12 +75,18 @@ const ENTITY_TABLE_MAP = {
   gps_track: 'gps_tracks',
   route_point: 'route_points',
   route: 'routes',
+  // Merchandising Audit (spec §5.3)
+  audit_templates: 'audit_templates',  // PULL from middleware
+  audit_visit: 'visit_reports',        // PUSH (filter report_kind='merch_audit')
+  audit_answers: 'audit_answers',      // PUSH (sent inline with audit_visit payload)
+  audit_photos: 'audit_photos',        // PUSH metadata (binary via uploader)
+  kpi_results: 'kpi_results',          // PULL from middleware (KPI Engine output)
 };
 
 const ENTITY_COLUMNS = {
   users: ['id', 'username', 'password_hash', 'full_name', 'role', 'phone', 'vehicle_id', 'is_active'],
   customers: ['id', 'external_id', 'name', 'legal_name', 'ship_to_name', 'inn', 'kpp', 'address', 'city', 'region', 'postal_code', 'latitude', 'longitude', 'contact_person', 'phone', 'email', 'visit_time_from', 'visit_time_to', 'delivery_notes_text', 'vat_rate', 'customer_type', 'payment_terms', 'credit_limit', 'debt_amount', 'currency', 'price_list_id', 'is_active'],
-  products: ['id', 'external_id', 'sku', 'name', 'category', 'subcategory', 'brand', 'volume', 'volume_unit', 'unit', 'barcode', 'weight', 'weight_unit', 'vat_percent', 'image_url', 'material_type', 'is_active'],
+  products: ['id', 'external_id', 'sku', 'name', 'category', 'subcategory', 'brand', 'volume', 'volume_unit', 'unit', 'barcode', 'weight', 'weight_unit', 'vat_percent', 'image_url', 'material_type', 'is_active', 'is_mml', 'mml_priority'],
   price_list_types: ['id', 'name'],
   prices: ['id', 'product_id', 'price_type', 'price', 'currency', 'valid_from', 'valid_to'],
   vehicles: ['id', 'plate_number', 'model', 'driver_id', 'is_active'],
@@ -84,6 +99,9 @@ const ENTITY_COLUMNS = {
   expense_types: ['id', 'name', 'icon', 'is_active', 'sort_order'],
   adjustment_reasons: ['id', 'code', 'name_ru', 'name_en', 'is_active', 'sort_order'],
   units: ['code', 'name'],
+  // Merchandising Audit (spec §5.3) — pull-only entities are upserted via these column lists.
+  audit_templates: ['id', 'outlet_type', 'version', 'name', 'questions', 'scoring', 'active', 'effective_from', 'effective_to', 'external_id'],
+  kpi_results: ['id', 'visit_report_id', 'kpi_code', 'value', 'status', 'formula_version', 'source', 'details_json'],
 };
 
 // Entity types where pull must not overwrite locally modified data.
@@ -126,7 +144,7 @@ export async function pullEntities(entityTypes = null) {
   const database = await getDatabase();
   const deviceId = await getDeviceId();
   const baseUrl = getBaseUrl();
-  const types = entityTypes || DEFAULT_ENTITY_TYPES;
+  const types = entityTypes || getDefaultPullEntityTypes();
   let totalUpserted = 0;
 
   logInfo(TAG, `PULL START — device: ${deviceId}, baseUrl: ${baseUrl}, entities: ${types.join(', ')}`);

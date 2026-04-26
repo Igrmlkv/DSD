@@ -77,4 +77,15 @@ export const SCREEN_NAMES = {
   PROFILE: 'Profile',
   SETTINGS: 'Settings',
   NOTIFICATIONS: 'Notifications',
+
+  // Merchandising Audit (preseller, gated by settingsStore.merchandisingEnabled).
+  // Screens live inside PresellerRouteStack, not a separate tab — when the flag is on,
+  // the "Отчёт о визите" button on PresellerVisitScreen opens MERCH_AUDIT in place
+  // of the legacy VISIT_REPORT screen.
+  MERCH_AUDIT_LIST: 'MerchAuditList',
+  MERCH_AUDIT: 'MerchAudit',
+  MERCH_QUESTION: 'MerchQuestion',
+  MERCH_PHOTO_CAPTURE: 'MerchPhotoCapture',
+  MERCH_AUDIT_SUMMARY: 'MerchAuditSummary',
+  MERCH_KPI_RESULT: 'MerchKpiResult',
 };

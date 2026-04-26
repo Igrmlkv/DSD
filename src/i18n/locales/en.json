@@ -1179,5 +1179,122 @@
     "conditionMissing": "Missing",
     "customer": "Customer",
     "total": "Total empties: {{count}}"
+  },
+  "merchAudit": {
+    "nav": {
+      "tab": "Merch audit",
+      "list": "Outlet audits",
+      "audit": "Survey",
+      "question": "Question",
+      "photo": "Camera",
+      "summary": "Summary",
+      "result": "Result"
+    },
+    "outletType": {
+      "retail": "Retail chain",
+      "kiosk": "Kiosk",
+      "horeca_bar": "Bar",
+      "horeca_cafe": "Cafe / Restaurant"
+    },
+    "block": {
+      "availability": "Availability",
+      "layout": "Layout",
+      "cooler": "Cooler",
+      "price": "Price",
+      "posm": "POSM",
+      "horeca": "HoReCa",
+      "staff": "Staff",
+      "process": "Process",
+      "other": "Other"
+    },
+    "list": {
+      "availableTitle": "Outlets available for audit",
+      "availableEmpty": "No outlets ready for audit. Open a visit from the route.",
+      "recentTitle": "My audits",
+      "recentEmpty": "No completed audits yet.",
+      "draft": "Draft"
+    },
+    "audit": {
+      "outletType": "Outlet type: {{type}}",
+      "progress": "Answered {{done}} of {{total}} questions",
+      "requiredLabel": "required",
+      "continueMissing": "{{count}} required left",
+      "toSummary": "To summary"
+    },
+    "question": {
+      "notFound": "Question not found in template",
+      "done": "Done",
+      "takePhoto": "Capture",
+      "photoCount": "Photos: {{count}} (min {{min}}, max {{max}})",
+      "textPlaceholder": "Comment...",
+      "unsupported": "Unsupported question type: {{type}}",
+      "unsupportedComposite": "Unsupported composite: {{kind}}",
+      "mmlEmpty": "MML for this outlet is not yet loaded.",
+      "mmlSeedManual": "Fill manually (demo)",
+      "mmlSummary": "Present: {{present}} of {{total}}"
+    },
+    "qg": {
+      "rejectedTitle": "Quality Gate not passed",
+      "retake": "Retake",
+      "keepAnyway": "Keep anyway",
+      "retakeHint": "Retake the photo — see suggestions above.",
+      "sharpness": "Photo is too blurry. Hold the device steady and wait for focus.",
+      "overexposed": "Too much overexposure. Move away from light sources.",
+      "underexposed": "Too dark. Turn on light or open blinds.",
+      "tilt": "Tilt is too high. Try shooting perpendicular to the shelf.",
+      "cameraNeeded": "Camera access not granted.",
+      "grantPermission": "Grant access",
+      "pickFromLibrary": "Pick from gallery",
+      "bypassTitle": "Test mode",
+      "bypassPickHint": "Simulator has no real camera — pick a photo from the device gallery.",
+      "reuseTitle": "Duplicate photo",
+      "reuseMsg": "This photo was already used in another visit. Take a new one.",
+      "hint": {
+        "default": "Hold the device steady. Object should be centered.",
+        "shelf_full": "Frame the entire category section.",
+        "shelf_section": "Focus on our section.",
+        "cooler_interior": "Open the cooler door and shoot inside.",
+        "cooler_front": "Shoot the entire cooler facade.",
+        "price_tag": "Focus on the price tag; digits should be sharp.",
+        "posm": "POSM in the centre of frame, no glare.",
+        "menu": "Capture the menu page without cropping lines.",
+        "glassware": "Capture the glass / cup up close."
+      }
+    },
+    "precond": {
+      "title": "Cannot start audit",
+      "auth": "Login required.",
+      "visit": "Open a visit from the route first.",
+      "geofence": "You are {{distance}} m from the outlet (allowed up to {{radius}} m). Move closer.",
+      "locationPerm": "Location access not granted.",
+      "locationUnavailable": "Failed to get device coordinates.",
+      "outletType": "Outlet type is not set in the customer card.",
+      "template": "No active audit template for outlet type '{{outletType}}'.",
+      "cameraPerm": "Camera access not granted.",
+      "storage": "Not enough free space on device (need ≥ 50 MB)."
+    },
+    "summary": {
+      "questions": "Answered: {{answered}} of {{total}}",
+      "photos": "Photos taken: {{count}}",
+      "missingTitle": "Fill required questions",
+      "missingMsg": "{{count}} required questions are still unanswered.",
+      "missingHeader": "Required questions unanswered: {{count}}",
+      "allRequired": "All required questions are filled.",
+      "submit": "Submit audit"
+    },
+    "kpi": {
+      "byCode": "KPI",
+      "empty": "KPI not yet computed. Values will arrive after sync.",
+      "pendingMl": "Waiting for ML processing...",
+      "localPreview": "Preliminary (local)",
+      "serverComputed": "Final (server)",
+      "notYet": "Not computed yet",
+      "backToList": "Back to list",
+      "backToVisit": "Back to visit"
+    },
+    "bypass": {
+      "startTitle": "Run test audit",
+      "startSub": "Test mode: debug UI without a route_point"
+    }
   }
 }

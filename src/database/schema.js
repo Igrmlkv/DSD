@@ -671,6 +671,106 @@ const CREATE_TABLES = [
   `CREATE INDEX IF NOT EXISTS idx_visit_reports_route ON visit_reports(route_id)`,
   `CREATE INDEX IF NOT EXISTS idx_visit_report_photos_report ON visit_report_photos(visit_report_id)`,
 
+  // --- Merchandising Audit (spec §5.2, schema v6) ---
+  // visit_reports gets extended via ALTER migrations in database.js (v6 block):
+  // report_kind, template_id, template_version, outlet_type, ml_status, kpi_payload, pss.
+
+  `CREATE TABLE IF NOT EXISTS audit_templates (
+    id TEXT PRIMARY KEY,
+    outlet_type TEXT NOT NULL CHECK(outlet_type IN ('retail','kiosk','horeca_bar','horeca_cafe')),
+    version INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    questions TEXT NOT NULL,
+    scoring TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    effective_from TEXT,
+    effective_to TEXT,
+    external_id TEXT,
+    synced INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_templates_outlet ON audit_templates(outlet_type, active)`,
+
+  `CREATE TABLE IF NOT EXISTS audit_answers (
+    id TEXT PRIMARY KEY,
+    visit_report_id TEXT NOT NULL,
+    question_id TEXT NOT NULL,
+    kpi_codes TEXT,
+    value_text TEXT,
+    value_number REAL,
+    value_bool INTEGER,
+    value_json TEXT,
+    ml_value TEXT,
+    discrepancy INTEGER DEFAULT 0,
+    source TEXT NOT NULL CHECK(source IN ('survey','ml_trax','ml_cv','mixed')),
+    confidence REAL,
+    synced INTEGER DEFAULT 0,
+    external_id TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (visit_report_id) REFERENCES visit_reports(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_answers_visit ON audit_answers(visit_report_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_answers_question ON audit_answers(question_id)`,
+
+  `CREATE TABLE IF NOT EXISTS audit_photos (
+    id TEXT PRIMARY KEY,
+    visit_report_id TEXT NOT NULL,
+    question_id TEXT,
+    photo_type TEXT,
+    uri_original TEXT NOT NULL,
+    uri_compressed TEXT,
+    exif_json TEXT,
+    qg_passed INTEGER,
+    qg_metrics TEXT,
+    ml_job_id TEXT,
+    ml_status TEXT,
+    ml_result TEXT,
+    upload_status TEXT NOT NULL DEFAULT 'pending'
+      CHECK(upload_status IN ('pending','uploading','done','failed')),
+    remote_url TEXT,
+    hash_sha256 TEXT,
+    synced INTEGER DEFAULT 0,
+    external_id TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (visit_report_id) REFERENCES visit_reports(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_photos_visit ON audit_photos(visit_report_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_photos_upload ON audit_photos(upload_status)`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_photos_hash ON audit_photos(hash_sha256)`,
+
+  `CREATE TABLE IF NOT EXISTS ml_jobs (
+    id TEXT PRIMARY KEY,
+    visit_report_id TEXT NOT NULL,
+    audit_photo_id TEXT NOT NULL,
+    engine TEXT NOT NULL CHECK(engine IN ('trax','yolo','detectron','sam','paddleocr','composite')),
+    request_json TEXT,
+    response_json TEXT,
+    status TEXT NOT NULL CHECK(status IN ('queued','sent','processing','done','failed','cancelled')),
+    attempts INTEGER DEFAULT 0,
+    last_error TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (visit_report_id) REFERENCES visit_reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (audit_photo_id) REFERENCES audit_photos(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_ml_jobs_status ON ml_jobs(status)`,
+  `CREATE INDEX IF NOT EXISTS idx_ml_jobs_visit ON ml_jobs(visit_report_id)`,
+
+  `CREATE TABLE IF NOT EXISTS kpi_results (
+    id TEXT PRIMARY KEY,
+    visit_report_id TEXT NOT NULL,
+    kpi_code TEXT NOT NULL,
+    value REAL,
+    status TEXT,
+    formula_version TEXT,
+    source TEXT,
+    details_json TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (visit_report_id) REFERENCES visit_reports(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_kpi_results_visit ON kpi_results(visit_report_id, kpi_code)`,
+
   // --- Adjustment Reasons (configurable) ---
 
   `CREATE TABLE IF NOT EXISTS adjustment_reasons (

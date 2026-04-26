@@ -21,6 +21,10 @@ const useAuthStore = create((set) => ({
     try {
       await authService.logout();
     } finally {
+      // Note: settingsStore.merchTestBypass is intentionally not cleared here so
+      // QA can enable it as admin, log out, and continue testing as preseller.
+      // A persistent on-screen banner (PresellerHomeScreen) makes accidental leak
+      // into a production session visible at a glance.
       set({
         user: null,
         isAuthenticated: false,

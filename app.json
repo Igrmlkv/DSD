@@ -74,7 +74,8 @@
           "cameraPermission": "Для сканирования QR-кодов необходим доступ к камере",
           "barcodeScannerEnabled": true
         }
-      ]
+      ],
+      "./src/plugins/withMerchPlugins"
     ]
   }
 }

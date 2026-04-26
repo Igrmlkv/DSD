@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -9,15 +9,22 @@ import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { ROUTE_STATUS, VISIT_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
+import useSettingsStore from '../../store/settingsStore';
 import {
   getRoutesByDate, getRoutePoints, getTodayOrdersByUser,
   getUnreadNotificationCount, getTodayExpensesTotal,
+  getAnyRoutePointForTesting, getCustomerById,
 } from '../../database';
+import { startAudit } from '../../modules/merchandising/services/auditService';
+import { mapCustomerTypeToOutletType } from '../../modules/merchandising/services/preconditions';
+import useAuditStore from '../../modules/merchandising/store/auditStore';
 
 export default function PresellerHomeScreen() {
   const { t } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const navigation = useNavigation();
+  const merchTestBypass = useSettingsStore((s) => s.merchTestBypass);
+  const merchandisingEnabled = useSettingsStore((s) => s.merchandisingEnabled);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     totalPoints: 0, completedPoints: 0,
@@ -26,6 +33,30 @@ export default function PresellerHomeScreen() {
     unreadNotifications: 0,
     todayExpenses: 0,
   });
+
+  // Bypass-only entry point: runs a full merch audit on a seeded route_point.
+  // Uses a real route_point from the DB so the visit_reports.route_point_id FK is satisfied;
+  // synthetic IDs would fail with FOREIGN KEY constraint failed.
+  // Hidden behind both flags — never visible in production builds where bypass is off.
+  const handleStartTestAudit = useCallback(async () => {
+    try {
+      const routePoint = await getAnyRoutePointForTesting(user?.id);
+      if (!routePoint) {
+        Alert.alert(t('common.error'), 'No route_points seeded — reset DB and retry.');
+        return;
+      }
+      const customer = routePoint.customer_id ? await getCustomerById(routePoint.customer_id) : null;
+      const outletType = mapCustomerTypeToOutletType(customer?.customer_type) || 'retail';
+      const ctx = await startAudit({ outletType, customer, routePoint, testMode: true });
+      useAuditStore.getState().startAudit(ctx);
+      navigation.navigate(SCREEN_NAMES.ROUTE_TAB, {
+        screen: SCREEN_NAMES.MERCH_AUDIT,
+        params: { visitId: ctx.visitId },
+      });
+    } catch (e) {
+      Alert.alert(t('common.error'), e.message);
+    }
+  }, [navigation, t, user]);
 
   const loadData = useCallback(async () => {
     try {
@@ -171,6 +202,18 @@ export default function PresellerHomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Test bypass: standalone audit launcher (visible only when both flags are on) */}
+      {merchandisingEnabled && merchTestBypass && (
+        <TouchableOpacity style={styles.bypassCard} onPress={handleStartTestAudit}>
+          <Ionicons name="bug" size={20} color={COLORS.error} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bypassTitle}>{t('merchAudit.bypass.startTitle')}</Text>
+            <Text style={styles.bypassSub}>{t('merchAudit.bypass.startSub')}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={COLORS.tabBarInactive} />
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -211,4 +254,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   actionLabel: { fontSize: 13, fontWeight: '500', color: COLORS.text, textAlign: 'center' },
+  bypassCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginTop: 24, padding: 14, borderRadius: 12,
+    backgroundColor: COLORS.error + '0E',
+    borderWidth: 1, borderColor: COLORS.error + '40', borderStyle: 'dashed',
+  },
+  bypassTitle: { fontSize: 14, fontWeight: '600', color: COLORS.error },
+  bypassSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
 });

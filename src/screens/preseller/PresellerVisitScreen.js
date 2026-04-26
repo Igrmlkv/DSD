@@ -9,11 +9,15 @@ import { COLORS } from '../../constants/colors';
 import { SCREEN_NAMES } from '../../constants/screens';
 import { VISIT_STATUS, ORDER_STATUS } from '../../constants/statuses';
 import useAuthStore from '../../store/authStore';
+import useSettingsStore from '../../store/settingsStore';
 import {
   getCustomerById, getOrdersByRoutePoint, updateRoutePointStatus,
-  getVisitReportByPoint,
+  getVisitReportByPoint, findDraftAuditByPoint, findLastSubmittedAuditByPoint,
 } from '../../database';
 import { recordVisitLocation } from '../../services/locationService';
+import { startAudit, loadDraftAudit } from '../../modules/merchandising/services/auditService';
+import { mapCustomerTypeToOutletType } from '../../modules/merchandising/services/preconditions';
+import useAuditStore from '../../modules/merchandising/store/auditStore';
 
 export default function PresellerVisitScreen({ route }) {
   const { t } = useTranslation();
@@ -46,6 +50,55 @@ export default function PresellerVisitScreen({ route }) {
 
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
+  // Opens the visit report — when settingsStore.merchandisingEnabled is on, the
+  // merchandising audit flow replaces the legacy VisitReportScreen entirely:
+  //   1. If a submitted merch audit exists for this point, jump to its KPI result.
+  //   2. Else, if a draft exists, resume it.
+  //   3. Else, start a new draft via startAudit() and open MERCH_AUDIT.
+  // When the flag is off, original VisitReportScreen flow runs unchanged.
+  const openReport = useCallback(async () => {
+    const merchOn = useSettingsStore.getState().merchandisingEnabled;
+    if (!merchOn) {
+      navigation.navigate(SCREEN_NAMES.VISIT_REPORT, { customerId, customerName, pointId, routeId });
+      return;
+    }
+    try {
+      // Already submitted? → KPI result.
+      const submitted = pointId ? await findLastSubmittedAuditByPoint(pointId) : null;
+      if (submitted) {
+        useAuditStore.getState().clear();
+        navigation.navigate(SCREEN_NAMES.MERCH_KPI_RESULT, { visitId: submitted.id });
+        return;
+      }
+      // Draft exists? → resume.
+      const draft = pointId ? await findDraftAuditByPoint(pointId) : null;
+      if (draft) {
+        const hydrated = await loadDraftAudit(draft.id);
+        if (hydrated) {
+          useAuditStore.getState().loadDraft({
+            visit: hydrated.visit,
+            template: hydrated.template,
+            answers: hydrated.answers,
+            photosByQuestion: hydrated.photosByQuestion,
+          });
+        }
+        navigation.navigate(SCREEN_NAMES.MERCH_AUDIT, { visitId: draft.id, resume: true });
+        return;
+      }
+      // Start fresh draft.
+      const outletType = mapCustomerTypeToOutletType(customer?.customer_type) || 'retail';
+      const ctx = await startAudit({
+        outletType,
+        customer,
+        routePoint: { id: pointId, route_id: routeId, customer_id: customerId },
+      });
+      useAuditStore.getState().startAudit(ctx);
+      navigation.navigate(SCREEN_NAMES.MERCH_AUDIT, { visitId: ctx.visitId });
+    } catch (e) {
+      Alert.alert(t('common.error'), e.message);
+    }
+  }, [navigation, customerId, customerName, pointId, routeId, customer, t]);
+
   const handleStartVisit = async () => {
     if (pointId) {
       await updateRoutePointStatus(pointId, VISIT_STATUS.IN_PROGRESS);
@@ -55,9 +108,12 @@ export default function PresellerVisitScreen({ route }) {
   };
 
   const handleEndVisit = async () => {
-    // Check if visit report has been filled
+    // Check if a report (legacy visit_report or submitted merch audit) has been filled.
     try {
-      const report = await getVisitReportByPoint(pointId);
+      const merchOn = useSettingsStore.getState().merchandisingEnabled;
+      const report = merchOn
+        ? await findLastSubmittedAuditByPoint(pointId)
+        : await getVisitReportByPoint(pointId);
       if (!report) {
         Alert.alert(
           t('preseller.reportMissing'),
@@ -66,7 +122,7 @@ export default function PresellerVisitScreen({ route }) {
             { text: t('preseller.skipReport'), style: 'cancel', onPress: () => confirmEndVisit() },
             {
               text: t('preseller.fillReport'),
-              onPress: () => navigation.navigate(SCREEN_NAMES.VISIT_REPORT, { customerId, customerName, pointId, routeId }),
+              onPress: () => openReport(),
             },
           ]
         );
@@ -188,11 +244,11 @@ export default function PresellerVisitScreen({ route }) {
         </TouchableOpacity>
       </View>
 
-      {/* Visit Report */}
+      {/* Visit Report — opens merch audit when settingsStore.merchandisingEnabled is on, legacy report otherwise */}
       <TouchableOpacity
         style={[styles.reportBtn, !visitStarted && styles.actionCardDisabled]}
         onPress={visitStarted
-          ? () => navigation.navigate(SCREEN_NAMES.VISIT_REPORT, { customerId, customerName, pointId, routeId })
+          ? () => openReport()
           : () => Alert.alert('', t('visit.startVisitFirst'))
         }
       >

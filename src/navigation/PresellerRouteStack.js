@@ -18,6 +18,13 @@ import VisitReportScreen from '../screens/preseller/VisitReportScreen';
 import StartOfDayScreen from '../screens/expeditor/StartOfDayScreen';
 import EndOfDayScreen from '../screens/expeditor/EndOfDayScreen';
 import ExpensesScreen from '../screens/expeditor/ExpensesScreen';
+// Merchandising Audit screens — registered here (not as a separate tab) so they live
+// in the same navigation tree as the visit flow that launches them.
+import AuditScreen from '../modules/merchandising/screens/AuditScreen';
+import QuestionScreen from '../modules/merchandising/screens/QuestionScreen';
+import PhotoCaptureScreen from '../modules/merchandising/screens/PhotoCaptureScreen';
+import AuditSummaryScreen from '../modules/merchandising/screens/AuditSummaryScreen';
+import KpiResultScreen from '../modules/merchandising/screens/KpiResultScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -51,6 +58,12 @@ export default function PresellerRouteStack() {
       <Stack.Screen name={SCREEN_NAMES.START_OF_DAY} component={StartOfDayScreen} options={{ title: i18n.t('startOfDay.title') }} />
       <Stack.Screen name={SCREEN_NAMES.END_OF_DAY} component={EndOfDayScreen} options={{ title: i18n.t('endOfDay.title') }} />
       <Stack.Screen name={SCREEN_NAMES.EXPENSES} component={ExpensesScreen} options={{ title: i18n.t('nav.expenses') }} />
+      {/* Merchandising Audit (gated by settingsStore.merchandisingEnabled) */}
+      <Stack.Screen name={SCREEN_NAMES.MERCH_AUDIT} component={AuditScreen} options={{ title: i18n.t('merchAudit.nav.audit') }} />
+      <Stack.Screen name={SCREEN_NAMES.MERCH_QUESTION} component={QuestionScreen} options={{ title: i18n.t('merchAudit.nav.question') }} />
+      <Stack.Screen name={SCREEN_NAMES.MERCH_PHOTO_CAPTURE} component={PhotoCaptureScreen} options={{ title: i18n.t('merchAudit.nav.photo'), headerShown: false }} />
+      <Stack.Screen name={SCREEN_NAMES.MERCH_AUDIT_SUMMARY} component={AuditSummaryScreen} options={{ title: i18n.t('merchAudit.nav.summary') }} />
+      <Stack.Screen name={SCREEN_NAMES.MERCH_KPI_RESULT} component={KpiResultScreen} options={{ title: i18n.t('merchAudit.nav.result') }} />
     </Stack.Navigator>
   );
 }

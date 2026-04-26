@@ -15,7 +15,10 @@ import {
   buildCashCollectionPayload, buildLoadingTripPayload, buildTourCheckinPayload,
   buildVisitReportPayload, buildExpensePayload,
   buildRouteStatusPayload, buildRoutePointStatusPayload,
+  buildAuditVisitPayload, buildAuditAnswerPayload, buildAuditPhotoPayload,
 } from '../services/syncPayloadBuilder';
+import { REPORT_KIND, ML_STATUSES, VISIT_AUDIT_STATUS, ANSWER_SOURCES } from '../constants/merchAudit';
+import { serializeJson } from '../utils/json';
 
 let db = null;
 
@@ -33,6 +36,23 @@ export async function getDatabase() {
   await db.execAsync('PRAGMA journal_mode = WAL');
   await db.execAsync('PRAGMA foreign_keys = ON');
   return db;
+}
+
+// Adds missing columns to a table using PRAGMA table_info as the source of truth.
+// More robust than blanket ALTER + try/catch: errors are logged, idempotent across runs,
+// and works regardless of SQLite version quirks around NOT NULL/DEFAULT in ADD COLUMN.
+async function ensureColumns(database, table, columns) {
+  const existing = await database.getAllAsync(`PRAGMA table_info(${table})`);
+  const existingNames = new Set((existing || []).map((c) => c.name));
+  for (const col of columns) {
+    if (existingNames.has(col.name)) continue;
+    const sql = `ALTER TABLE ${table} ADD COLUMN ${col.name} ${col.ddl}`;
+    try {
+      await database.execAsync(sql);
+    } catch (e) {
+      console.warn(`[database] ensureColumns: failed to add ${table}.${col.name}: ${e.message}`);
+    }
+  }
 }
 
 export async function initDatabase() {
@@ -120,11 +140,45 @@ export async function initDatabase() {
     try { await database.execAsync(sql); } catch { /* column already exists */ }
   }
 
+  // Merchandising Audit (spec §5.1) — flag products that belong to the Must-Must-List
+  // ("обязательная ассортиментная матрица" — spec §2 / §5.4 / §8.4). For v1 the MML is global
+  // (one list for all outlets); per-outlet MML is delivered by the backoffice in later phases.
+  await ensureColumns(database, 'products', [
+    { name: 'is_mml',       ddl: 'INTEGER DEFAULT 0' },
+    { name: 'mml_priority', ddl: 'INTEGER' },
+  ]);
+  try { await database.execAsync('CREATE INDEX IF NOT EXISTS idx_products_is_mml ON products(is_mml)'); } catch { /* ignore */ }
+
+  // Merchandising Audit (spec §5.1) — extend visit_reports.
+  // Runs after the array above so we can use PRAGMA table_info for explicit column-existence checks.
+  // The previous "ALTER ... NOT NULL DEFAULT 'generic'" form was swallowed silently by some
+  // SQLite builds; the helper below guarantees columns are present and logs failures.
+  await ensureColumns(database, 'visit_reports', [
+    { name: 'report_kind',      ddl: "TEXT DEFAULT 'generic'" },
+    { name: 'template_id',      ddl: 'TEXT' },
+    { name: 'template_version', ddl: 'INTEGER' },
+    { name: 'outlet_type',      ddl: 'TEXT' },
+    { name: 'ml_status',        ddl: 'TEXT' },
+    { name: 'kpi_payload',      ddl: 'TEXT' },
+    { name: 'pss',              ddl: 'REAL' },
+  ]);
+  // Backfill report_kind for any pre-existing rows that came in before the column was added.
+  await database.execAsync("UPDATE visit_reports SET report_kind = 'generic' WHERE report_kind IS NULL");
+  try { await database.execAsync('CREATE INDEX IF NOT EXISTS idx_visit_reports_kind ON visit_reports(report_kind)'); } catch { /* ignore */ }
+  try { await database.execAsync('CREATE INDEX IF NOT EXISTS idx_visit_reports_template ON visit_reports(template_id, template_version)'); } catch { /* ignore */ }
+
   // Ensure expense types exist (idempotent)
   try { await ensureExpenseTypes(); } catch { /* table may not exist yet on first run */ }
 
   // Ensure adjustment reasons exist (idempotent)
   try { await ensureAdjustmentReasons(); } catch { /* ignore */ }
+
+  // Mark seeded products that belong to the merchandising MML.
+  // Server-pushed products carry their own is_mml/mml_priority via sync; this is a
+  // dev-only fallback so the local mock data exposes a working MML for QA.
+  if (!useSettingsStore.getState().serverSyncEnabled) {
+    try { await ensureMmlSeed(); } catch (e) { console.warn('[database] ensureMmlSeed:', e.message); }
+  }
 
   // Check if already seeded — but skip seeding when server sync is enabled:
   // after clearReferenceData() the DB is empty and should be filled from
@@ -437,6 +491,22 @@ async function seedDatabase(database) {
       await database.runAsync(
         `INSERT OR IGNORE INTO error_log (id, severity, source, message, context, stack_trace, user_id, screen, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [e.id, e.severity, e.source, e.message, e.context || null, e.stack_trace || null, e.user_id || null, e.screen || null, e.created_at]
+      );
+    }
+
+    // Audit templates (seed-fallback for merchandising module).
+    // Backoffice will overwrite these via /sync/audit_templates pull when versions advance.
+    const { SEED_AUDIT_TEMPLATES } = require('./auditTemplatesSeed');
+    for (const tpl of SEED_AUDIT_TEMPLATES) {
+      await database.runAsync(
+        `INSERT OR IGNORE INTO audit_templates
+         (id, outlet_type, version, name, questions, scoring, active, synced)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+        [
+          tpl.id, tpl.outlet_type, tpl.version, tpl.name,
+          JSON.stringify(tpl.questions), JSON.stringify(tpl.scoring),
+          tpl.active != null ? tpl.active : 1,
+        ]
       );
     }
 
@@ -2693,10 +2763,13 @@ export async function getVisitReportByPoint(routePointId) {
 
 export async function getVisitReportsByRoute(routeId) {
   const database = await getDatabase();
+  // Returns only generic visit reports — merchandising audits live in the same table
+  // but have report_kind='merch_audit' and are accessed via listAuditVisitsByRoute().
   const reports = await database.getAllAsync(
     `SELECT vr.*, c.name as customer_name FROM visit_reports vr
      LEFT JOIN customers c ON vr.customer_id = c.id
-     WHERE vr.route_id = ? ORDER BY vr.created_at DESC`,
+     WHERE vr.route_id = ? AND COALESCE(vr.report_kind, 'generic') = 'generic'
+     ORDER BY vr.created_at DESC`,
     [routeId]
   );
   return reports.map((r) => ({ ...r, checklist: JSON.parse(r.checklist || '{}') }));
@@ -3028,4 +3101,458 @@ export async function getGpsTrackStats(routeId) {
      FROM gps_tracks WHERE route_id = ?`,
     [routeId]
   );
+}
+
+
+// =====================================================
+// Merchandising Audit (spec §5.2) — CRUD
+// =====================================================
+
+export async function upsertAuditTemplate(tpl) {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO audit_templates (id, outlet_type, version, name, questions, scoring, active, effective_from, effective_to, external_id, synced, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+     ON CONFLICT(id) DO UPDATE SET
+       outlet_type=excluded.outlet_type,
+       version=excluded.version,
+       name=excluded.name,
+       questions=excluded.questions,
+       scoring=excluded.scoring,
+       active=excluded.active,
+       effective_from=excluded.effective_from,
+       effective_to=excluded.effective_to,
+       external_id=excluded.external_id,
+       updated_at=excluded.updated_at`,
+    [
+      tpl.id, tpl.outlet_type, tpl.version, tpl.name,
+      serializeJson(tpl.questions),
+      serializeJson(tpl.scoring),
+      tpl.active != null ? tpl.active : 1,
+      tpl.effective_from || null, tpl.effective_to || null,
+      tpl.external_id || null, tpl.synced != null ? tpl.synced : 1,
+      tpl.created_at || now, now,
+    ]
+  );
+}
+
+export async function getActiveAuditTemplate(outletType) {
+  const database = await getDatabase();
+  const now = new Date().toISOString();
+  return database.getFirstAsync(
+    `SELECT * FROM audit_templates
+     WHERE outlet_type = ? AND active = 1
+       AND (effective_from IS NULL OR effective_from <= ?)
+       AND (effective_to IS NULL OR effective_to >= ?)
+     ORDER BY version DESC LIMIT 1`,
+    [outletType, now, now]
+  );
+}
+
+export async function getAuditTemplateById(id) {
+  const database = await getDatabase();
+  return database.getFirstAsync('SELECT * FROM audit_templates WHERE id = ?', [id]);
+}
+
+export async function getAllActiveAuditTemplates() {
+  const database = await getDatabase();
+  return database.getAllAsync('SELECT * FROM audit_templates WHERE active = 1');
+}
+
+export async function createAuditVisit(visit) {
+  const database = await getDatabase();
+  const id = visit.id || generateId();
+  const now = new Date().toISOString();
+  const checklistJson = serializeJson(visit.checklist, '{}');
+  await database.runAsync(
+    `INSERT INTO visit_reports
+     (id, route_point_id, route_id, customer_id, user_id, checklist, notes, status, visit_date, created_at, updated_at,
+      report_kind, template_id, template_version, outlet_type, ml_status, kpi_payload, pss)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      id, visit.route_point_id, visit.route_id || null, visit.customer_id || null, visit.user_id,
+      checklistJson, visit.notes || null, visit.status || VISIT_AUDIT_STATUS.DRAFT,
+      visit.visit_date || now, now, now,
+      REPORT_KIND.MERCH_AUDIT, visit.template_id, visit.template_version || null,
+      visit.outlet_type, visit.ml_status || ML_STATUSES.SURVEY_ONLY,
+      visit.kpi_payload || null, visit.pss != null ? visit.pss : null,
+    ]
+  );
+  return id;
+}
+
+export async function updateAuditVisit(id, fields) {
+  const database = await getDatabase();
+  const allowed = ['checklist', 'notes', 'status', 'ml_status', 'kpi_payload', 'pss'];
+  const sets = [];
+  const values = [];
+  for (const k of allowed) {
+    if (fields[k] === undefined) continue;
+    const v = (k === 'checklist' || k === 'kpi_payload') ? serializeJson(fields[k]) : fields[k];
+    sets.push(`${k} = ?`);
+    values.push(v);
+  }
+  if (sets.length === 0) return;
+  sets.push("updated_at = datetime('now')");
+  values.push(id);
+  await database.runAsync(
+    `UPDATE visit_reports SET ${sets.join(', ')} WHERE id = ?`,
+    values
+  );
+}
+
+export async function getAuditVisit(id) {
+  const database = await getDatabase();
+  return database.getFirstAsync(
+    `SELECT * FROM visit_reports WHERE id = ? AND report_kind = ?`,
+    [id, REPORT_KIND.MERCH_AUDIT]
+  );
+}
+
+// Picks any seeded route_point for QA test bypass — picks the first available row
+// regardless of date / status. Used by the "Run test audit" debug entry.
+export async function getAnyRoutePointForTesting(userId = null) {
+  const database = await getDatabase();
+  if (userId) {
+    // Prefer a route_point belonging to the current user's routes.
+    const own = await database.getFirstAsync(
+      `SELECT rp.* FROM route_points rp
+       JOIN routes r ON r.id = rp.route_id
+       WHERE r.driver_id = ? LIMIT 1`,
+      [userId]
+    );
+    if (own) return own;
+  }
+  return database.getFirstAsync(`SELECT * FROM route_points LIMIT 1`);
+}
+
+async function findAuditByPointAndStatus(routePointId, status) {
+  const database = await getDatabase();
+  // Excludes audits flagged with the [TEST] notes marker (started via PresellerHome
+  // test-bypass entry) so production flow's "resume draft" and "report submitted"
+  // checks don't pick up a fake audit attached to a real route_point.
+  return database.getFirstAsync(
+    `SELECT * FROM visit_reports
+     WHERE report_kind = ? AND route_point_id = ? AND status = ?
+       AND (notes IS NULL OR notes NOT LIKE '%[TEST]%')
+     ORDER BY visit_date DESC LIMIT 1`,
+    [REPORT_KIND.MERCH_AUDIT, routePointId, status]
+  );
+}
+
+export const findDraftAuditByPoint = (id) =>
+  findAuditByPointAndStatus(id, VISIT_AUDIT_STATUS.DRAFT);
+export const findLastSubmittedAuditByPoint = (id) =>
+  findAuditByPointAndStatus(id, VISIT_AUDIT_STATUS.SUBMITTED);
+
+export async function listAuditVisitsByRoute(routeId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM visit_reports
+     WHERE report_kind = ? AND route_id = ?
+     ORDER BY visit_date DESC`,
+    [REPORT_KIND.MERCH_AUDIT, routeId]
+  );
+}
+
+export async function listAuditVisitsByUser(userId, limit = 50) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT vr.*, c.name AS customer_name, c.address AS customer_address
+     FROM visit_reports vr
+     LEFT JOIN customers c ON c.id = vr.customer_id
+     WHERE vr.report_kind = ? AND vr.user_id = ?
+     ORDER BY vr.visit_date DESC LIMIT ?`,
+    [REPORT_KIND.MERCH_AUDIT, userId, limit]
+  );
+}
+
+export async function submitAuditVisit(id, kpiPayload, pss) {
+  const database = await getDatabase();
+  const payload = serializeJson(kpiPayload);
+  await database.runAsync(
+    `UPDATE visit_reports
+     SET status = ?, kpi_payload = COALESCE(?, kpi_payload), pss = COALESCE(?, pss), updated_at = datetime('now')
+     WHERE id = ?`,
+    [VISIT_AUDIT_STATUS.SUBMITTED, payload, pss != null ? pss : null, id]
+  );
+  // Server push for merch audit lands in phase 2 (spec §7.1).
+  // syncService push-runner has no handler for entity_type='audit_visit' yet —
+  // writing to sync_log now would accumulate rows the runner can't process.
+  // Re-enable once buildAuditVisitPayload's contract is wired up in syncService.
+  // const visit = await getAuditVisit(id);
+  // const answers = await listAuditAnswers(id);
+  // const photos = await listAuditPhotos(id);
+  // await logSyncOperation('audit_visit', id, 'create',
+  //   buildAuditVisitPayload(visit, answers, photos));
+}
+
+// --- Answers ---
+
+export async function upsertAuditAnswer(answer) {
+  const database = await getDatabase();
+  const id = answer.id || generateId();
+  const valueJson = serializeJson(answer.value_json);
+  const kpiCodes = serializeJson(answer.kpi_codes);
+  // Replace any existing answer for the same (visit, question)
+  await database.runAsync(
+    `DELETE FROM audit_answers WHERE visit_report_id = ? AND question_id = ?`,
+    [answer.visit_report_id, answer.question_id]
+  );
+  await database.runAsync(
+    `INSERT INTO audit_answers
+     (id, visit_report_id, question_id, kpi_codes, value_text, value_number, value_bool, value_json,
+      ml_value, discrepancy, source, confidence, synced, external_id, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      id, answer.visit_report_id, answer.question_id, kpiCodes,
+      answer.value_text != null ? String(answer.value_text) : null,
+      answer.value_number != null ? Number(answer.value_number) : null,
+      answer.value_bool != null ? (answer.value_bool ? 1 : 0) : null,
+      valueJson,
+      answer.ml_value != null ? String(answer.ml_value) : null,
+      answer.discrepancy ? 1 : 0,
+      answer.source || ANSWER_SOURCES.SURVEY,
+      answer.confidence != null ? Number(answer.confidence) : null,
+      0, null, new Date().toISOString(),
+    ]
+  );
+  return id;
+}
+
+export async function listAuditAnswers(visitReportId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM audit_answers WHERE visit_report_id = ?`,
+    [visitReportId]
+  );
+}
+
+export async function getAuditAnswer(visitReportId, questionId) {
+  const database = await getDatabase();
+  return database.getFirstAsync(
+    `SELECT * FROM audit_answers WHERE visit_report_id = ? AND question_id = ?`,
+    [visitReportId, questionId]
+  );
+}
+
+// --- Photos ---
+
+export async function addAuditPhoto(photo) {
+  const database = await getDatabase();
+  const id = photo.id || generateId();
+  const exifJson = serializeJson(photo.exif_json);
+  const qgMetrics = serializeJson(photo.qg_metrics);
+  await database.runAsync(
+    `INSERT INTO audit_photos
+     (id, visit_report_id, question_id, photo_type, uri_original, uri_compressed,
+      exif_json, qg_passed, qg_metrics, ml_job_id, ml_status, ml_result,
+      upload_status, remote_url, hash_sha256, synced, external_id, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [
+      id, photo.visit_report_id, photo.question_id || null,
+      photo.photo_type || null, photo.uri_original, photo.uri_compressed || null,
+      exifJson,
+      photo.qg_passed != null ? (photo.qg_passed ? 1 : 0) : null,
+      qgMetrics,
+      photo.ml_job_id || null, photo.ml_status || null, photo.ml_result || null,
+      photo.upload_status || 'pending', photo.remote_url || null,
+      photo.hash_sha256 || null, 0, null, new Date().toISOString(),
+    ]
+  );
+  return id;
+}
+
+export async function listAuditPhotos(visitReportId, questionId = null) {
+  const database = await getDatabase();
+  if (questionId) {
+    return database.getAllAsync(
+      `SELECT * FROM audit_photos WHERE visit_report_id = ? AND question_id = ? ORDER BY created_at`,
+      [visitReportId, questionId]
+    );
+  }
+  return database.getAllAsync(
+    `SELECT * FROM audit_photos WHERE visit_report_id = ? ORDER BY created_at`,
+    [visitReportId]
+  );
+}
+
+export async function deleteAuditPhoto(id) {
+  const database = await getDatabase();
+  await database.runAsync(`DELETE FROM audit_photos WHERE id = ?`, [id]);
+}
+
+export async function findAuditPhotoByHash(hash) {
+  const database = await getDatabase();
+  return database.getFirstAsync(
+    `SELECT * FROM audit_photos WHERE hash_sha256 = ? LIMIT 1`,
+    [hash]
+  );
+}
+
+export async function updateAuditPhotoUpload(id, fields) {
+  const database = await getDatabase();
+  const allowed = ['upload_status', 'remote_url', 'ml_job_id', 'ml_status', 'ml_result'];
+  const sets = [];
+  const values = [];
+  for (const k of allowed) {
+    if (fields[k] === undefined) continue;
+    sets.push(`${k} = ?`);
+    values.push(fields[k]);
+  }
+  if (sets.length === 0) return;
+  values.push(id);
+  await database.runAsync(`UPDATE audit_photos SET ${sets.join(', ')} WHERE id = ?`, values);
+}
+
+export async function listPendingAuditPhotos(limit = 20) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM audit_photos WHERE upload_status IN ('pending','failed') ORDER BY created_at LIMIT ?`,
+    [limit]
+  );
+}
+
+// --- KPI Results (incoming from server, or computed locally in dual mode) ---
+
+export async function saveKpiResult(result) {
+  const database = await getDatabase();
+  const id = result.id || generateId();
+  const detailsJson = serializeJson(result.details_json);
+  await database.runAsync(
+    `INSERT INTO kpi_results (id, visit_report_id, kpi_code, value, status, formula_version, source, details_json, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?)`,
+    [
+      id, result.visit_report_id, result.kpi_code,
+      result.value != null ? Number(result.value) : null,
+      result.status || null, result.formula_version || null,
+      result.source || null, detailsJson, new Date().toISOString(),
+    ]
+  );
+  return id;
+}
+
+export async function listKpiResults(visitReportId) {
+  const database = await getDatabase();
+  return database.getAllAsync(
+    `SELECT * FROM kpi_results WHERE visit_report_id = ? ORDER BY created_at DESC`,
+    [visitReportId]
+  );
+}
+
+export async function clearKpiResults(visitReportId, source = null) {
+  const database = await getDatabase();
+  if (source) {
+    await database.runAsync(
+      `DELETE FROM kpi_results WHERE visit_report_id = ? AND source = ?`,
+      [visitReportId, source]
+    );
+  } else {
+    await database.runAsync(`DELETE FROM kpi_results WHERE visit_report_id = ?`, [visitReportId]);
+  }
+}
+
+// --- ML jobs ---
+
+export async function createMlJob(job) {
+  const database = await getDatabase();
+  const id = job.id || generateId();
+  const requestJson = serializeJson(job.request_json);
+  await database.runAsync(
+    `INSERT INTO ml_jobs (id, visit_report_id, audit_photo_id, engine, request_json, status, attempts, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,datetime('now'),datetime('now'))`,
+    [id, job.visit_report_id, job.audit_photo_id, job.engine, requestJson, job.status || 'queued', job.attempts || 0]
+  );
+  return id;
+}
+
+export async function updateMlJob(id, fields) {
+  const database = await getDatabase();
+  const allowed = ['response_json', 'status', 'attempts', 'last_error'];
+  const sets = [];
+  const values = [];
+  for (const k of allowed) {
+    if (fields[k] === undefined) continue;
+    sets.push(`${k} = ?`);
+    values.push(fields[k]);
+  }
+  if (sets.length === 0) return;
+  sets.push("updated_at = datetime('now')");
+  values.push(id);
+  await database.runAsync(`UPDATE ml_jobs SET ${sets.join(', ')} WHERE id = ?`, values);
+}
+
+// =====================================================
+// Merchandising — MML (Must-Must-List) seed + queries
+// =====================================================
+
+// Curated MML for v1: 12 flagship SKUs across cola / lemon-lime / water / juice.
+// Priority 1 = highest (must-have), 2 = should-have. Used to populate the MML
+// composite question in the audit template.
+const MML_SEED = [
+  { id: 'prd-001', priority: 1 }, // Coca-Cola 0.5л
+  { id: 'prd-002', priority: 2 }, // Coca-Cola 1л
+  { id: 'prd-004', priority: 1 }, // Fanta Апельсин 0.5л
+  { id: 'prd-006', priority: 1 }, // Sprite 0.5л
+  { id: 'prd-008', priority: 1 }, // Pepsi 0.5л
+  { id: 'prd-010', priority: 2 }, // 7UP 0.5л
+  { id: 'prd-011', priority: 1 }, // BonAqua 0.5л
+  { id: 'prd-012', priority: 2 }, // BonAqua 1.5л
+  { id: 'prd-013', priority: 2 }, // Святой Источник 0.5л
+  { id: 'prd-018', priority: 2 }, // Добрый Яблоко 1л
+  { id: 'prd-019', priority: 1 }, // Добрый Апельсин 1л
+  { id: 'prd-015', priority: 2 }, // Ессентуки №17 0.5л
+];
+
+// Defensive helper: ensures the MML columns exist before running queries against them.
+// Saves us from "no such column" errors when the JS bundle was hot-reloaded but
+// initDatabase hasn't re-run with the new ensureColumns calls.
+async function ensureMmlColumns(database) {
+  await ensureColumns(database, 'products', [
+    { name: 'is_mml',       ddl: 'INTEGER DEFAULT 0' },
+    { name: 'mml_priority', ddl: 'INTEGER' },
+  ]);
+}
+
+export async function ensureMmlSeed() {
+  const database = await getDatabase();
+  await ensureMmlColumns(database);
+  // Reset MML flags first so the seed is the single source of truth in mock mode —
+  // priority changes between releases will propagate cleanly.
+  await database.execAsync('UPDATE products SET is_mml = 0, mml_priority = NULL');
+  for (const m of MML_SEED) {
+    await database.runAsync(
+      `UPDATE products SET is_mml = 1, mml_priority = ? WHERE id = ?`,
+      [m.priority, m.id]
+    );
+  }
+}
+
+// Returns products flagged as MML, ordered by priority (1 first) then SKU.
+// Self-heals against missing columns (hot-reload case before initDatabase re-ran)
+// and never throws — empty list is a graceful UX fallback for the MML question.
+export async function getMmlProducts(_outletType = null) {
+  const database = await getDatabase();
+  const SQL = `SELECT id, sku, name, brand, category, mml_priority
+               FROM products
+               WHERE is_mml = 1 AND is_active = 1
+               ORDER BY COALESCE(mml_priority, 99), sku`;
+  try {
+    return await database.getAllAsync(SQL);
+  } catch (e) {
+    if (/no such column/i.test(e?.message || '')) {
+      console.warn('[database] getMmlProducts: missing columns, running ensureColumns + seed once');
+      try {
+        await ensureMmlColumns(database);
+        await ensureMmlSeed();
+        return await database.getAllAsync(SQL);
+      } catch (e2) {
+        console.warn('[database] getMmlProducts: retry failed:', e2.message);
+        return [];
+      }
+    }
+    console.warn('[database] getMmlProducts:', e.message);
+    return [];
+  }
 }

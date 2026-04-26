@@ -35,6 +35,19 @@ export default function SystemSettingsScreen() {
   const setServerSyncEnabled = useSettingsStore((s) => s.setServerSyncEnabled);
   const apiBaseUrl = useSettingsStore((s) => s.apiBaseUrl);
   const setApiBaseUrl = useSettingsStore((s) => s.setApiBaseUrl);
+  // Merchandising Audit (spec §11)
+  const merchandisingEnabled = useSettingsStore((s) => s.merchandisingEnabled);
+  const setMerchandisingEnabled = useSettingsStore((s) => s.setMerchandisingEnabled);
+  const merchandisingMlMode = useSettingsStore((s) => s.merchandisingMlMode);
+  const setMerchandisingMlMode = useSettingsStore((s) => s.setMerchandisingMlMode);
+  const kpiEngineMode = useSettingsStore((s) => s.kpiEngineMode);
+  const setKpiEngineMode = useSettingsStore((s) => s.setKpiEngineMode);
+  const geofenceRadiusM = useSettingsStore((s) => s.geofenceRadiusM);
+  const setGeofenceRadiusM = useSettingsStore((s) => s.setGeofenceRadiusM);
+  const photoMaxLongEdgeUpload = useSettingsStore((s) => s.photoMaxLongEdgeUpload);
+  const setPhotoMaxLongEdgeUpload = useSettingsStore((s) => s.setPhotoMaxLongEdgeUpload);
+  const merchTestBypass = useSettingsStore((s) => s.merchTestBypass);
+  const setMerchTestBypass = useSettingsStore((s) => s.setMerchTestBypass);
   const [dbStats, setDbStats] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -278,6 +291,94 @@ export default function SystemSettingsScreen() {
                 const idx = cycle.indexOf(gpsTrackingDistance);
                 setGpsTrackingDistance(cycle[(idx + 1) % cycle.length]);
               }}
+            />
+          </>
+        )}
+      </View>
+
+      {/* Merchandising Audit (spec §11) */}
+      <Text style={styles.sectionTitle}>{t('systemSettings.merchSection', 'Merchandising Audit')}</Text>
+      <View style={styles.section}>
+        <SettingRow
+          icon="checkbox"
+          iconColor={COLORS.accent}
+          title={t('systemSettings.merchEnabled', 'Модуль аудита ТТ')}
+          subtitle={t('systemSettings.merchEnabledSub', 'Опрос мерчендайзера + фото-evidence')}
+          right={
+            <Switch
+              value={merchandisingEnabled}
+              onValueChange={setMerchandisingEnabled}
+              trackColor={{ true: COLORS.primary }}
+            />
+          }
+        />
+        {merchandisingEnabled && (
+          <>
+            <View style={styles.separator} />
+            <SettingRow
+              icon="cube-outline"
+              iconColor={COLORS.info}
+              title={t('systemSettings.merchMlMode', 'Режим ML')}
+              subtitle={merchandisingMlMode === 'survey'
+                ? t('systemSettings.merchMlSurvey', 'Только опрос (v1)')
+                : merchandisingMlMode === 'trax'
+                ? t('systemSettings.merchMlTrax', 'Trax / вендор (v2)')
+                : t('systemSettings.merchMlCv', 'Собственный CV (v3)')}
+              onPress={() => {
+                const cycle = ['survey', 'trax', 'cv'];
+                const idx = cycle.indexOf(merchandisingMlMode);
+                setMerchandisingMlMode(cycle[(idx + 1) % cycle.length]);
+              }}
+            />
+            <View style={styles.separator} />
+            <SettingRow
+              icon="calculator-outline"
+              iconColor={COLORS.secondary}
+              title={t('systemSettings.merchKpiEngine', 'KPI Engine')}
+              subtitle={kpiEngineMode === 'server_only'
+                ? t('systemSettings.merchKpiServer', 'Только сервер')
+                : t('systemSettings.merchKpiDual', 'Сервер + локальный (мгновенный фидбек)')}
+              onPress={() => {
+                setKpiEngineMode(kpiEngineMode === 'server_only' ? 'dual' : 'server_only');
+              }}
+            />
+            <View style={styles.separator} />
+            <SettingRow
+              icon="locate-outline"
+              iconColor={COLORS.success}
+              title={t('systemSettings.merchGeofence', 'Радиус geofence ТТ')}
+              subtitle={`${geofenceRadiusM} м`}
+              onPress={() => {
+                const cycle = [50, 100, 200, 500];
+                const idx = cycle.indexOf(geofenceRadiusM);
+                setGeofenceRadiusM(cycle[(idx + 1) % cycle.length]);
+              }}
+            />
+            <View style={styles.separator} />
+            <SettingRow
+              icon="image-outline"
+              iconColor={COLORS.info}
+              title={t('systemSettings.merchPhotoMax', 'Макс. сторона фото')}
+              subtitle={`${photoMaxLongEdgeUpload} px`}
+              onPress={() => {
+                const cycle = [1024, 1600, 2048, 3000];
+                const idx = cycle.indexOf(photoMaxLongEdgeUpload);
+                setPhotoMaxLongEdgeUpload(cycle[(idx + 1) % cycle.length]);
+              }}
+            />
+            <View style={styles.separator} />
+            <SettingRow
+              icon="bug-outline"
+              iconColor={COLORS.error}
+              title={t('systemSettings.merchTestBypass', 'Тестовый режим (симулятор)')}
+              subtitle={t('systemSettings.merchTestBypassSub', 'Обход geofence/камеры; выбор фото из галереи')}
+              right={
+                <Switch
+                  value={merchTestBypass}
+                  onValueChange={setMerchTestBypass}
+                  trackColor={{ true: COLORS.error }}
+                />
+              }
             />
           </>
         )}

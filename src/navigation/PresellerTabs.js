@@ -10,6 +10,9 @@ import ProfileStack from './ProfileStack';
 
 const Tab = createBottomTabNavigator();
 
+// The merchandising audit flow lives inside PresellerRouteStack (not as a separate tab) —
+// when settingsStore.merchandisingEnabled is true the "Отчёт о визите" button on
+// PresellerVisitScreen routes into the merch audit stack instead of the legacy VisitReportScreen.
 const TAB_CONFIG = {
   [SCREEN_NAMES.PRESELLER_HOME]: {
     component: PresellerHomeScreen,
